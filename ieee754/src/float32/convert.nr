@@ -100,7 +100,7 @@ pub fn float32_from_u64(value: u64) -> IEEE754Float32 {
         } else {
             // Create mantissa by shifting value to position the MSB at bit 23
             // For u64, we need to extract the top 24 bits (including implicit bit)
-            let mantissa = if msb_pos >= 23 {
+            let float_result = if msb_pos >= 23 {
                 let shift = msb_pos - 23;
                 let shifted = (value >> shift) as u32;
                 // Check for rounding (look at bits that were shifted out)
@@ -134,7 +134,7 @@ pub fn float32_from_u64(value: u64) -> IEEE754Float32 {
                 IEEE754Float32 { sign: 0, exponent: exponent as u8, mantissa }
             };
 
-            mantissa
+            float_result
         };
     }
 

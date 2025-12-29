@@ -80,7 +80,7 @@ pub fn float64_from_u64(value: u64) -> IEEE754Float64 {
             float64_infinity(0)
         } else {
             // Create mantissa by shifting value to position the MSB at bit 52
-            let mantissa = if msb_pos >= 52 {
+            let float_result = if msb_pos >= 52 {
                 let shift = msb_pos - 52;
                 let shifted = value >> shift;
                 // Check for rounding (look at bits that were shifted out)
@@ -114,7 +114,7 @@ pub fn float64_from_u64(value: u64) -> IEEE754Float64 {
                 IEEE754Float64 { sign: 0, exponent: exponent as u16, mantissa }
             };
 
-            mantissa
+            float_result
         };
     }
 
