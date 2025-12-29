@@ -8,6 +8,7 @@ pub(crate) mod mul;
 pub(crate) mod div;
 pub(crate) mod cmp;
 pub(crate) mod sqrt;
+pub(crate) mod convert;
 
 // Re-export all public functions
 pub use helpers::{
@@ -19,6 +20,10 @@ pub use add::{add_float64, add_float64_with_rounding};
 pub use cmp::{
     float64_compare, float64_eq, float64_ge, float64_gt, float64_le, float64_lt, float64_ne,
     float64_unordered,
+};
+pub use convert::{
+    float64_from_field, float64_from_u32, float64_from_u64, float64_to_field, float64_to_u32,
+    float64_to_u64,
 };
 pub use div::{div_float64, div_float64_with_rounding};
 pub use mul::{mul_float64, mul_float64_with_rounding};
