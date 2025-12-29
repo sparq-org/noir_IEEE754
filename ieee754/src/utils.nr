@@ -196,11 +196,11 @@ pub fn should_round_up(guard_bits: u64, result_mant: u64, result_sign: u1, mode:
     let is_positive = result_sign == 0;
     let is_negative = result_sign == 1;
 
-    // Check if we're exactly at the midpoint (R=1, S=0)
-    let at_midpoint = (guard_bits & 0x3) == 0x2; // R=1, S=0
+    // Check if we're exactly at the midpoint: guard_bits = 0b100 (G=1, R=0, S=0)
+    let at_midpoint = guard_bits == 4;
 
-    // Check if we're above the midpoint (R=1, S=1) or (R=0 but G=1 and something beyond)
-    let above_midpoint = guard_bits > 4; // More than just G=1
+    // Check if we're above the midpoint (values strictly greater than 0b100)
+    let above_midpoint = guard_bits > 4;
 
     if mode == ROUNDING_MODE_NEAREST_EVEN {
         // Round to nearest, ties to even
@@ -231,7 +231,7 @@ pub fn should_round_up(guard_bits: u64, result_mant: u64, result_sign: u1, mode:
 /// This version is for operations that use 4 guard bits (like division)
 ///
 /// # Arguments
-/// * `guard_bits` - The guard bits (4 bits: GRSS where G=guard, R=round, S=sticky bits)
+/// * `guard_bits` - The guard bits (4 bits representing a value 0-15, with midpoint at 8 for rounding)
 /// * `result_mant` - The mantissa after shifting out guard bits
 /// * `result_sign` - The sign of the result (0 = positive, 1 = negative)
 /// * `mode` - The rounding mode to use (use ROUNDING_MODE_* constants)
