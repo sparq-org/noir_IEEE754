@@ -39,6 +39,8 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 | Square Root | ✅     | ✅      | ✅ |
 | Absolute Value | ✅   | ✅      | N/A (no rounding) |
 | Comparison (eq, ne, lt, le, gt, ge) | ✅ | ✅ | N/A (no rounding) |
+| Integer to Float (from_u32, from_u64) | ✅ | ✅ | Nearest Even |
+| Float to Integer (to_u32, to_u64) | ✅ | ✅ | Truncate (toward zero) |
 
 ## Installation
 
@@ -237,6 +239,53 @@ float32_compare(a, b)   // -1, 0, or 1 (total ordering including NaN)
 
 // Same functions available for float64 with float64_ prefix (except sqrt uses sqrt_float64)
 ```
+
+### Integer Conversions
+
+The library provides functions to convert between integers and floating-point numbers:
+
+```noir
+use ieee754::float::{
+    // Integer to float conversions
+    float32_from_u32, float32_from_u64,
+    float64_from_u32, float64_from_u64,
+    // Float to integer conversions (truncate toward zero)
+    float32_to_u32, float32_to_u64,
+    float64_to_u32, float64_to_u64,
+};
+
+fn main() {
+    // Convert unsigned integers to floats
+    let a = float32_from_u32(42);        // 42u32 -> 42.0f32
+    let b = float32_from_u64(1000000);   // 1000000u64 -> 1000000.0f32
+    let c = float64_from_u32(42);        // 42u32 -> 42.0f64 (exact)
+    let d = float64_from_u64(1000000);   // 1000000u64 -> 1000000.0f64
+    
+    // Convert floats to unsigned integers (truncate toward zero)
+    let x = float32_to_u32(float32_from_bits(0x40400000)); // 3.0f -> 3u32
+    let y = float32_to_u32(float32_from_bits(0x402CCCCD)); // 2.7f -> 2u32 (truncated)
+    let z = float32_to_u64(float32_from_bits(0x447A0000)); // 1000.0f -> 1000u64
+    
+    // Special cases:
+    // - NaN converts to 0
+    // - Negative values convert to 0 for unsigned types
+    // - Overflow returns maximum value (0xFFFFFFFF for u32, 0xFFFFFFFFFFFFFFFF for u64)
+    // - Fractional parts are truncated (round toward zero)
+}
+```
+
+**Precision Notes:**
+- `float32_from_u32`: All u32 values with ≤24 significant bits are exactly representable; larger values may be rounded
+- `float32_from_u64`: May lose precision for values > 2^24
+- `float64_from_u32`: All u32 values are exactly representable (float64 has 53 mantissa bits)
+- `float64_from_u64`: All u64 values with ≤53 significant bits are exactly representable; larger values may be rounded
+
+**Truncation Behavior:**
+- All float-to-integer conversions truncate toward zero (same as C/Rust casting)
+- Values less than 1.0 truncate to 0
+- Negative values truncate to 0 for unsigned types
+- Overflow returns the maximum value for the target type
+- NaN converts to 0
 
 ## Development Status
 
