@@ -6,6 +6,8 @@ This document explains the automated release system for the noir_IEEE754 project
 
 This project uses [semantic-release](https://github.com/semantic-release/semantic-release) to automate the versioning and release process. Releases are automatically created when changes are merged to the `main` branch, based on conventional commit messages.
 
+> **Note**: This project releases to **GitHub only** (not NPM). The configuration uses only the GitHub plugin for releases. The `package.json` file is solely for managing semantic-release dependencies and is marked as `"private": true` to prevent any NPM publishing.
+
 ## How It Works
 
 ### 1. Commit Message Format
