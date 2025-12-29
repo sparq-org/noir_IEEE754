@@ -201,12 +201,8 @@ pub fn float32_to_u32(f: IEEE754Float32) -> u32 {
             if exp >= 23 {
                 // Shift left (value >= 2^23)
                 let shift = exp - 23;
-                if shift >= 9 {
-                    // Would overflow u32
-                    0xFFFFFFFF
-                } else {
-                    full_mantissa << shift
-                }
+                // Maximum shift is 8 (when unbiased_exp=31), so no overflow possible
+                full_mantissa << shift
             } else {
                 // Shift right (value < 2^23)
                 full_mantissa >> (23 - exp)
@@ -264,12 +260,8 @@ pub fn float32_to_u64(f: IEEE754Float32) -> u64 {
             if exp >= 23 {
                 // Shift left (value >= 2^23)
                 let shift = exp - 23;
-                if shift >= 41 {
-                    // Would overflow u64
-                    0xFFFFFFFFFFFFFFFF
-                } else {
-                    full_mantissa << shift
-                }
+                // Maximum shift is 40 (when unbiased_exp=63), so no overflow possible
+                full_mantissa << shift
             } else {
                 // Shift right (value < 2^23)
                 full_mantissa >> (23 - exp)

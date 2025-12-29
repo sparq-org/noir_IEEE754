@@ -313,10 +313,12 @@ fn main() {
 - Very large Field values will lose precision when converting to float
 
 ## Development Status
-- `float32_from_u32`: All u32 values with ≤24 significant bits are exactly representable; larger values may be rounded
+
+**Precision Notes:**
+- `float32_from_u32`: All u32 values up to and including 2^24 (16777216) are exactly representable; values above 2^24 may require rounding
 - `float32_from_u64`: May lose precision for values > 2^24
 - `float64_from_u32`: All u32 values are exactly representable (float64 has 53 mantissa bits)
-- `float64_from_u64`: All u64 values with ≤53 significant bits are exactly representable; larger values may be rounded
+- `float64_from_u64`: All u64 values up to and including 2^53 (9007199254740992) are exactly representable; values above 2^53 may require rounding
 
 **Truncation Behavior:**
 - All float-to-integer conversions truncate toward zero (same as C/Rust casting)
