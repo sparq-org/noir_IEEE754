@@ -102,6 +102,7 @@ pub fn float32_from_u64(value: u64) -> IEEE754Float32 {
             // For u64, we need to extract the top 24 bits (including implicit bit)
             let float_result = if msb_pos >= 23 {
                 let shift = msb_pos - 23;
+                // Safe cast: value >> shift extracts the top (shift + 1) bits, max 24 bits
                 let shifted = (value >> shift) as u32;
                 // Check for rounding (look at bits that were shifted out)
                 let lost_bits = value & ((1 << shift) - 1);
@@ -128,7 +129,9 @@ pub fn float32_from_u64(value: u64) -> IEEE754Float32 {
                     IEEE754Float32 { sign: 0, exponent: exponent as u8, mantissa: result_mant }
                 }
             } else {
+                // msb_pos < 23: value has at most 23 bits, shift left to position
                 let shift = 23 - msb_pos;
+                // Safe cast: value has msb_pos+1 bits, after shift has at most 24 bits
                 let shifted = (value << shift) as u32;
                 let mantissa = shifted & 0x7FFFFF;
                 IEEE754Float32 { sign: 0, exponent: exponent as u8, mantissa }

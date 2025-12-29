@@ -169,7 +169,10 @@ pub fn float64_to_u32(f: IEEE754Float64) -> u32 {
             if exp >= 52 {
                 // Shift left (value >= 2^52)
                 let shift = exp - 52;
-                let shifted = if shift > 0 {
+                if shift == 0 {
+                    // No shift needed, just cast
+                    full_mantissa as u32
+                } else {
                     // Check if this would overflow u32
                     let high_bits = full_mantissa >> (32 - shift);
                     if high_bits != 0 {
@@ -177,10 +180,7 @@ pub fn float64_to_u32(f: IEEE754Float64) -> u32 {
                     } else {
                         (full_mantissa << shift) as u32
                     }
-                } else {
-                    (full_mantissa << shift) as u32
-                };
-                shifted
+                }
             } else {
                 // Shift right (value < 2^52)
                 (full_mantissa >> (52 - exp)) as u32
