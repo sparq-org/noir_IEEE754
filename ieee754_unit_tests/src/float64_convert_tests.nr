@@ -3,8 +3,8 @@
 // ============================================================================
 
 use ieee754::float::{
-    float64_from_bits, float64_from_u32, float64_from_u64, float64_to_bits, float64_to_u32,
-    float64_to_u64, float64_zero,
+    float64_from_bits, float64_from_field, float64_from_u32, float64_from_u64, float64_to_bits,
+    float64_to_field, float64_to_u32, float64_to_u64, float64_zero,
 };
 
 // ============================================================================
@@ -238,5 +238,59 @@ fn test_float64_u64_roundtrip_powers_of_two() {
     let original: u64 = 1024;
     let f = float64_from_u64(original);
     let result = float64_to_u64(f);
+    assert(result == original);
+}
+
+// ============================================================================
+// Float64 Field Conversion Tests
+// ============================================================================
+
+#[test]
+fn test_float64_from_field_zero() {
+    let field_val: Field = 0;
+    let result = float64_from_field(field_val);
+    assert(float64_to_bits(result) == 0x0000000000000000);
+}
+
+#[test]
+fn test_float64_from_field_one() {
+    let field_val: Field = 1;
+    let result = float64_from_field(field_val);
+    assert(float64_to_bits(result) == 0x3FF0000000000000); // 1.0
+}
+
+#[test]
+fn test_float64_from_field_large() {
+    let field_val: Field = 1000;
+    let result = float64_from_field(field_val);
+    assert(float64_to_bits(result) == 0x408F400000000000); // 1000.0
+}
+
+#[test]
+fn test_float64_to_field_zero() {
+    let f = float64_zero(0);
+    let result = float64_to_field(f);
+    assert(result == 0);
+}
+
+#[test]
+fn test_float64_to_field_one() {
+    let f = float64_from_bits(0x3FF0000000000000); // 1.0
+    let result = float64_to_field(f);
+    assert(result == 1);
+}
+
+#[test]
+fn test_float64_to_field_large() {
+    let f = float64_from_bits(0x408F400000000000); // 1000.0
+    let result = float64_to_field(f);
+    assert(result == 1000);
+}
+
+#[test]
+fn test_float64_field_roundtrip() {
+    let original: Field = 42;
+    let f = float64_from_field(original);
+    let result = float64_to_field(f);
     assert(result == original);
 }

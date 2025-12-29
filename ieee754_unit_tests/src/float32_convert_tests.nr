@@ -3,8 +3,8 @@
 // ============================================================================
 
 use ieee754::float::{
-    float32_from_bits, float32_from_u32, float32_from_u64, float32_to_bits, float32_to_u32,
-    float32_to_u64, float32_zero,
+    float32_from_bits, float32_from_field, float32_from_u32, float32_from_u64, float32_to_bits,
+    float32_to_field, float32_to_u32, float32_to_u64, float32_zero,
 };
 
 // ============================================================================
@@ -222,5 +222,59 @@ fn test_float32_u64_roundtrip_small() {
     let original: u64 = 42;
     let f = float32_from_u64(original);
     let result = float32_to_u64(f);
+    assert(result == original);
+}
+
+// ============================================================================
+// Float32 Field Conversion Tests
+// ============================================================================
+
+#[test]
+fn test_float32_from_field_zero() {
+    let field_val: Field = 0;
+    let result = float32_from_field(field_val);
+    assert(float32_to_bits(result) == 0x00000000);
+}
+
+#[test]
+fn test_float32_from_field_one() {
+    let field_val: Field = 1;
+    let result = float32_from_field(field_val);
+    assert(float32_to_bits(result) == 0x3F800000); // 1.0
+}
+
+#[test]
+fn test_float32_from_field_large() {
+    let field_val: Field = 1000;
+    let result = float32_from_field(field_val);
+    assert(float32_to_bits(result) == 0x447A0000); // 1000.0
+}
+
+#[test]
+fn test_float32_to_field_zero() {
+    let f = float32_zero(0);
+    let result = float32_to_field(f);
+    assert(result == 0);
+}
+
+#[test]
+fn test_float32_to_field_one() {
+    let f = float32_from_bits(0x3F800000); // 1.0
+    let result = float32_to_field(f);
+    assert(result == 1);
+}
+
+#[test]
+fn test_float32_to_field_large() {
+    let f = float32_from_bits(0x447A0000); // 1000.0
+    let result = float32_to_field(f);
+    assert(result == 1000);
+}
+
+#[test]
+fn test_float32_field_roundtrip() {
+    let original: Field = 42;
+    let f = float32_from_field(original);
+    let result = float32_to_field(f);
     assert(result == original);
 }

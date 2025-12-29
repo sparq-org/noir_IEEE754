@@ -11,6 +11,9 @@ use crate::types::{FLOAT32_IMPLICIT_BIT, IEEE754Float32};
 
 /// Convert u32 to IEEE754Float32
 /// Returns the float32 representation of the integer value
+///
+/// # Warning
+/// This function has not been extensively tested or reviewed. Use with caution.
 pub fn float32_from_u32(value: u32) -> IEEE754Float32 {
     let mut result = float32_zero(0);
 
@@ -72,6 +75,9 @@ pub fn float32_from_u32(value: u32) -> IEEE754Float32 {
 
 /// Convert u64 to IEEE754Float32 (may lose precision for large values)
 /// Returns the float32 representation of the integer value
+///
+/// # Warning
+/// This function has not been extensively tested or reviewed. Use with caution.
 pub fn float32_from_u64(value: u64) -> IEEE754Float32 {
     let mut result = float32_zero(0);
 
@@ -150,6 +156,9 @@ pub fn float32_from_u64(value: u64) -> IEEE754Float32 {
 
 /// Convert IEEE754Float32 to u32 (truncate toward zero)
 /// Returns 0 for NaN, 0 for values < 0, 0xFFFFFFFF for overflow
+///
+/// # Warning
+/// This function has not been extensively tested or reviewed. Use with caution.
 pub fn float32_to_u32(f: IEEE754Float32) -> u32 {
     let mut result = 0;
 
@@ -210,6 +219,9 @@ pub fn float32_to_u32(f: IEEE754Float32) -> u32 {
 
 /// Convert IEEE754Float32 to u64 (truncate toward zero)
 /// Returns 0 for NaN, 0 for values < 0, 0xFFFFFFFFFFFFFFFF for overflow
+///
+/// # Warning
+/// This function has not been extensively tested or reviewed. Use with caution.
 pub fn float32_to_u64(f: IEEE754Float32) -> u64 {
     let mut result: u64 = 0;
 
@@ -266,4 +278,32 @@ pub fn float32_to_u64(f: IEEE754Float32) -> u64 {
     };
 
     result
+}
+
+// ============================================================================
+// Field to Float32 Conversions
+// ============================================================================
+
+/// Convert Field to IEEE754Float32
+/// Returns the float32 representation of the field element
+/// Note: Field elements can be very large, so this will likely lose precision
+///
+/// # Warning
+/// This function has not been extensively tested or reviewed. Use with caution.
+pub fn float32_from_field(value: Field) -> IEEE754Float32 {
+    // Convert Field to u64 first (this may truncate for large field elements)
+    // Field is internally a large integer, we take modulo 2^64 for conversion
+    let value_u64 = value as u64;
+    float32_from_u64(value_u64)
+}
+
+/// Convert IEEE754Float32 to Field (truncate toward zero)
+/// Returns Field representation of the float's integer value
+/// Returns 0 for NaN, 0 for negative values
+///
+/// # Warning
+/// This function has not been extensively tested or reviewed. Use with caution.
+pub fn float32_to_field(f: IEEE754Float32) -> Field {
+    let value_u64 = float32_to_u64(f);
+    value_u64 as Field
 }

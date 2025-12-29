@@ -41,6 +41,8 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 | Comparison (eq, ne, lt, le, gt, ge) | ✅ | ✅ | N/A (no rounding) |
 | Integer to Float (from_u32, from_u64) | ✅ | ✅ | Nearest Even |
 | Float to Integer (to_u32, to_u64) | ✅ | ✅ | Truncate (toward zero) |
+| Field to Float (from_field) | ✅ | ✅ | Nearest Even |
+| Float to Field (to_field) | ✅ | ✅ | Truncate (toward zero) |
 
 ## Installation
 
@@ -274,7 +276,43 @@ fn main() {
 }
 ```
 
-**Precision Notes:**
+> **⚠️ Warning**: All integer and Field conversion functions have not been extensively tested or reviewed. Use with caution in production systems.
+
+### Field Conversions
+
+The library provides functions to convert between Noir's native Field type and floating-point numbers:
+
+```noir
+use ieee754::float::{
+    // Field to float conversions
+    float32_from_field, float64_from_field,
+    // Float to Field conversions (truncate toward zero)
+    float32_to_field, float64_to_field,
+};
+
+fn main() {
+    // Convert Field to floats
+    let field_val: Field = 42;
+    let f32 = float32_from_field(field_val);  // Field -> float32
+    let f64 = float64_from_field(field_val);  // Field -> float64
+    
+    // Convert floats to Field (truncate toward zero)
+    let result: Field = float32_to_field(f32);
+    
+    // Note: Field elements can be very large (typically 254 bits)
+    // Conversion to float will lose significant precision for large values
+    // Only the lower 64 bits are used in the conversion
+}
+```
+
+**Field Conversion Notes:**
+- Field elements are converted by taking the value modulo 2^64 before converting to float
+- This means only the lower 64 bits of the Field are preserved in the conversion
+- Float-to-Field conversions truncate toward zero, similar to float-to-integer conversions
+- NaN and negative float values convert to Field(0)
+- Very large Field values will lose precision when converting to float
+
+## Development Status
 - `float32_from_u32`: All u32 values with ≤24 significant bits are exactly representable; larger values may be rounded
 - `float32_from_u64`: May lose precision for values > 2^24
 - `float64_from_u32`: All u32 values are exactly representable (float64 has 53 mantissa bits)

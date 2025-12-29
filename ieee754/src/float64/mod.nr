@@ -21,7 +21,10 @@ pub use cmp::{
     float64_compare, float64_eq, float64_ge, float64_gt, float64_le, float64_lt, float64_ne,
     float64_unordered,
 };
-pub use convert::{float64_from_u32, float64_from_u64, float64_to_u32, float64_to_u64};
+pub use convert::{
+    float64_from_field, float64_from_u32, float64_from_u64, float64_to_field, float64_to_u32,
+    float64_to_u64,
+};
 pub use div::{div_float64, div_float64_with_rounding};
 pub use mul::{mul_float64, mul_float64_with_rounding};
 pub use sqrt::{sqrt_float64, sqrt_float64_with_rounding};
