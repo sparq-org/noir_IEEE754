@@ -38,6 +38,8 @@ pub use crate::float32::{
     float32_compare,
     // Square root
     sqrt_float32, sqrt_float32_with_rounding,
+    // Integer conversions
+    float32_from_u32, float32_from_u64, float32_to_u32, float32_to_u64,
 };
 
 // Re-export Float64 operations
@@ -51,4 +53,6 @@ pub use crate::float64::{
     float64_compare,
     // Square root
     sqrt_float64, sqrt_float64_with_rounding,
+    // Integer conversions
+    float64_from_u32, float64_from_u64, float64_to_u32, float64_to_u64,
 };
