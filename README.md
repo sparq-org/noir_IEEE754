@@ -362,7 +362,7 @@ This project uses [semantic-release](https://github.com/semantic-release/semanti
 - `fix:` commits trigger a patch version bump (e.g., 0.4.0 → 0.4.1)
 - `feat!:` or commits with `BREAKING CHANGE:` trigger a major version bump (e.g., 0.4.0 → 1.0.0)
 
-The changelog is automatically generated and included in each GitHub release.
+The changelog is automatically generated and included in each GitHub release. For more details, see [SEMANTIC_RELEASE.md](SEMANTIC_RELEASE.md).
 
 ## License
 
