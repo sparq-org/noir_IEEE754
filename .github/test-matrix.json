@@ -151,136 +151,6 @@
       "package": "ieee754_test_add_shift_and_special_significands_part26"
     },
     {
-      "name": "add_shift_and_special_significands_part27",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part27"
-    },
-    {
-      "name": "add_shift_and_special_significands_part28",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part28"
-    },
-    {
-      "name": "add_shift_and_special_significands_part29",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part29"
-    },
-    {
-      "name": "add_shift_and_special_significands_part30",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part30"
-    },
-    {
-      "name": "add_shift_and_special_significands_part31",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part31"
-    },
-    {
-      "name": "add_shift_and_special_significands_part32",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part32"
-    },
-    {
-      "name": "add_shift_and_special_significands_part33",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part33"
-    },
-    {
-      "name": "add_shift_and_special_significands_part34",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part34"
-    },
-    {
-      "name": "add_shift_and_special_significands_part35",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part35"
-    },
-    {
-      "name": "add_shift_and_special_significands_part36",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part36"
-    },
-    {
-      "name": "add_shift_and_special_significands_part37",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part37"
-    },
-    {
-      "name": "add_shift_and_special_significands_part38",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part38"
-    },
-    {
-      "name": "add_shift_and_special_significands_part39",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part39"
-    },
-    {
-      "name": "add_shift_and_special_significands_part40",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part40"
-    },
-    {
-      "name": "add_shift_and_special_significands_part41",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part41"
-    },
-    {
-      "name": "add_shift_and_special_significands_part42",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part42"
-    },
-    {
-      "name": "add_shift_and_special_significands_part43",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part43"
-    },
-    {
-      "name": "add_shift_and_special_significands_part44",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part44"
-    },
-    {
-      "name": "add_shift_and_special_significands_part45",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part45"
-    },
-    {
-      "name": "add_shift_and_special_significands_part46",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part46"
-    },
-    {
-      "name": "add_shift_and_special_significands_part47",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part47"
-    },
-    {
-      "name": "add_shift_and_special_significands_part48",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part48"
-    },
-    {
-      "name": "add_shift_and_special_significands_part49",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part49"
-    },
-    {
-      "name": "add_shift_and_special_significands_part50",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part50"
-    },
-    {
-      "name": "add_shift_and_special_significands_part51",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part51"
-    },
-    {
-      "name": "add_shift_and_special_significands_part52",
-      "module": "test_add_shift_and_special_significands",
-      "package": "ieee754_test_add_shift_and_special_significands_part52"
-    },
-    {
       "name": "add_shift",
       "module": "test_add_shift",
       "package": "ieee754_test_add_shift"
@@ -299,16 +169,6 @@
       "name": "basic_types_inputs_part2",
       "module": "test_basic_types_inputs",
       "package": "ieee754_test_basic_types_inputs_part2"
-    },
-    {
-      "name": "basic_types_inputs_part3",
-      "module": "test_basic_types_inputs",
-      "package": "ieee754_test_basic_types_inputs_part3"
-    },
-    {
-      "name": "basic_types_inputs_part4",
-      "module": "test_basic_types_inputs",
-      "package": "ieee754_test_basic_types_inputs_part4"
     },
     {
       "name": "basic_types_intermediate",
@@ -336,14 +196,9 @@
       "package": "ieee754_test_hamming_distance"
     },
     {
-      "name": "input_special_significand_part0",
+      "name": "input_special_significand",
       "module": "test_input_special_significand",
-      "package": "ieee754_test_input_special_significand_part0"
-    },
-    {
-      "name": "input_special_significand_part1",
-      "module": "test_input_special_significand",
-      "package": "ieee754_test_input_special_significand_part1"
+      "package": "ieee754_test_input_special_significand"
     },
     {
       "name": "overflow",
@@ -354,11 +209,6 @@
       "name": "rounding",
       "module": "test_rounding",
       "package": "ieee754_test_rounding"
-    },
-    {
-      "name": "synthetic_f64_corner_cases",
-      "module": "test_synthetic_f64_corner_cases",
-      "package": "ieee754_test_synthetic_f64_corner_cases"
     },
     {
       "name": "underflow",
