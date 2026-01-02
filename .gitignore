@@ -14,7 +14,7 @@ scripts/__pycache__/
 
 # Node.js / semantic-release
 node_modules/
-package-lock.json
+# package-lock.json
 
 # OS files
 .DS_Store
