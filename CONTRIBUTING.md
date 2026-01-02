@@ -2,6 +2,61 @@
 
 Contributions are welcome! This guide covers the project structure, test infrastructure, and development workflow.
 
+## Commit Message Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation. Please follow these guidelines when writing commit messages:
+
+### Format
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+### Types
+
+- **feat**: A new feature (triggers minor version bump)
+- **fix**: A bug fix (triggers patch version bump)
+- **docs**: Documentation only changes
+- **style**: Code style changes (formatting, missing semicolons, etc.)
+- **refactor**: Code refactoring without changing functionality
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **chore**: Maintenance tasks, dependency updates, etc.
+- **ci**: Changes to CI configuration files and scripts
+
+### Breaking Changes
+
+To indicate a breaking change (triggers major version bump), add `BREAKING CHANGE:` in the commit footer or add `!` after the type/scope:
+
+```
+feat!: change float32_add signature
+
+BREAKING CHANGE: The function now requires a rounding mode parameter
+```
+
+### Examples
+
+```
+feat(float): add fused multiply-add operation
+fix(div): correct division by zero handling for denormals
+docs: update README with Field conversion examples
+test: add tests for edge cases in sqrt operation
+chore: update dependencies
+```
+
+### Scope (Optional)
+
+Common scopes in this project:
+- `float`: Core floating-point operations
+- `conversion`: Integer/Field conversion functions
+- `test`: Test infrastructure
+- `ci`: CI/CD workflows
+- `docs`: Documentation
+
 ## Project Structure
 
 ```

@@ -1,0 +1,27 @@
+{
+  "name": "noir_ieee754",
+  "version": "0.0.0-development",
+  "description": "IEEE 754 compliant floating-point arithmetic library for Noir",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeswr/noir_IEEE754.git"
+  },
+  "keywords": [
+    "noir",
+    "ieee754",
+    "floating-point",
+    "zero-knowledge"
+  ],
+  "author": "Jesse Wright",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jeswr/noir_IEEE754/issues"
+  },
+  "homepage": "https://github.com/jeswr/noir_IEEE754#readme",
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "semantic-release": "^23.0.0"
+  }
+}

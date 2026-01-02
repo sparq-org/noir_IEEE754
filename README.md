@@ -350,7 +350,19 @@ The library implements IEEE 754 arithmetic for both float32 and float64 with ful
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for test infrastructure details and development workflow.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for test infrastructure details, development workflow, and commit message conventions.
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and release management. Please follow the commit message format described in CONTRIBUTING.md.
+
+## Releases
+
+This project uses [semantic-release](https://github.com/semantic-release/semantic-release) for automated versioning and GitHub releases. Releases are automatically created when changes are merged to the main branch, based on the commit messages:
+
+- `feat:` commits trigger a minor version bump (e.g., 0.4.0 → 0.5.0)
+- `fix:` commits trigger a patch version bump (e.g., 0.4.0 → 0.4.1)
+- `feat!:` or commits with `BREAKING CHANGE:` trigger a major version bump (e.g., 0.4.0 → 1.0.0)
+
+The changelog is automatically generated and included in each GitHub release. **Note**: This project releases to GitHub only, not to NPM. For more details, see [SEMANTIC_RELEASE.md](SEMANTIC_RELEASE.md).
 
 ## License
 
