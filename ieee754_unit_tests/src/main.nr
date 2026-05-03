@@ -5,5 +5,6 @@ mod float32_tests;
 mod float64_tests;
 mod float32_convert_tests;
 mod float64_convert_tests;
+mod rounding_mode_tests;
 
 fn main() {}
