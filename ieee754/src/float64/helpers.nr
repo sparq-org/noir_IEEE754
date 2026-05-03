@@ -39,6 +39,13 @@ pub fn float64_zero(sign: u1) -> IEEE754Float64 {
     IEEE754Float64 { sign, exponent: 0, mantissa: 0 }
 }
 
+// Create signed maximum-magnitude finite Float64
+// (the IEEE 754-2019 sec 7.4 directed-rounding overflow saturation target).
+// Encodes ``(2 - 2^-52) * 2^1023`` with the requested sign (FLOAT64_MAX_NORMAL).
+pub fn float64_max_finite(sign: u1) -> IEEE754Float64 {
+    IEEE754Float64 { sign, exponent: FLOAT64_EXPONENT_MAX - 1, mantissa: 0xFFFFFFFFFFFFF }
+}
+
 // Convert from u64 bits to IEEE754Float64
 pub fn float64_from_bits(bits: u64) -> IEEE754Float64 {
     let sign = ((bits >> 63) & 1) as u1;

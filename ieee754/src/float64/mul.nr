@@ -4,13 +4,15 @@
 
 use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
-    float64_nan, float64_zero,
+    float64_max_finite, float64_nan, float64_zero,
 };
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
 };
 use crate::unconstrained_ops::shift_right_sticky_u128_verified;
-use crate::utils::{mul_u64_to_u128, shift_right_sticky_u64, should_round_up};
+use crate::utils::{
+    directed_overflow_saturates_to_inf, mul_u64_to_u128, shift_right_sticky_u64, should_round_up,
+};
 
 // IEEE 754 compliant multiplication for 64-bit floats with rounding mode
 pub fn mul_float64_with_rounding(
@@ -294,16 +296,17 @@ pub fn mul_float64_with_rounding(
         }
     }
 
-    // Handle underflow to denormal BEFORE rounding
-    // The mantissa currently has implicit bit at position 55 (52 mantissa + 3 guard)
+    // Handle underflow to denormal BEFORE rounding.
+    // The mantissa currently has implicit bit at position 55 (52 mantissa
+    // + 3 guard). Per IEEE 754-2019 sec 7.5, ``shift_right_sticky_u64``
+    // collapses any non-zero value shifted by ``>= 64`` to a sticky-1 bit
+    // -- the pre-fix code zero-filled at ``denorm_shift >= 56``, losing
+    // the sticky and forcing flush-to-zero under every rounding mode
+    // (bug class 2 mirror in f64).
     let mut is_denormal_result = false;
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
-        if denorm_shift < 56 {
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
-        } else {
-            result_mant = 0;
-        }
+        result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
         result_exp = 0;
         is_denormal_result = true;
     }
@@ -355,9 +358,17 @@ pub fn mul_float64_with_rounding(
         result = float64_zero(result_sign);
     }
 
-    // Overflow to infinity
+    // Overflow under directed rounding (IEEE 754-2019 sec 7.4): clamp to
+    // +/-max-finite for ``roundTowardZero`` and the opposite-sign cases of
+    // ``roundTowardPositive`` / ``roundTowardNegative``; saturate to
+    // +/-Inf for round-to-nearest modes and the matching-sign directed
+    // cases. Bug class 1 (per PR #49 -- f64 mirror of the f32 fix).
     if overflows_to_inf {
-        result = float64_infinity(result_sign);
+        if directed_overflow_saturates_to_inf(rounding_mode, result_sign) {
+            result = float64_infinity(result_sign);
+        } else {
+            result = float64_max_finite(result_sign);
+        }
     }
 
     // Handle zero inputs

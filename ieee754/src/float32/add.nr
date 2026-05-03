@@ -4,12 +4,13 @@
 
 use crate::float32::helpers::{
     float32_infinity, float32_is_denormal, float32_is_infinity, float32_is_nan, float32_is_zero,
-    float32_nan, float32_zero,
+    float32_max_finite, float32_nan, float32_zero,
 };
 use crate::types::{
     FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
+    ROUNDING_MODE_TOWARD_NEGATIVE,
 };
-use crate::utils::should_round_up;
+use crate::utils::{directed_overflow_saturates_to_inf, should_round_up};
 
 // IEEE 754 compliant addition for 32-bit floats with rounding mode
 pub fn add_float32_with_rounding(
@@ -183,13 +184,51 @@ pub fn add_float32_with_rounding(
 
     let mut result = normal_result;
     if result_is_zero {
-        result = float32_zero(0);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // exact-zero cancellation of opposite-sign operands of equal
+        // magnitude is `+0` under every rounding-direction attribute
+        // except roundTowardNegative, under which it is `-0`. The
+        // pre-fix circuit hard-coded `+0`. NB: like-sign zero sums fall
+        // through to the ``a_is_zero & b_is_zero`` clause below, which
+        // already implements 6.3 (`a.sign & b.sign`).
+        let cancellation_sign: u1 = if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float32_zero(cancellation_sign);
     }
     if overflows_to_inf {
-        result = float32_infinity(result_sign);
+        // IEEE 754-2019 sec 7.4 (overflow under directed rounding): under
+        // ``roundTowardZero`` the overflow result is the destination's
+        // largest finite with the sign of the intermediate result; under
+        // ``roundTowardPositive`` / ``roundTowardNegative`` it is +/- Inf
+        // when the rounding direction matches the result sign and
+        // +/- max-finite otherwise. Round-to-nearest modes always go to
+        // +/- Inf. ``directed_overflow_saturates_to_inf`` centralises the
+        // rule (bug class 1, per PR #49).
+        if directed_overflow_saturates_to_inf(rounding_mode, result_sign) {
+            result = float32_infinity(result_sign);
+        } else {
+            result = float32_max_finite(result_sign);
+        }
     }
     if a_is_zero & b_is_zero {
-        result = float32_zero(a.sign & b.sign);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // for two operand zeros (the early short-circuit path), the sum
+        // shares the sign of both operands when they agree
+        // (``+0 + +0 = +0``, ``-0 + -0 = -0``); for opposite signs the
+        // sum is ``+0`` under every rounding-direction attribute except
+        // ``roundTowardNegative``, under which it is ``-0``.
+        let signs_match = a.sign == b.sign;
+        let zero_sign: u1 = if signs_match {
+            a.sign
+        } else if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float32_zero(zero_sign);
     } else if a_is_zero {
         result = b;
     } else if b_is_zero {

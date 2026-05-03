@@ -4,12 +4,13 @@
 
 use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
-    float64_nan, float64_zero,
+    float64_max_finite, float64_nan, float64_zero,
 };
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
+    ROUNDING_MODE_TOWARD_NEGATIVE,
 };
-use crate::utils::should_round_up_8bit;
+use crate::utils::{directed_overflow_saturates_to_inf, should_round_up_8bit};
 
 // IEEE 754 compliant addition for 64-bit doubles with rounding mode
 pub fn add_float64_with_rounding(
@@ -219,13 +220,46 @@ pub fn add_float64_with_rounding(
 
     let mut result = normal_result;
     if (result_mant == 0) & (result_sticky == 0) {
-        result = float64_zero(0);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // when the sum of two opposite-signed operands of equal magnitude
+        // (or the difference of two like-signed operands of equal magnitude)
+        // is exactly zero, the sign of that exact-zero sum is `+` under
+        // every rounding-direction attribute except roundTowardNegative,
+        // under which it is `-`. The pre-fix circuit hard-coded `+0`, which
+        // is wrong for RNDD. NB: only opposite-sign cancellation reaches
+        // this branch -- like-sign sums of zero come from the
+        // ``a_is_zero & b_is_zero`` clause below, which already implements
+        // 6.3 (`a.sign & b.sign`).
+        let cancellation_sign: u1 = if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float64_zero(cancellation_sign);
     }
     if overflows_to_inf {
-        result = float64_infinity(result_sign);
+        // IEEE 754-2019 sec 7.4: directed rounding may clamp overflow to
+        // +/-max-finite instead of +/-Inf. Bug class 1 (per PR #49).
+        if directed_overflow_saturates_to_inf(rounding_mode, result_sign) {
+            result = float64_infinity(result_sign);
+        } else {
+            result = float64_max_finite(result_sign);
+        }
     }
     if a_is_zero & b_is_zero {
-        result = float64_zero(a.sign & b.sign);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // matching signs propagate; opposite-sign zero operands sum to
+        // ``+0`` under every rounding-direction attribute except
+        // ``roundTowardNegative``, which yields ``-0``.
+        let signs_match = a.sign == b.sign;
+        let zero_sign: u1 = if signs_match {
+            a.sign
+        } else if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float64_zero(zero_sign);
     } else if a_is_zero {
         result = b;
     } else if b_is_zero {
