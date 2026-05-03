@@ -9,6 +9,9 @@ focused on Noir-test emission. The submodule layout is:
   ``render_special_or_hex`` for emitting Noir source.
 - :mod:`fptest` -- IBM FPgen ``.fptest`` parser plus the ``fp_value_to_bits``
   helper.
+- :mod:`reference` -- MPFR-backed (``gmpy2``) reference oracle for the
+  expected result of ``a op b`` under any IEEE 754 rounding mode.
+  ``compute_expected_bits`` is the public entry point.
 """
 
 from . import constants

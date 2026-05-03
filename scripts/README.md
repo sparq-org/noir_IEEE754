@@ -1,4 +1,31 @@
-# `noir_IEEE754` benchmarking scripts
+# `noir_IEEE754` scripts
+
+## Python dependencies
+
+The test-generation pipeline uses [`gmpy2`](https://gmpy2.readthedocs.io/)
+(MPFR-backed arbitrary-precision floats) as the reference oracle for
+non-default IEEE 754 rounding modes. `gmpy2` requires native libraries
+(GMP / MPFR / MPC) that have to be installed before `pip install`:
+
+| Platform | Native deps install |
+|----------|---------------------|
+| macOS (Homebrew) | `brew install gmp mpfr libmpc` |
+| Debian / Ubuntu | `sudo apt install libgmp-dev libmpfr-dev libmpc-dev` |
+| Fedora | `sudo dnf install gmp-devel mpfr-devel libmpc-devel` |
+| Windows | Non-trivial; prefer WSL or rely on a binary wheel from PyPI (`pip install gmpy2` may use a prebuilt wheel; falling back to a source build needs the GMP / MPFR / MPC headers on `INCLUDE` / `LIB`). |
+
+Once the native deps are present:
+
+```sh
+pip install -r scripts/requirements.txt
+```
+
+The `scripts/test_reference.py` cross-check (run as part of CI) confirms the
+MPFR route and the legacy `float.fromhex` + `struct.pack` route produce
+byte-identical results under round-to-nearest-even, which is what the
+shipping test corpus uses today. When non-default rounding modes are
+unblocked in the test suite, the MPFR route automatically takes over for
+those cases (see `scripts/noir_ieee754_inputs/reference.py`).
 
 ## `benchmark_gates.py`
 

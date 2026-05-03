@@ -63,6 +63,9 @@ from noir_ieee754_inputs.fptest import (  # noqa: E402
     fp_value_to_bits64,
     parse_fptest_file,
 )
+from noir_ieee754_inputs.reference import (  # noqa: E402
+    compute_expected_bits as _mpfr_expected_bits,
+)
 
 
 # IEEE 754 conversion utilities using Python's struct module
@@ -440,8 +443,27 @@ def generate_noir_test_name(test: TestCase, index: int, force_f64: bool = False)
     return f"test_{precision}_{op}_{index}"
 
 
-def _compute_expected_bits(test: 'TestCase', f1: float, f2: float, is_float32: bool) -> tuple[int, bool]:
-    """Compute the expected result bits for this test case using Python's hardware float.
+def _compute_expected_bits(
+    test: 'TestCase',
+    f1: float,
+    f2: float,
+    is_float32: bool,
+    bits1: Optional[int] = None,
+    bits2: Optional[int] = None,
+) -> tuple[int, bool]:
+    """Compute the expected result bits for this test case.
+
+    Routing:
+
+    * Round-to-nearest-even (the only mode the current corpus emits) stays on
+      the legacy ``float`` + ``struct`` fast path. ``test_reference.py`` proves
+      it's byte-identical to the MPFR route, so this preserves the shipping
+      corpus exactly.
+    * Every other rounding mode is delegated to
+      :func:`noir_ieee754_inputs.reference.compute_expected_bits`, which uses
+      ``gmpy2.mpfr`` with an IEEE-shaped context. ``generate_noir_test``
+      currently still skips non-RNE cases at the call site, so this branch is
+      reachable only when that gate lifts -- but the wiring is now in place.
 
     Returns (expected_bits, is_nan). The bit value is purely informational
     when ``is_nan`` is true: callers emit a ``floatN_is_nan`` predicate
@@ -451,6 +473,30 @@ def _compute_expected_bits(test: 'TestCase', f1: float, f2: float, is_float32: b
     if test.result.is_nan:
         return (FLOAT32_NAN if is_float32 else FLOAT64_NAN), True
 
+    if test.rounding != RoundingMode.NEAREST_EVEN:
+        # MPFR-backed path. The caller passes operand bit patterns when this
+        # branch is reachable; if not, fall back to repacking f1 / f2 (which
+        # is RNE only and therefore wrong for the non-RNE inputs we'd see
+        # here -- log loudly in case the caller forgot).
+        if bits1 is None or bits2 is None:
+            raise RuntimeError(
+                "_compute_expected_bits: non-RNE rounding requires bits1 / "
+                "bits2 to be provided so the MPFR oracle can reproduce the "
+                "exact operand bit patterns."
+            )
+        precision = 24 if is_float32 else 53
+        result_bits = _mpfr_expected_bits(
+            test.operation, bits1, bits2, test.rounding, precision
+        )
+        # MPFR canonicalises NaNs to a single bit pattern, but the caller has
+        # already returned early on test.result.is_nan, so any NaN we see
+        # here is a runtime NaN (e.g. 0/0) and we treat it the same way.
+        nan_bits = FLOAT32_NAN if is_float32 else FLOAT64_NAN
+        if result_bits == nan_bits:
+            return result_bits, True
+        return result_bits, False
+
+    # Round-to-nearest-even fast path.
     if test.operation == Operation.ADD:
         result_float = f1 + f2
     elif test.operation == Operation.SUBTRACT:
@@ -544,7 +590,9 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     if not test.operand2.is_zero and f2 == 0:
         return None  # operand2 underflowed to zero (division by zero)
     
-    expected, result_is_nan = _compute_expected_bits(test, f1, f2, is_float32)
+    expected, result_is_nan = _compute_expected_bits(
+        test, f1, f2, is_float32, bits1=bits1, bits2=bits2
+    )
     
     # Determine the Noir function to call
     op_func_map = {
