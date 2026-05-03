@@ -113,7 +113,129 @@ BENCHMARKS = {
 # the headline `benchmarks` table.
 # ---------------------------------------------------------------------------
 
-PRIMITIVE_BENCHMARKS = {}
+PRIMITIVE_BENCHMARKS = {
+    # -- Isolated: the verifier on its own vs. the in-tree baseline copied
+    #    from `ieee754/src/utils.rs::shift_right_sticky_u64`. The shift is
+    #    a `pub u64` witness so constant-folding cannot collapse the
+    #    runtime branch.
+    "shr_sticky_u64_isolated_verified": {
+        "extra_use": "use ieee754::shift_right_sticky_u64_verified;",
+        "prelude": "",
+        "inputs": "value: pub u64, shift: pub u64",
+        "body": """
+    shift_right_sticky_u64_verified(value, shift)
+""",
+        "return_type": "pub u64",
+    },
+    "shr_sticky_u64_isolated_baseline": {
+        "extra_use": "",
+        "prelude": """
+fn shr_sticky_u64_baseline(value: u64, shift: u64) -> u64 {
+    if shift == 0 {
+        value
+    } else if shift >= 64 {
+        if value != 0 {
+            1
+        } else {
+            0
+        }
+    } else {
+        let mask = (1 << shift) - 1;
+        let shifted_out = value & mask;
+        let result = value >> shift;
+        if shifted_out != 0 {
+            result | 1
+        } else {
+            result
+        }
+    }
+}
+""",
+        "inputs": "value: pub u64, shift: pub u64",
+        "body": """
+    shr_sticky_u64_baseline(value, shift)
+""",
+        "return_type": "pub u64",
+    },
+    # -- Composed: emulate the denormal-mantissa shift step that float64
+    #    `mul`, `div`, and `sqrt` perform (a `shift_right_sticky_u64` driven
+    #    by a witness-dependent `denorm_shift`). The baseline copies the
+    #    in-tree code; the candidate replaces it with the verified primitive.
+    #    This is the measurement that actually answers
+    #    "should we swap call sites?".
+    "shr_sticky_u64_composed_verified": {
+        "extra_use": "use ieee754::shift_right_sticky_u64_verified;",
+        "prelude": """
+fn denorm_shift_verified(result_mant: u64, result_exp: i64) -> (u64, u64) {
+    let mut new_mant: u64 = result_mant;
+    let mut new_exp: u64 = 0;
+    if result_exp <= 0 {
+        let denorm_shift = (1 - result_exp) as u64;
+        if denorm_shift < 56 {
+            new_mant = shift_right_sticky_u64_verified(result_mant, denorm_shift);
+        } else {
+            new_mant = 0;
+        }
+    } else {
+        new_exp = result_exp as u64;
+    }
+    (new_mant, new_exp)
+}
+""",
+        "inputs": "result_mant: pub u64, result_exp: pub i64",
+        "body": """
+    let (m, e) = denorm_shift_verified(result_mant, result_exp);
+    m + e
+""",
+        "return_type": "pub u64",
+    },
+    "shr_sticky_u64_composed_baseline": {
+        "extra_use": "",
+        "prelude": """
+fn shr_sticky_u64_baseline(value: u64, shift: u64) -> u64 {
+    if shift == 0 {
+        value
+    } else if shift >= 64 {
+        if value != 0 {
+            1
+        } else {
+            0
+        }
+    } else {
+        let mask = (1 << shift) - 1;
+        let shifted_out = value & mask;
+        let result = value >> shift;
+        if shifted_out != 0 {
+            result | 1
+        } else {
+            result
+        }
+    }
+}
+fn denorm_shift_baseline(result_mant: u64, result_exp: i64) -> (u64, u64) {
+    let mut new_mant: u64 = result_mant;
+    let mut new_exp: u64 = 0;
+    if result_exp <= 0 {
+        let denorm_shift = (1 - result_exp) as u64;
+        if denorm_shift < 56 {
+            new_mant = shr_sticky_u64_baseline(result_mant, denorm_shift);
+        } else {
+            new_mant = 0;
+        }
+    } else {
+        new_exp = result_exp as u64;
+    }
+    (new_mant, new_exp)
+}
+""",
+        "inputs": "result_mant: pub u64, result_exp: pub i64",
+        "body": """
+    let (m, e) = denorm_shift_baseline(result_mant, result_exp);
+    m + e
+""",
+        "return_type": "pub u64",
+    },
+}
 
 
 def create_primitive_benchmark_project(tmpdir: Path, name: str, benchmark: dict) -> Path:
