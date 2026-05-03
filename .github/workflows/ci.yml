@@ -18,6 +18,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # Default ``pull_request`` types are ``[opened, synchronize, reopened]``;
+    # crucially that excludes ``ready_for_review``. Since ``ieee754-tests``
+    # is gated on ``draft != true``, we MUST run CI when a draft PR is
+    # marked ready (and re-gate when a ready PR is reverted to draft) so
+    # that the full IEEE 754 matrix runs before any merge from a PR that
+    # was opened in draft.
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
 
 jobs:
