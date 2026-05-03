@@ -9,7 +9,9 @@ use crate::float32::helpers::{
 use crate::types::{
     FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
 };
-use crate::utils::{directed_overflow_saturates_to_inf, shift_right_sticky_u64, should_round_up_4bit};
+use crate::utils::{
+    directed_overflow_saturates_to_inf, shift_right_sticky_u64, should_round_up_4bit,
+};
 
 // IEEE 754 compliant division for 32-bit floats with rounding mode
 pub fn div_float32_with_rounding(
