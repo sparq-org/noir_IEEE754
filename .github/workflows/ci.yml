@@ -216,12 +216,20 @@ jobs:
             echo "Unit tests failed"
             exit 1
           fi
-          # ``ieee754-tests`` is gated on PR-draft state above, so a
-          # draft-mode skip surfaces as ``skipped`` here. Treat skipped as
-          # acceptable; require ``success`` only in the non-skipped case.
-          if [ "${{ needs.ieee754-tests.result }}" != "success" ] \
-             && [ "${{ needs.ieee754-tests.result }}" != "skipped" ]; then
-            echo "IEEE 754 tests failed"
+          # ``ieee754-tests`` is gated on PR-draft state in its job-level
+          # ``if:``. Accept ``skipped`` ONLY when this run is itself a
+          # draft pull_request -- never on push (main) or on a ready
+          # pull_request. Any other ``skipped`` (empty matrix, future
+          # workflow-condition regression) must fail the summary loudly
+          # rather than masquerade as a green main.
+          IEEE754_RESULT="${{ needs.ieee754-tests.result }}"
+          IS_DRAFT_PR="${{ github.event_name == 'pull_request' && github.event.pull_request.draft == true }}"
+          if [ "$IEEE754_RESULT" = "success" ]; then
+            : # ok
+          elif [ "$IEEE754_RESULT" = "skipped" ] && [ "$IS_DRAFT_PR" = "true" ]; then
+            echo "IEEE 754 tests skipped (draft PR; full matrix runs at ready-for-review)"
+          else
+            echo "IEEE 754 tests result=$IEEE754_RESULT, is_draft_pr=$IS_DRAFT_PR"
             exit 1
           fi
           if [ "${{ needs.generate-tests.result }}" != "success" ]; then
