@@ -181,13 +181,19 @@ def fp_value_to_bits(val: FPValue, is_float32: bool = True) -> int:
     """
     if val.is_nan:
         if val.is_snan:
-            # Legacy "low-bit payload" SNaN encoding the generator has always
-            # emitted; the Noir library uses 0x7FA00000 / 0x7FF4_..._0000
-            # instead. Both are valid SNaN per IEEE 754-2019 sec 6.2.1; the
-            # design doc tracks the alignment as an open question (Q.C.3),
-            # so this round preserves byte-for-byte parity with previous
-            # generator output.
-            return 0x7F800001 if is_float32 else 0x7FF0000000000001
+            # Library-canonical SNaN encoding (decision C.3, 2026-05-03):
+            # ``FLOAT32_SIGNALING_NAN`` / ``FLOAT64_SIGNALING_NAN`` are the
+            # exact bit patterns the Noir library produces from its own
+            # SNaN-handling paths, so emitting them here keeps the generator
+            # and the library aligned. NaN-result tests assert via
+            # ``floatN_is_nan`` and therefore do not depend on this choice;
+            # SNaN *operand* encodings now match the library so quietened
+            # expectations (e.g. ``S * x -> qNaN``) round-trip cleanly.
+            return (
+                constants.FLOAT32_SIGNALING_NAN
+                if is_float32
+                else constants.FLOAT64_SIGNALING_NAN
+            )
         return constants.FLOAT32_NAN if is_float32 else constants.FLOAT64_NAN
     if val.is_inf:
         if is_float32:
