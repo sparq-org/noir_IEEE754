@@ -8,6 +8,7 @@ use crate::float64::helpers::{
 };
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
+    ROUNDING_MODE_TOWARD_NEGATIVE,
 };
 use crate::utils::should_round_up_8bit;
 
@@ -219,7 +220,22 @@ pub fn add_float64_with_rounding(
 
     let mut result = normal_result;
     if (result_mant == 0) & (result_sticky == 0) {
-        result = float64_zero(0);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // when the sum of two opposite-signed operands of equal magnitude
+        // (or the difference of two like-signed operands of equal magnitude)
+        // is exactly zero, the sign of that exact-zero sum is `+` under
+        // every rounding-direction attribute except roundTowardNegative,
+        // under which it is `-`. The pre-fix circuit hard-coded `+0`, which
+        // is wrong for RNDD. NB: only opposite-sign cancellation reaches
+        // this branch -- like-sign sums of zero come from the
+        // ``a_is_zero & b_is_zero`` clause below, which already implements
+        // 6.3 (`a.sign & b.sign`).
+        let cancellation_sign: u1 = if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float64_zero(cancellation_sign);
     }
     if overflows_to_inf {
         result = float64_infinity(result_sign);

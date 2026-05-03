@@ -87,11 +87,6 @@ KNOWN_BAD_TESTS_BY_ROUNDING: set[tuple[str, str, str, str]] = {
     # f32 ADD round-toward-negative underflow flush-to-zero (bug class 2):
     # tiny denormal sum should round up to +min-denormal under RNDD.
     ("b32", "+", "<", "b32+ < +0.000064P-126 -0.000063P-126 -> +0.000001P-126"),
-    # The same source line, generated as f64 under ``--generate-f64``: the
-    # operands are exact in f64 but the f64 add-with-RNDD circuit produces
-    # a wrong sign of zero (expected -0 by IEEE 754 sec 6.3, got +0). This
-    # is a b64 manifestation of bug class 2's signed-zero handling.
-    ("b64", "+", "<", "b32+ < +0.000064P-126 -0.000063P-126 -> +0.000001P-126"),
     # f32 ADD round-toward-negative overflow boundary (bug class 1).
     ("b32", "+", "<", "b32+ < +1.682A0BP127 +1.789BF2P127 -> +1.7FFFFFP127 xo"),
     ("b32", "+", "<", "b32+ < +1.72F71CP127 +1.536292P127 -> +1.7FFFFFP127 xo"),

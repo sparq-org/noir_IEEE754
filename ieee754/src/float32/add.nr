@@ -8,6 +8,7 @@ use crate::float32::helpers::{
 };
 use crate::types::{
     FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
+    ROUNDING_MODE_TOWARD_NEGATIVE,
 };
 use crate::utils::should_round_up;
 
@@ -183,7 +184,19 @@ pub fn add_float32_with_rounding(
 
     let mut result = normal_result;
     if result_is_zero {
-        result = float32_zero(0);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // exact-zero cancellation of opposite-sign operands of equal
+        // magnitude is `+0` under every rounding-direction attribute
+        // except roundTowardNegative, under which it is `-0`. The
+        // pre-fix circuit hard-coded `+0`. NB: like-sign zero sums fall
+        // through to the ``a_is_zero & b_is_zero`` clause below, which
+        // already implements 6.3 (`a.sign & b.sign`).
+        let cancellation_sign: u1 = if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float32_zero(cancellation_sign);
     }
     if overflows_to_inf {
         result = float32_infinity(result_sign);
