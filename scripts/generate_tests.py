@@ -28,12 +28,41 @@ import os
 import random
 import re
 import struct
+import sys
 import urllib.request
 import urllib.error
-from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 from typing import Optional
+
+# Make the colocated input-prep package importable when this script is run as
+# a top-level module from any working directory.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from noir_ieee754_inputs.constants import (  # noqa: E402
+    FLOAT32_INFINITY,
+    FLOAT32_NAN,
+    FLOAT32_NEG_INFINITY,
+    FLOAT64_INFINITY,
+    FLOAT64_MANTISSA_MASK,
+    FLOAT64_MAX_DENORMAL,
+    FLOAT64_MIN_DENORMAL,
+    FLOAT64_NAN,
+    FLOAT64_NEG_INFINITY,
+    FLOAT64_NEG_ZERO,
+    FLOAT64_ONE,
+    f64_pack,
+    render_special_or_hex,
+)
+from noir_ieee754_inputs.fptest import (  # noqa: E402
+    FPValue,
+    Operation,
+    Precision,
+    RoundingMode,
+    TestCase,
+    fp_value_to_bits32,
+    fp_value_to_bits64,
+    parse_fptest_file,
+)
 
 
 # IEEE 754 conversion utilities using Python's struct module
@@ -81,15 +110,6 @@ AVAILABLE_TEST_FILES = [
 # Default cache directory (relative to script location)
 DEFAULT_CACHE_DIR = ".ieee754_test_cache"
 
-# Known bad test cases in the IBM FPgen test suite (bugs in expected values)
-# Format: set of (raw_line_without_flags,) tuples - we match by the operation + operands
-KNOWN_BAD_TESTS = {
-    # Divide-Divide-By-Zero-Exception.fptest line 6: incorrect expected result
-    # +1.2CEE1BP-64 / +1.50EFBDP-30 should give 0x2E64A490, not 0x2E29F109
-    "b32/ =0 +1.2CEE1BP-64 +1.50EFBDP-30",
-    "b32/ =0 oz +1.2CEE1BP-64 +1.50EFBDP-30",  # Same test with overflow flag
-}
-
 
 def generate_synthetic_f64_tests() -> list['TestCase']:
     """Generate synthetic float64 test cases for corner cases.
@@ -123,203 +143,10 @@ def generate_synthetic_f64_tests() -> list['TestCase']:
     return tests
 
 
-class Precision(Enum):
-    BINARY32 = "b32"
-    BINARY64 = "b64"
-
-
-class Operation(Enum):
-    ADD = "+"
-    SUBTRACT = "-"
-    MULTIPLY = "*"
-    DIVIDE = "/"
-    FMA = "*+"
-    SQRT = "V"
-    REM = "%"
-
-
-class RoundingMode(Enum):
-    NEAREST_EVEN = "=0"
-    NEAREST_AWAY = "=^"
-    TOWARD_POSITIVE = ">"
-    TOWARD_NEGATIVE = "<"
-    TOWARD_ZERO = "0"
-
-
-@dataclass
-class FPValue:
-    """Represents a floating-point value from the test file."""
-    sign: int  # 0 for positive, 1 for negative
-    significand: str  # hex string without the leading 1. part
-    exponent: int  # unbiased exponent
-    is_zero: bool = False
-    is_inf: bool = False
-    is_nan: bool = False
-    is_snan: bool = False  # signaling NaN
-
-
-@dataclass
-class TestCase:
-    """Represents a single test case."""
-    precision: Precision
-    operation: Operation
-    rounding: RoundingMode
-    operand1: FPValue
-    operand2: Optional[FPValue]
-    operand3: Optional[FPValue]  # for FMA
-    result: FPValue
-    exception_flags: str
-    line_number: int
-    raw_line: str
-
-
-def parse_fp_value(value_str: str) -> FPValue:
-    """
-    Parse a floating-point value from the test file format.
-    
-    Format: <sign><significand>P<exponent>
-    Examples: +1.01FD72P-118, -0.7FFFFFP-126, +Inf, -Zero, Q, S
-    """
-    value_str = value_str.strip()
-    
-    # Handle special values
-    if value_str in ("+Inf", "Inf"):
-        return FPValue(sign=0, significand="", exponent=0, is_inf=True)
-    if value_str == "-Inf":
-        return FPValue(sign=1, significand="", exponent=0, is_inf=True)
-    if value_str in ("+Zero", "Zero"):
-        return FPValue(sign=0, significand="", exponent=0, is_zero=True)
-    if value_str == "-Zero":
-        return FPValue(sign=1, significand="", exponent=0, is_zero=True)
-    if value_str == "Q":  # Quiet NaN
-        return FPValue(sign=0, significand="", exponent=0, is_nan=True)
-    if value_str == "S":  # Signaling NaN
-        return FPValue(sign=0, significand="", exponent=0, is_nan=True, is_snan=True)
-    if value_str == "#":  # Generic result (don't care)
-        return FPValue(sign=0, significand="", exponent=0, is_nan=True)
-    
-    # Parse regular values: <sign><significand>P<exponent>
-    # Examples: +1.01FD72P-118, -0.7FFFFFP-126
-    match = re.match(r'^([+-]?)(\d+)\.([0-9A-Fa-f]+)P([+-]?\d+)$', value_str)
-    if not match:
-        raise ValueError(f"Cannot parse FP value: {value_str}")
-    
-    sign_str, int_part, frac_part, exp_str = match.groups()
-    sign = 1 if sign_str == '-' else 0
-    exponent = int(exp_str)
-    
-    # Combine integer and fractional parts
-    # int_part is typically 0 or 1
-    significand = int_part + frac_part
-    
-    return FPValue(sign=sign, significand=significand, exponent=exponent)
-
-
-# Special bit patterns for IEEE 754
-_FLOAT32_SPECIAL = {
-    'qnan': 0x7FC00000,
-    'snan': 0x7F800001,
-    'pos_inf': 0x7F800000,
-    'neg_inf': 0xFF800000,
-    'pos_zero': 0x00000000,
-    'neg_zero': 0x80000000,
-}
-
-_FLOAT64_SPECIAL = {
-    'qnan': 0x7FF8000000000000,
-    'snan': 0x7FF0000000000001,
-    'pos_inf': 0x7FF0000000000000,
-    'neg_inf': 0xFFF0000000000000,
-    'pos_zero': 0x0000000000000000,
-    'neg_zero': 0x8000000000000000,
-}
-
-
-def fp_value_to_bits(val: FPValue, is_float32: bool = True) -> int:
-    """Convert an FPValue to IEEE 754 bits using direct bit manipulation.
-    
-    The test format uses 24 bits (6 hex digits) for float32 mantissa and 
-    52 bits (13 hex digits) for float64. We convert directly to avoid
-    precision loss from Python float arithmetic.
-    """
-    special = _FLOAT32_SPECIAL if is_float32 else _FLOAT64_SPECIAL
-    
-    if val.is_nan:
-        return special['snan'] if val.is_snan else special['qnan']
-    if val.is_inf:
-        return special['neg_inf'] if val.sign else special['pos_inf']
-    if val.is_zero:
-        return special['neg_zero'] if val.sign else special['pos_zero']
-    
-    # Parse significand: "1" + hex_fraction or "0" + hex_fraction (for denormals)
-    int_part = int(val.significand[0])
-    frac_hex = val.significand[1:]
-    
-    if is_float32:
-        # Float32: 23-bit mantissa, 8-bit exponent (bias 127)
-        MANTISSA_BITS = 23
-        EXP_BIAS = 127
-        EXP_MAX = 254  # Max normal exponent (biased)
-        # Test format uses 6 hex digits = 24 bits, we need 23
-        # Pad/truncate to exactly 6 hex digits
-        frac_hex_padded = frac_hex.ljust(6, '0')[:6]
-        frac_bits_24 = int(frac_hex_padded, 16)
-        # Round from 24 bits to 23 bits (round to nearest, ties to even).
-        # No sticky bits apply here: a 24-bit value rounded to 23 bits has no
-        # bits beyond the round bit, so the half-way tie reduces to "round up
-        # only when the LSB of the result is odd".
-        lsb = (frac_bits_24 >> 1) & 1
-        round_bit = frac_bits_24 & 1
-        frac_bits_23 = frac_bits_24 >> 1
-        if round_bit and lsb:  # exact half, LSB odd -> round up to even
-            frac_bits_23 += 1
-        mantissa = frac_bits_23 & 0x7FFFFF
-    else:
-        # Float64: 52-bit mantissa, 11-bit exponent (bias 1023)
-        MANTISSA_BITS = 52
-        EXP_BIAS = 1023
-        EXP_MAX = 2046
-        # Test format uses 13 hex digits = 52 bits exactly
-        frac_hex_padded = frac_hex.ljust(13, '0')[:13]
-        mantissa = int(frac_hex_padded, 16) & ((1 << 52) - 1)
-    
-    # Calculate biased exponent
-    biased_exp = val.exponent + EXP_BIAS
-    
-    # Handle denormals (int_part == 0) and normal numbers (int_part == 1)
-    if int_part == 0:
-        # Denormal: exponent field is 0, mantissa as-is
-        biased_exp = 0
-    elif biased_exp <= 0:
-        # Underflow to denormal
-        biased_exp = 0
-    elif biased_exp > EXP_MAX:
-        # Overflow to infinity
-        return special['neg_inf'] if val.sign else special['pos_inf']
-    
-    # Assemble IEEE 754 bits
-    if is_float32:
-        bits = (val.sign << 31) | (biased_exp << 23) | mantissa
-    else:
-        bits = (val.sign << 63) | (biased_exp << 52) | mantissa
-    
-    return bits
-
-
-def fp_value_to_bits32(val: FPValue) -> int:
-    """Convert an FPValue to IEEE 754 binary32 bits."""
-    return fp_value_to_bits(val, is_float32=True)
-
-
-def fp_value_to_bits64(val: FPValue) -> int:
-    """Convert an FPValue to IEEE 754 binary64 bits."""
-    return fp_value_to_bits(val, is_float32=False)
-
-
 # Float64 layout constants (used by synthetic-f64 generators below).
+# ``FLOAT64_NEG_ZERO`` is the f64 sign-bit mask (bit 63) -- semantically the
+# same value as ``1 << 63``, named for what it actually is.
 _F64_BIAS = 1023
-_F64_SIGN_BIT = 1 << 63
-_F64_MANTISSA_MASK = (1 << 52) - 1
 
 
 def bits_to_fpvalue(bits: int) -> FPValue:
@@ -332,7 +159,7 @@ def bits_to_fpvalue(bits: int) -> FPValue:
     """
     sign = (bits >> 63) & 1
     exp = (bits >> 52) & 0x7FF
-    mant = bits & _F64_MANTISSA_MASK
+    mant = bits & FLOAT64_MANTISSA_MASK
 
     if exp == 0x7FF:
         if mant == 0:
@@ -349,7 +176,7 @@ def bits_to_fpvalue(bits: int) -> FPValue:
 
 def _random_sign_bit() -> int:
     """Return the f64 sign-bit mask with 50/50 probability, else 0."""
-    return _F64_SIGN_BIT if random.random() < 0.5 else 0
+    return FLOAT64_NEG_ZERO if random.random() < 0.5 else 0
 
 
 def _make_synthetic_f64_test(op: 'Operation', a_bits: int, b_bits: int, line_num: int, desc: str) -> 'TestCase':
@@ -402,8 +229,8 @@ def _gen_corner_div_denorm(start_line: int) -> list['TestCase']:
     for i in range(20):
         a_bits = random.randint(1, 0xFFFFFFFFFFF) | _random_sign_bit()
         b_exp = random.randint(900, 1023)
-        b_mant = random.randint(0, _F64_MANTISSA_MASK)
-        b_bits = (b_exp << 52) | b_mant | _random_sign_bit()
+        b_mant = random.randint(0, FLOAT64_MANTISSA_MASK)
+        b_bits = f64_pack(0, b_exp, b_mant) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.DIVIDE, a_bits, b_bits, start_line + i, f"corner_div_denorm_{i}"
         ))
@@ -416,10 +243,10 @@ def _gen_underflow_mul(start_line: int) -> list['TestCase']:
     for i in range(30):
         a_exp = random.randint(1, 50)
         b_exp = random.randint(1, 50)
-        a_mant = random.randint(0, _F64_MANTISSA_MASK)
-        b_mant = random.randint(0, _F64_MANTISSA_MASK)
-        a_bits = (a_exp << 52) | a_mant | _random_sign_bit()
-        b_bits = (b_exp << 52) | b_mant | _random_sign_bit()
+        a_mant = random.randint(0, FLOAT64_MANTISSA_MASK)
+        b_mant = random.randint(0, FLOAT64_MANTISSA_MASK)
+        a_bits = f64_pack(0, a_exp, a_mant) | _random_sign_bit()
+        b_bits = f64_pack(0, b_exp, b_mant) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.MULTIPLY, a_bits, b_bits, start_line + i, f"underflow_mul_{i}"
         ))
@@ -432,10 +259,10 @@ def _gen_underflow_div(start_line: int) -> list['TestCase']:
     for i in range(20):
         a_exp = random.randint(1, 100)
         b_exp = random.randint(1500, 2046)
-        a_mant = random.randint(0, _F64_MANTISSA_MASK)
-        b_mant = random.randint(0, _F64_MANTISSA_MASK)
-        a_bits = (a_exp << 52) | a_mant | _random_sign_bit()
-        b_bits = (b_exp << 52) | b_mant | _random_sign_bit()
+        a_mant = random.randint(0, FLOAT64_MANTISSA_MASK)
+        b_mant = random.randint(0, FLOAT64_MANTISSA_MASK)
+        a_bits = f64_pack(0, a_exp, a_mant) | _random_sign_bit()
+        b_bits = f64_pack(0, b_exp, b_mant) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.DIVIDE, a_bits, b_bits, start_line + i, f"underflow_div_{i}"
         ))
@@ -454,8 +281,8 @@ def _gen_hamming_add_sub(start_line: int) -> list['TestCase']:
     line_num = start_line
     for i in range(30):
         exp = random.randint(1, 2046)
-        mant = random.randint(1, (1 << 52) - 2)
-        base_bits = (exp << 52) | mant
+        mant = random.randint(1, FLOAT64_MANTISSA_MASK - 1)
+        base_bits = f64_pack(0, exp, mant)
         ulp_bits = base_bits + 1
 
         base = float64_from_bits(base_bits)
@@ -486,10 +313,10 @@ def _gen_sticky_mul(start_line: int) -> list['TestCase']:
     for i in range(30):
         exp_a = random.randint(500, 1500)
         exp_b = random.randint(500, 1500)
-        mant_a = random.randint((1 << 51), (1 << 52) - 1)
-        mant_b = random.randint((1 << 51), (1 << 52) - 1)
-        a_bits = (exp_a << 52) | mant_a | _random_sign_bit()
-        b_bits = (exp_b << 52) | mant_b | _random_sign_bit()
+        mant_a = random.randint((1 << 51), FLOAT64_MANTISSA_MASK)
+        mant_b = random.randint((1 << 51), FLOAT64_MANTISSA_MASK)
+        a_bits = f64_pack(0, exp_a, mant_a) | _random_sign_bit()
+        b_bits = f64_pack(0, exp_b, mant_b) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.MULTIPLY, a_bits, b_bits, start_line + i, f"sticky_mul_{i}"
         ))
@@ -502,8 +329,8 @@ def _gen_div_pow2(start_line: int) -> list['TestCase']:
     for i in range(20):
         exp_a = random.randint(100, 1900)
         exp_b = random.randint(100, 1900)
-        a_bits = (exp_a << 52) | _random_sign_bit()
-        b_bits = (exp_b << 52) | _random_sign_bit()
+        a_bits = f64_pack(0, exp_a, 0) | _random_sign_bit()
+        b_bits = f64_pack(0, exp_b, 0) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.DIVIDE, a_bits, b_bits, start_line + i, f"div_pow2_{i}"
         ))
@@ -517,8 +344,8 @@ def _gen_round_boundary(start_line: int) -> list['TestCase']:
         exp = random.randint(100, 1900)
         mant = random.randint(0, (1 << 48) - 1) << 4
         mant |= 0x8  # Set the guard bit at the midpoint.
-        a_bits = (exp << 52) | mant | _random_sign_bit()
-        b_bits = (1023 << 52) | _random_sign_bit()  # +-1.0
+        a_bits = f64_pack(0, exp, mant) | _random_sign_bit()
+        b_bits = FLOAT64_ONE | _random_sign_bit()  # +-1.0
         tests.append(_make_synthetic_f64_test(
             Operation.MULTIPLY, a_bits, b_bits, start_line + i, f"round_boundary_{i}"
         ))
@@ -531,10 +358,10 @@ def _gen_overflow_mul(start_line: int) -> list['TestCase']:
     for i in range(20):
         exp_a = random.randint(1800, 2046)
         exp_b = random.randint(1, 300)
-        mant_a = random.randint(0, _F64_MANTISSA_MASK)
-        mant_b = random.randint(0, _F64_MANTISSA_MASK)
-        a_bits = (exp_a << 52) | mant_a | _random_sign_bit()
-        b_bits = (exp_b << 52) | mant_b | _random_sign_bit()
+        mant_a = random.randint(0, FLOAT64_MANTISSA_MASK)
+        mant_b = random.randint(0, FLOAT64_MANTISSA_MASK)
+        a_bits = f64_pack(0, exp_a, mant_a) | _random_sign_bit()
+        b_bits = f64_pack(0, exp_b, mant_b) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.MULTIPLY, a_bits, b_bits, start_line + i, f"overflow_mul_{i}"
         ))
@@ -551,8 +378,8 @@ def _gen_denorm_normalize(start_line: int) -> list['TestCase']:
         a_bits = mant | _random_sign_bit()
 
         b_exp = random.randint(1, 100)
-        b_mant = random.randint(0, _F64_MANTISSA_MASK)
-        b_bits = (b_exp << 52) | b_mant | _random_sign_bit()
+        b_mant = random.randint(0, FLOAT64_MANTISSA_MASK)
+        b_bits = f64_pack(0, b_exp, b_mant) | _random_sign_bit()
 
         tests.append(_make_synthetic_f64_test(
             Operation.MULTIPLY, a_bits, b_bits, line_num, f"denorm_normalize_mul_{i}"
@@ -569,10 +396,10 @@ def _gen_denorm_to_normal(start_line: int) -> list['TestCase']:
     """Largest denormal multiplied by values straddling the normal threshold."""
     tests = []
     for i in range(10):
-        a_bits = 0x000FFFFFFFFFFFFF | _random_sign_bit()
+        a_bits = FLOAT64_MAX_DENORMAL | _random_sign_bit()
         b_exp = random.randint(1020, 1026)
-        b_mant = random.randint(0, _F64_MANTISSA_MASK)
-        b_bits = (b_exp << 52) | b_mant | _random_sign_bit()
+        b_mant = random.randint(0, FLOAT64_MANTISSA_MASK)
+        b_bits = f64_pack(0, b_exp, b_mant) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.MULTIPLY, a_bits, b_bits, start_line + i, f"denorm_to_normal_{i}"
         ))
@@ -583,137 +410,12 @@ def _gen_tiny_mul(start_line: int) -> list['TestCase']:
     """Smallest denormal multiplied by values near 1.0 (must not flush to zero incorrectly)."""
     tests = []
     for i in range(10):
-        a_bits = 0x0000000000000001 | _random_sign_bit()
+        a_bits = FLOAT64_MIN_DENORMAL | _random_sign_bit()
         b_exp = random.randint(1020, 1026)
-        b_bits = (b_exp << 52) | _random_sign_bit()
+        b_bits = f64_pack(0, b_exp, 0) | _random_sign_bit()
         tests.append(_make_synthetic_f64_test(
             Operation.MULTIPLY, a_bits, b_bits, start_line + i, f"tiny_mul_{i}"
         ))
-    return tests
-
-
-def parse_test_line(line: str, line_number: int) -> Optional[TestCase]:
-    """Parse a single test line from an .fptest file."""
-    line = line.strip()
-    
-    # Skip empty lines and comments
-    if not line or line.startswith('--') or line.startswith('#'):
-        return None
-    
-    # Skip headers like "Floating point tests: ..."
-    if line.startswith('Floating point tests') or line.startswith('Copyright'):
-        return None
-    
-    # Skip known bad tests (bugs in the IBM FPgen test suite)
-    # We check if the line starts with any known bad prefix
-    for bad_prefix in KNOWN_BAD_TESTS:
-        if line.startswith(bad_prefix):
-            return None
-    
-    # Parse precision and operation
-    # Format: b32+ or b64- or b32* etc.
-    match = re.match(r'^(b32|b64)(\+|-|\*|/|\*\+|V|%)\s+(.*)$', line)
-    if not match:
-        return None
-    
-    precision_str, op_str, rest = match.groups()
-    
-    try:
-        precision = Precision(precision_str)
-    except ValueError:
-        return None
-    
-    op_map = {
-        '+': Operation.ADD,
-        '-': Operation.SUBTRACT,
-        '*': Operation.MULTIPLY,
-        '/': Operation.DIVIDE,
-        '*+': Operation.FMA,
-        'V': Operation.SQRT,
-        '%': Operation.REM,
-    }
-    
-    if op_str not in op_map:
-        return None
-    operation = op_map[op_str]
-    
-    # Parse rounding mode
-    rounding_match = re.match(r'^(=0|=\^|>|<|0)\s+(.*)$', rest)
-    if not rounding_match:
-        return None
-    
-    rounding_str, rest = rounding_match.groups()
-    
-    rounding_map = {
-        '=0': RoundingMode.NEAREST_EVEN,
-        '=^': RoundingMode.NEAREST_AWAY,
-        '>': RoundingMode.TOWARD_POSITIVE,
-        '<': RoundingMode.TOWARD_NEGATIVE,
-        '0': RoundingMode.TOWARD_ZERO,
-    }
-    rounding = rounding_map.get(rounding_str)
-    if not rounding:
-        return None
-    
-    # Check for exception flags before operands
-    exception_flags = ""
-    exc_match = re.match(r'^([iI])\s+(.*)$', rest)
-    if exc_match:
-        exception_flags = exc_match.group(1)
-        rest = exc_match.group(2)
-    
-    # Split by -> to get operands and result
-    if ' -> ' not in rest:
-        return None
-    
-    operands_str, result_str = rest.split(' -> ', 1)
-    
-    # Parse result and result flags
-    result_parts = result_str.split()
-    if not result_parts:
-        return None
-    
-    result_value_str = result_parts[0]
-    result_flags = ' '.join(result_parts[1:]) if len(result_parts) > 1 else ''
-    
-    # Parse operands (space-separated)
-    operand_strs = operands_str.split()
-    if not operand_strs:
-        return None
-    
-    try:
-        operand1 = parse_fp_value(operand_strs[0])
-        operand2 = parse_fp_value(operand_strs[1]) if len(operand_strs) > 1 else None
-        operand3 = parse_fp_value(operand_strs[2]) if len(operand_strs) > 2 else None
-        result = parse_fp_value(result_value_str)
-    except ValueError as e:
-        # Skip malformed values
-        return None
-    
-    return TestCase(
-        precision=precision,
-        operation=operation,
-        rounding=rounding,
-        operand1=operand1,
-        operand2=operand2,
-        operand3=operand3,
-        result=result,
-        exception_flags=exception_flags + result_flags,
-        line_number=line_number,
-        raw_line=line,
-    )
-
-
-def parse_fptest_file(filepath: str) -> list[TestCase]:
-    """Parse all test cases from an .fptest file."""
-    tests = []
-    
-    with open(filepath, 'r') as f:
-        for line_num, line in enumerate(f, 1):
-            test = parse_test_line(line, line_num)
-            if test:
-                tests.append(test)
-    
     return tests
 
 
@@ -741,11 +443,13 @@ def generate_noir_test_name(test: TestCase, index: int, force_f64: bool = False)
 def _compute_expected_bits(test: 'TestCase', f1: float, f2: float, is_float32: bool) -> tuple[int, bool]:
     """Compute the expected result bits for this test case using Python's hardware float.
 
-    Returns (expected_bits, is_nan).
+    Returns (expected_bits, is_nan). The bit value is purely informational
+    when ``is_nan`` is true: callers emit a ``floatN_is_nan`` predicate
+    rather than a bit-equality assertion (see C.3 in the design doc -- this
+    side-steps the SNaN-encoding question).
     """
     if test.result.is_nan:
-        expected = _FLOAT32_SPECIAL['qnan'] if is_float32 else _FLOAT64_SPECIAL['qnan']
-        return expected, True
+        return (FLOAT32_NAN if is_float32 else FLOAT64_NAN), True
 
     if test.operation == Operation.ADD:
         result_float = f1 + f2
@@ -755,20 +459,20 @@ def _compute_expected_bits(test: 'TestCase', f1: float, f2: float, is_float32: b
         result_float = f1 * f2
     elif test.operation == Operation.DIVIDE:
         if f2 == 0:
-            # Division by zero — fall back to the test file's expected bits since
-            # Python raises ZeroDivisionError instead of producing IEEE Inf/NaN.
+            # Division by zero -- fall back to the test file's expected bits
+            # since Python raises ZeroDivisionError instead of producing
+            # IEEE Inf/NaN.
             to_bits_result = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
             return to_bits_result(test.result), False
         result_float = f1 / f2
 
     if math.isnan(result_float):
-        expected = _FLOAT32_SPECIAL['qnan'] if is_float32 else _FLOAT64_SPECIAL['qnan']
-        return expected, True
+        return (FLOAT32_NAN if is_float32 else FLOAT64_NAN), True
     if math.isinf(result_float):
         if result_float > 0:
-            expected = _FLOAT32_SPECIAL['pos_inf'] if is_float32 else _FLOAT64_SPECIAL['pos_inf']
+            expected = FLOAT32_INFINITY if is_float32 else FLOAT64_INFINITY
         else:
-            expected = _FLOAT32_SPECIAL['neg_inf'] if is_float32 else _FLOAT64_SPECIAL['neg_inf']
+            expected = FLOAT32_NEG_INFINITY if is_float32 else FLOAT64_NEG_INFINITY
         return expected, False
     if is_float32:
         return float32_to_bits(result_float), False
@@ -828,11 +532,9 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     # If force_f64 is True and the test is f32, convert to f64
     original_is_f32 = test.precision == Precision.BINARY32
     is_float32 = original_is_f32 and not force_f64
-    
+
     prec = "32" if is_float32 else "64"
-    sign_bit = 0x80000000 if is_float32 else 0x8000000000000000
-    hex_width = 8 if is_float32 else 16
-    
+
     bits1, bits2, f1, f2 = _operand_bits_and_floats(test, force_f64)
     
     # Skip tests where an operand underflows to zero when it wasn't supposed to be zero
@@ -854,9 +556,9 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     op_func = op_func_map[test.operation]
     
     test_name = generate_noir_test_name(test, index, force_f64=force_f64 and original_is_f32)
-    bits1_str = f"0x{bits1:0{hex_width}X}"
-    bits2_str = f"0x{bits2:0{hex_width}X}"
-    expected_str = f"0x{expected:0{hex_width}X}"
+    bits1_str = render_special_or_hex(bits1, is_float32=is_float32)
+    bits2_str = render_special_or_hex(bits2, is_float32=is_float32)
+    expected_str = render_special_or_hex(expected, is_float32=is_float32)
     
     # Generate test body
     if result_is_nan:
@@ -880,14 +582,26 @@ fn {test_name}() {{
 """
 
 
+_NAMED_CONSTANTS_USED_IN_EMITTED_NOIR: tuple[str, ...] = (
+    # Float32 special values, masks and bounds.
+    "FLOAT32_ZERO", "FLOAT32_NEG_ZERO", "FLOAT32_ONE", "FLOAT32_NEG_ONE",
+    "FLOAT32_INFINITY", "FLOAT32_NEG_INFINITY", "FLOAT32_NAN", "FLOAT32_SIGNALING_NAN",
+    "FLOAT32_MIN_DENORMAL", "FLOAT32_MAX_DENORMAL", "FLOAT32_MIN_NORMAL", "FLOAT32_MAX_NORMAL",
+    # Float64 special values, masks and bounds.
+    "FLOAT64_ZERO", "FLOAT64_NEG_ZERO", "FLOAT64_ONE", "FLOAT64_NEG_ONE",
+    "FLOAT64_INFINITY", "FLOAT64_NEG_INFINITY", "FLOAT64_NAN", "FLOAT64_SIGNALING_NAN",
+    "FLOAT64_MIN_DENORMAL", "FLOAT64_MAX_DENORMAL", "FLOAT64_MIN_NORMAL", "FLOAT64_MAX_NORMAL",
+)
+
+
 def analyze_test_code(test_code: list[str]) -> dict[str, bool]:
-    """Analyze test code to determine which imports are needed.
-    
+    """Analyse test code to determine which imports are needed.
+
     Returns a dict of import flags.
     """
     code_str = "\n".join(test_code)
-    return {
-        # Float32 operations
+    flags = {
+        # Float32 operations.
         'add_float32': "add_float32" in code_str,
         'sub_float32': "sub_float32" in code_str,
         'mul_float32': "mul_float32" in code_str,
@@ -895,7 +609,7 @@ def analyze_test_code(test_code: list[str]) -> dict[str, bool]:
         'float32_from_bits': "float32_from_bits" in code_str,
         'float32_to_bits': "float32_to_bits" in code_str,
         'float32_is_nan': "float32_is_nan" in code_str,
-        # Float64 operations
+        # Float64 operations.
         'add_float64': "add_float64" in code_str,
         'sub_float64': "sub_float64" in code_str,
         'mul_float64': "mul_float64" in code_str,
@@ -904,6 +618,11 @@ def analyze_test_code(test_code: list[str]) -> dict[str, bool]:
         'float64_to_bits': "float64_to_bits" in code_str,
         'float64_is_nan': "float64_is_nan" in code_str,
     }
+    # Match constant names by word boundary so e.g. ``FLOAT32_ZERO`` does not
+    # accidentally light up ``FLOAT32_NEG_ZERO``-only chunks.
+    for name in _NAMED_CONSTANTS_USED_IN_EMITTED_NOIR:
+        flags[name] = re.search(rf'\b{name}\b', code_str) is not None
+    return flags
 
 
 def _render_noir_header(source_info: str, analysis: dict[str, bool], use_path: str) -> str:
