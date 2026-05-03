@@ -297,6 +297,176 @@ fn shr_sticky_u64_baseline_const20(value: u64) -> u64 {
 """,
         "return_type": "pub u64",
     },
+    # -- Isolated u128: the verifier on its own vs. the in-tree
+    #    `crate::utils::shift_right_sticky_u128` baseline. The shift is a
+    #    `pub u64` witness so constant-folding cannot collapse the runtime
+    #    branch. The U128 operand is supplied via `(high, low) pub u64`s
+    #    rather than the struct literal directly because Noir's `main`
+    #    parameters cannot be `pub U128` -- we reconstruct the struct from
+    #    the two halves inside `main`.
+    "shr_sticky_u128_isolated_verified": {
+        "extra_use": "use ieee754::shift_right_sticky_u128_verified;\nuse ieee754::utils::U128;",
+        "prelude": "",
+        "inputs": "high: pub u64, low: pub u64, shift: pub u64",
+        "body": """
+    let val = U128 { high, low };
+    shift_right_sticky_u128_verified(val, shift)
+""",
+        "return_type": "pub u64",
+    },
+    "shr_sticky_u128_isolated_baseline": {
+        "extra_use": "use ieee754::utils::U128;",
+        "prelude": """
+// Verbatim copy of `crate::utils::shift_right_sticky_u128`, kept here so
+// the isolated benchmark does not pull the in-tree symbol through the
+// public-API surface (which would otherwise fold the U128 constructor
+// alongside other ieee754 prelude code).
+fn shr_sticky_u128_baseline(val: U128, shift: u64) -> u64 {
+    if shift == 0 {
+        val.low
+    } else if shift >= 128 {
+        if (val.high != 0) | (val.low != 0) {
+            1
+        } else {
+            0
+        }
+    } else if shift >= 64 {
+        let effective_shift = shift - 64;
+        let sticky = if val.low != 0 { 1 } else { 0 };
+        if effective_shift >= 64 {
+            if (val.high != 0) | (sticky != 0) {
+                1
+            } else {
+                0
+            }
+        } else {
+            let mask = (1 << effective_shift) - 1;
+            let shifted_out = val.high & mask;
+            let result = val.high >> effective_shift;
+            if (shifted_out != 0) | (sticky != 0) {
+                result | 1
+            } else {
+                result
+            }
+        }
+    } else {
+        let mask = (1 << shift) - 1;
+        let shifted_out = val.low & mask;
+        let result_low = (val.low >> shift) | (val.high << (64 - shift));
+        if shifted_out != 0 {
+            result_low | 1
+        } else {
+            result_low
+        }
+    }
+}
+""",
+        "inputs": "high: pub u64, low: pub u64, shift: pub u64",
+        "body": """
+    let val = U128 { high, low };
+    shr_sticky_u128_baseline(val, shift)
+""",
+        "return_type": "pub u64",
+    },
+    # -- Composed u128: emulate the leading-bit normalisation step that
+    #    `float64/mul.nr` performs around line 281 (a `shift_right_sticky_u128`
+    #    driven by a witness-dependent `shift_amount = leading_pos - 55`,
+    #    with a `leading_pos >= 55` guard copied from the source). The
+    #    surrounding leading-bit binary search is *not* included -- it is
+    #    independent of the primitive's cost shape and would dwarf the
+    #    measurement. The harness simply takes `leading_pos` as a public
+    #    input and feeds the resulting shift through the primitive.
+    "shr_sticky_u128_composed_verified": {
+        "extra_use": "use ieee754::shift_right_sticky_u128_verified;\nuse ieee754::utils::U128;",
+        "prelude": """
+fn normalise_to_pos55_verified(high: u64, low: u64, leading_pos: i64) -> u64 {
+    let product = U128 { high, low };
+    let target_pos: i64 = 55;
+    let mut result_mant: u64 = 0;
+    if leading_pos >= target_pos {
+        let shift_amount = (leading_pos - target_pos) as u64;
+        result_mant = shift_right_sticky_u128_verified(product, shift_amount);
+    } else {
+        let shift_left = (target_pos - leading_pos) as u64;
+        result_mant = product.low << shift_left;
+        if (product.high != 0) & (shift_left < 64) {
+            result_mant = result_mant | (product.high << (shift_left + 64));
+        }
+    }
+    result_mant
+}
+""",
+        "inputs": "high: pub u64, low: pub u64, leading_pos: pub i64",
+        "body": """
+    normalise_to_pos55_verified(high, low, leading_pos)
+""",
+        "return_type": "pub u64",
+    },
+    "shr_sticky_u128_composed_baseline": {
+        "extra_use": "use ieee754::utils::U128;",
+        "prelude": """
+fn shr_sticky_u128_baseline(val: U128, shift: u64) -> u64 {
+    if shift == 0 {
+        val.low
+    } else if shift >= 128 {
+        if (val.high != 0) | (val.low != 0) {
+            1
+        } else {
+            0
+        }
+    } else if shift >= 64 {
+        let effective_shift = shift - 64;
+        let sticky = if val.low != 0 { 1 } else { 0 };
+        if effective_shift >= 64 {
+            if (val.high != 0) | (sticky != 0) {
+                1
+            } else {
+                0
+            }
+        } else {
+            let mask = (1 << effective_shift) - 1;
+            let shifted_out = val.high & mask;
+            let result = val.high >> effective_shift;
+            if (shifted_out != 0) | (sticky != 0) {
+                result | 1
+            } else {
+                result
+            }
+        }
+    } else {
+        let mask = (1 << shift) - 1;
+        let shifted_out = val.low & mask;
+        let result_low = (val.low >> shift) | (val.high << (64 - shift));
+        if shifted_out != 0 {
+            result_low | 1
+        } else {
+            result_low
+        }
+    }
+}
+fn normalise_to_pos55_baseline(high: u64, low: u64, leading_pos: i64) -> u64 {
+    let product = U128 { high, low };
+    let target_pos: i64 = 55;
+    let mut result_mant: u64 = 0;
+    if leading_pos >= target_pos {
+        let shift_amount = (leading_pos - target_pos) as u64;
+        result_mant = shr_sticky_u128_baseline(product, shift_amount);
+    } else {
+        let shift_left = (target_pos - leading_pos) as u64;
+        result_mant = product.low << shift_left;
+        if (product.high != 0) & (shift_left < 64) {
+            result_mant = result_mant | (product.high << (shift_left + 64));
+        }
+    }
+    result_mant
+}
+""",
+        "inputs": "high: pub u64, low: pub u64, leading_pos: pub i64",
+        "body": """
+    normalise_to_pos55_baseline(high, low, leading_pos)
+""",
+        "return_type": "pub u64",
+    },
 }
 
 
