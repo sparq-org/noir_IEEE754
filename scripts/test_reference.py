@@ -99,8 +99,13 @@ def _legacy_expected_bits(op: Operation, a_bits: int, b_bits: int, *, is_float32
         try:
             return _f32_bits(r)
         except OverflowError:
-            sign = (a_bits >> 31) ^ (b_bits >> 31)
-            return C.FLOAT32_NEG_INFINITY if sign else C.FLOAT32_INFINITY
+            # binary32 finite range exceeded. The sign of the saturated
+            # infinity follows the *result* sign (which Python's float can
+            # represent without overflow), not the XOR of operand signs --
+            # correct for every operation, including add / sub where signs
+            # don't propagate as a simple XOR (e.g. -big + -big -> -inf,
+            # not +inf).
+            return C.FLOAT32_NEG_INFINITY if r < 0 else C.FLOAT32_INFINITY
     return _f64_bits(r)
 
 
@@ -202,9 +207,16 @@ def randomised(t: TestRunner, *, is_float32: bool, n: int) -> None:
 
 
 def non_default_rounding_smoke(t: TestRunner) -> None:
-    # Confirm the gmpy2 path runs for every rounding mode; we don't have a
-    # ground-truth oracle for non-default modes yet (that's a separate PR).
-    for rm in RoundingMode:
+    # Confirm the gmpy2 path runs for every rounding mode and that 1/3
+    # rounds to the expected target on each direction.
+    expected_one_third = {
+        RoundingMode.NEAREST_EVEN: 0x3EAAAAAB,    # rounds up at the tie
+        RoundingMode.NEAREST_AWAY: 0x3EAAAAAB,    # ties -> away from zero (positive -> up)
+        RoundingMode.TOWARD_POSITIVE: 0x3EAAAAAB,
+        RoundingMode.TOWARD_NEGATIVE: 0x3EAAAAAA,
+        RoundingMode.TOWARD_ZERO: 0x3EAAAAAA,
+    }
+    for rm, expected in expected_one_third.items():
         try:
             r = compute_expected_bits(
                 Operation.DIVIDE,
@@ -217,12 +229,65 @@ def non_default_rounding_smoke(t: TestRunner) -> None:
             t.failed += 1
             t.failures.append(f"non-default rounding {rm.name} raised {e!r}")
             continue
-        # Sanity: 1/3 in binary32 must be one of two adjacent bit patterns.
-        if r in (0x3EAAAAAA, 0x3EAAAAAB):
+        if r == expected:
             t.passed += 1
         else:
             t.failed += 1
-            t.failures.append(f"1/3 binary32 mode={rm.name} -> 0x{r:08X} (out of expected pair)")
+            t.failures.append(
+                f"1/3 binary32 mode={rm.name} -> 0x{r:08X}, expected 0x{expected:08X}"
+            )
+
+    # IEEE roundTiesToAway must differ from MPFR's ``RoundAwayZero`` (the
+    # directed-away mode) on a case where the exact result is *not* a
+    # halfway tie. Pick 0.1 + 0.2 in binary32: the exact decimal sum
+    # 0.30000001192...e0 maps cleanly to round-to-nearest 0x3E99999A and
+    # under both nearest-even and nearest-away gives that same bit, but
+    # under MPFR_RNDA (full directed away) it would push to 0x3E99999B.
+    # If reference.py mistakenly used MPFR_RNDA for nearest-away, this
+    # would catch it.
+    near_away = compute_expected_bits(
+        Operation.ADD,
+        _f32_bits(0.1),
+        _f32_bits(0.2),
+        RoundingMode.NEAREST_AWAY,
+        24,
+    )
+    rne = compute_expected_bits(
+        Operation.ADD,
+        _f32_bits(0.1),
+        _f32_bits(0.2),
+        RoundingMode.NEAREST_EVEN,
+        24,
+    )
+    if near_away == rne:
+        t.passed += 1
+    else:
+        t.failed += 1
+        t.failures.append(
+            f"NEAREST_AWAY for 0.1+0.2 (no tie) should equal RNE (0x{rne:08X}) "
+            f"but got 0x{near_away:08X} -- looks like RoundAwayZero (directed) "
+            "leaked through where roundTiesToAway was needed."
+        )
+
+    # And a case where roundTiesToAway differs from roundTiesToEven: the
+    # canonical example is rounding 0.5 to integer (1, not 0). At
+    # binary-floating-point granularity, halfway ties on a 24-bit
+    # significand are easy to construct: take a value with significand
+    # 0x800001 << 1 + 1 (a 25-bit value whose bottom bit is exactly the
+    # round-bit halfway), produced by an exact MUL.
+    # Concrete: 0x40000001 * 0x40000000 in binary32 -- ADD instead, which
+    # we can build directly.
+    # Actually a simpler construction: 2^24 + 1 (representable in f32) plus
+    # 0.5 (representable) is exactly 16777217.5, which sits halfway
+    # between 16777217 and 16777218. Both are representable; RNE rounds to
+    # 16777218 (last bit even); roundTiesToAway rounds away from zero,
+    # which for a positive value also goes up to 16777218 -- same bit
+    # pattern. Halfway-ties-going-different-ways need a case where RNE
+    # picks the toward-zero neighbour. Construct: 2^24 - 1 (= 0x4B7FFFFF)
+    # plus 0.5 (= 0x3F000000). Exact result = 16777215.5; RNE rounds to
+    # 16777216 (even last bit), roundTiesToAway rounds to 16777216 too
+    # (positive -> away = up). Hard to construct distinguishing cases at
+    # binary32 add granularity; we settle for the smoke-check above.
 
 
 def main() -> int:
