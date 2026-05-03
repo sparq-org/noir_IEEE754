@@ -44,7 +44,11 @@
 /// This function is `unconstrained` and contributes no ACIR gates. Its output
 /// MUST be validated by `count_leading_zeros_u23_verified` before being
 /// trusted.
-pub unconstrained fn count_leading_zeros_u23_unconstrained(value: u32) -> u32 {
+///
+/// Crate-private deliberately: a downstream caller must not be able to bypass
+/// the verifier by importing the raw hint. The only sanctioned consumer is
+/// `count_leading_zeros_u23_verified` immediately below.
+unconstrained fn count_leading_zeros_u23_unconstrained(value: u32) -> u32 {
     // Mask to the low 23 bits we care about.
     let masked: u32 = value & 0x007F_FFFF_u32;
 
