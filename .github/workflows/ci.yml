@@ -1,3 +1,16 @@
+# Canonical CI workflow template for Noir-flavoured sub-repos.
+#
+# Source of truth: zkp-sparql-workspace/templates/sub-repo/noir/.github/workflows/ci.yml.tmpl
+# Rendered by:    zkp-sparql-workspace/scripts/sync-standards.sh
+#
+# Hook blocks delimited by `# HOOK:<name>` / `# /HOOK:<name>` are kept when
+# `<name>` appears in this sub-repo's `ci_hooks` list in `.sync.json`, and
+# stripped otherwise. Variables `${PACKAGE_NAME}` etc. are NOT yet supported —
+# this template is lifted verbatim from `noir_IEEE754` (canonical per §3 of
+# `docs/cross-repo-consistency-plan.md`), so package names currently read
+# `ieee754`. Phase 2 of the migration plan introduces per-repo variable
+# substitution; until then, only `noir_IEEE754` should be rendered from this
+# template.
 name: CI
 
 on:

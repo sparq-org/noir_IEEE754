@@ -68,25 +68,43 @@ jobs:
           echo "Updated noir-versions.json:"
           cat .github/noir-versions.json
 
+      - name: Render PR body
+        if: steps.update.outputs.updated == 'true'
+        run: |
+          # Build the PR body in a shell step so we can interpolate the
+          # updated noir-versions.json. The peter-evans/create-pull-request
+          # `body:` input is treated as a literal string by the action — it
+          # does not run `$(...)` command substitution — so we generate the
+          # rendered body here and pass it via `body-path:` below.
+          {
+            echo "A new version of Noir has been released: **${{ steps.update.outputs.new_version }}**"
+            echo
+            echo "This PR updates the CI test matrix to include the new version while keeping the 3 most recent versions."
+            echo
+            echo "Updated versions:"
+            echo '```json'
+            cat .github/noir-versions.json
+            echo '```'
+            echo
+            echo "---"
+            echo "*This PR was automatically created by the version check workflow.*"
+          } > /tmp/pr-body.md
+
       - name: Create Pull Request
         if: steps.update.outputs.updated == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use a dedicated PAT (`GH_TOKEN`) rather than the default
+          # `GITHUB_TOKEN`. Pushes / PRs created with `GITHUB_TOKEN` do not
+          # trigger downstream `on: push` / `on: pull_request` workflows
+          # (GitHub blocks this to avoid recursive workflow loops), so the
+          # automated Noir-version-matrix bump PRs would otherwise be left
+          # unvalidated by CI. `GH_TOKEN` is the same secret used in
+          # `automerge.yml`.
+          token: ${{ secrets.GH_TOKEN }}
           commit-message: "ci: add Noir ${{ steps.update.outputs.new_version }} to test matrix"
           title: "ci: add Noir ${{ steps.update.outputs.new_version }} to test matrix"
-          body: |
-            A new version of Noir has been released: **${{ steps.update.outputs.new_version }}**
-            
-            This PR updates the CI test matrix to include the new version while keeping the 3 most recent versions.
-            
-            Updated versions:
-            ```json
-            $(cat .github/noir-versions.json)
-            ```
-            
-            ---
-            *This PR was automatically created by the version check workflow.*
+          body-path: /tmp/pr-body.md
           branch: ci/noir-${{ steps.update.outputs.new_version }}
           delete-branch: true
           labels: |

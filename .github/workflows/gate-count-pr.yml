@@ -41,29 +41,56 @@ jobs:
           which nargo || echo "nargo not found in PATH"
           nargo --version || echo "nargo command failed"
 
+      - name: Save benchmark script to temp location
+        run: |
+          cp scripts/benchmark_gates.py /tmp/benchmark_gates.py
+          echo "Benchmark script saved to /tmp/benchmark_gates.py"
+
       - name: Run gate count benchmark on PR branch
         id: pr-benchmark
         run: |
-          python3 scripts/benchmark_gates.py --output /tmp/pr_gates.json
+          PR_COMMIT=$(git rev-parse HEAD | cut -c1-8)
+          echo "pr_commit=$PR_COMMIT" >> $GITHUB_OUTPUT
+          python3 /tmp/benchmark_gates.py --output /tmp/pr_gates.json
           echo "PR branch gate counts generated"
 
       - name: Checkout base branch
+        id: checkout-base
+        continue-on-error: true
         run: |
-          git fetch origin ${{ github.base_ref }}
-          git checkout origin/${{ github.base_ref }}
+          git fetch origin ${{ github.base_ref }} || exit 1
+          git checkout origin/${{ github.base_ref }} || exit 1
+          BASE_COMMIT=$(git rev-parse HEAD | cut -c1-8)
+          echo "base_commit=$BASE_COMMIT" >> $GITHUB_OUTPUT
 
       - name: Run gate count benchmark on base branch
         id: base-benchmark
+        if: steps.checkout-base.outcome == 'success'
         run: |
-          python3 scripts/benchmark_gates.py --output /tmp/base_gates.json
+          python3 /tmp/benchmark_gates.py --output /tmp/base_gates.json
           echo "Base branch gate counts generated"
+
+      - name: Create empty baseline if base branch doesn't exist
+        id: create-baseline
+        if: steps.checkout-base.outcome != 'success'
+        run: |
+          echo '{"timestamp": "baseline", "git_commit": "none", "benchmarks": {}}' > /tmp/base_gates.json
+          echo "base_commit=none" >> $GITHUB_OUTPUT
+          echo "Base branch not found, using empty baseline"
 
       - name: Compare gate counts and generate comment
         id: compare
+        env:
+          PR_COMMIT: ${{ steps.pr-benchmark.outputs.pr_commit }}
+          BASE_COMMIT: ${{ steps.checkout-base.outputs.base_commit || steps.create-baseline.outputs.base_commit || 'none' }}
         run: |
           python3 << 'EOF'
           import json
           import os
+          
+          # Get commits from environment
+          pr_commit = os.environ.get('PR_COMMIT', 'unknown')
+          base_commit = os.environ.get('BASE_COMMIT', 'unknown')
           
           # Load benchmark results
           with open('/tmp/pr_gates.json') as f:
@@ -79,8 +106,8 @@ jobs:
           
           # Generate markdown comment
           comment = "## 🔢 Gate Count Report\n\n"
-          comment += f"**PR Branch**: `{pr_results.get('git_commit', 'unknown')}`\n"
-          comment += f"**Base Branch**: `{base_results.get('git_commit', 'unknown')}`\n\n"
+          comment += f"**PR Branch**: `{pr_commit}`\n"
+          comment += f"**Base Branch**: `{base_commit}`\n\n"
           
           comment += "| Operation | Base ACIR | PR ACIR | Change | Base Brillig | PR Brillig | Change |\n"
           comment += "|-----------|-----------|---------|--------|--------------|------------|--------|\n"
