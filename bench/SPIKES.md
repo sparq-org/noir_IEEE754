@@ -127,6 +127,24 @@ That's a candidate for a *future* spike, not this one.
 - Roborev (codex / gpt-5.5) returned "No issues found" on both the
   spike and bench commits before the verdict.
 
+### 2026-05-03 follow-up -- merged dynamic-shift verifier dropped too
+
+After this no-go verdict on the bit-decomposition shape, the merged
+dynamic-shift `count_leading_zeros_u64_verified` from PR #37 was also
+deleted (along with its 14 unit tests and the `clz_u64_*`
+`PRIMITIVE_BENCHMARKS` entries). The numbers above show the verified
+variant regressing on both Width and ACIR vs. the binary-search
+baseline in both regimes -- with no candidate verifier shape that
+recovers the gap. Per the experimental-API memory rule, dead
+optimisation primitives don't stay in the public surface. Future
+agents reaching for `clz_u64_verified` expecting different numbers
+should consult this entry before reattempting -- the only remaining
+unexplored axis is the `Field::to_le_bits::<64>()` intrinsic
+hybrid noted above.
+
+`count_leading_zeros_u23_verified` is kept -- it wins for small N per
+the noir-optimisation skill's section 3.3.
+
 ---
 
 ## Template
