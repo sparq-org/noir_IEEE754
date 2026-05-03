@@ -346,9 +346,14 @@
       "package": "ieee754_test_input_special_significand_part1"
     },
     {
-      "name": "overflow",
+      "name": "overflow_part0",
       "module": "test_overflow",
-      "package": "ieee754_test_overflow"
+      "package": "ieee754_test_overflow_part0"
+    },
+    {
+      "name": "overflow_part1",
+      "module": "test_overflow",
+      "package": "ieee754_test_overflow_part1"
     },
     {
       "name": "rounding",
@@ -356,14 +361,24 @@
       "package": "ieee754_test_rounding"
     },
     {
+      "name": "sticky_bit_calculation",
+      "module": "test_sticky_bit_calculation",
+      "package": "ieee754_test_sticky_bit_calculation"
+    },
+    {
       "name": "synthetic_f64_corner_cases",
       "module": "test_synthetic_f64_corner_cases",
       "package": "ieee754_test_synthetic_f64_corner_cases"
     },
     {
-      "name": "underflow",
+      "name": "underflow_part0",
       "module": "test_underflow",
-      "package": "ieee754_test_underflow"
+      "package": "ieee754_test_underflow_part0"
+    },
+    {
+      "name": "underflow_part1",
+      "module": "test_underflow",
+      "package": "ieee754_test_underflow_part1"
     },
     {
       "name": "vicinity_of_rounding_boundaries",

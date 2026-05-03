@@ -55,12 +55,14 @@ from noir_ieee754_inputs.constants import (  # noqa: E402
 )
 from noir_ieee754_inputs.fptest import (  # noqa: E402
     FPValue,
+    KNOWN_BAD_TESTS_BY_ROUNDING,
     Operation,
     Precision,
     RoundingMode,
     TestCase,
     fp_value_to_bits32,
     fp_value_to_bits64,
+    is_known_bad_for_rounding,
     parse_fptest_file,
 )
 from noir_ieee754_inputs.reference import (  # noqa: E402
@@ -422,11 +424,27 @@ def _gen_tiny_mul(start_line: int) -> list['TestCase']:
     return tests
 
 
+# Short, file-system-safe suffixes for the non-default rounding modes.
+# NEAREST_EVEN is the default and gets no suffix so the existing test names
+# (and downstream chunk-naming heuristics) remain untouched.
+_ROUNDING_NAME_SUFFIX = {
+    RoundingMode.NEAREST_EVEN: "",
+    RoundingMode.NEAREST_AWAY: "rnda",
+    RoundingMode.TOWARD_POSITIVE: "rndu",
+    RoundingMode.TOWARD_NEGATIVE: "rndd",
+    RoundingMode.TOWARD_ZERO: "rndz",
+}
+
+
 def generate_noir_test_name(test: TestCase, index: int, force_f64: bool = False) -> str:
     """Generate a Noir test function name for a test case.
 
     When force_f64 is True the name reflects the effective f64 precision
     even if the source TestCase is f32.
+
+    Non-default rounding modes get a short mode suffix (``rnda`` / ``rndu`` /
+    ``rndd`` / ``rndz``) inserted before the index so multiple rounding modes
+    on the same source line never collide on a test name.
     """
     is_f32 = test.precision == Precision.BINARY32 and not force_f64
     precision = "f32" if is_f32 else "f64"
@@ -440,6 +458,9 @@ def generate_noir_test_name(test: TestCase, index: int, force_f64: bool = False)
         Operation.REM: "rem",
     }
     op = op_names.get(test.operation, "op")
+    suffix = _ROUNDING_NAME_SUFFIX.get(test.rounding, "")
+    if suffix:
+        return f"test_{precision}_{op}_{suffix}_{index}"
     return f"test_{precision}_{op}_{index}"
 
 
@@ -552,48 +573,79 @@ def _operand_bits_and_floats(test: 'TestCase', force_f64: bool) -> tuple[int, in
     return bits1, bits2, from_bits(bits1), from_bits(bits2)
 
 
+# Mapping from RoundingMode -> Noir library constant name. These are emitted
+# verbatim as the third argument to the ``op_floatN_with_rounding`` helpers,
+# so the names must match the ``pub global`` declarations in
+# ``ieee754/src/types.nr``.
+_ROUNDING_NOIR_CONSTANT = {
+    RoundingMode.NEAREST_EVEN: "ROUNDING_MODE_NEAREST_EVEN",
+    RoundingMode.NEAREST_AWAY: "ROUNDING_MODE_NEAREST_AWAY",
+    RoundingMode.TOWARD_POSITIVE: "ROUNDING_MODE_TOWARD_POSITIVE",
+    RoundingMode.TOWARD_NEGATIVE: "ROUNDING_MODE_TOWARD_NEGATIVE",
+    RoundingMode.TOWARD_ZERO: "ROUNDING_MODE_TOWARD_ZERO",
+}
+
+
 def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, force_f64: bool = False) -> Optional[str]:
     """Generate Noir test code for a single test case.
-    
+
     Args:
         test: The test case to generate code for
         index: Test index for naming
         add_debug: Whether to add println statements
         force_f64: If True, convert f32 test cases to f64 (using f64 arithmetic)
+
+    Non-default rounding modes are emitted via the
+    ``op_floatN_with_rounding(a, b, ROUNDING_MODE_X)`` helpers, with the
+    expected result computed by the MPFR-backed reference oracle in
+    :mod:`noir_ieee754_inputs.reference`. Tests in
+    :data:`KNOWN_BAD_TESTS_BY_ROUNDING` are dropped at generation time -- see
+    that data structure's docstring for the rationale.
     """
-    
+
     # Support add, subtract, multiply, and divide
     if test.operation not in (Operation.ADD, Operation.SUBTRACT, Operation.MULTIPLY, Operation.DIVIDE):
         return None
-    
-    # Only support round-to-nearest-even for now
-    if test.rounding != RoundingMode.NEAREST_EVEN:
-        return None
-    
+
     # Need two operands for binary operations
     if test.operand2 is None:
         return None
-    
+
     # Determine if we're generating f32 or f64 test
     # If force_f64 is True and the test is f32, convert to f64
     original_is_f32 = test.precision == Precision.BINARY32
     is_float32 = original_is_f32 and not force_f64
 
+    # Drop tests the existing circuits cannot pass under non-default rounding
+    # modes. The list is the f64-hardening progress metric (decision C from
+    # questions/enable-non-default-rounding-modes.md): future PRs that fix
+    # the underlying circuit bugs shrink it; a too-empty list means CI breaks.
+    # The allow-list is keyed by *effective* precision (the precision of the
+    # generated Noir test, not necessarily the source ``.fptest`` line) so
+    # ``--generate-f64`` runs of an f32 source consult only the b64 entries
+    # -- f32 and f64 circuits fail differently and the list must distinguish.
+    if test.rounding != RoundingMode.NEAREST_EVEN:
+        effective_precision = (
+            Precision.BINARY32 if is_float32 else Precision.BINARY64
+        )
+        if is_known_bad_for_rounding(test, effective_precision):
+            return None
+
     prec = "32" if is_float32 else "64"
 
     bits1, bits2, f1, f2 = _operand_bits_and_floats(test, force_f64)
-    
+
     # Skip tests where an operand underflows to zero when it wasn't supposed to be zero
     # The test file may expect a finite result, but IEEE float32 will give infinity/NaN
     if not test.operand1.is_zero and f1 == 0:
         return None  # operand1 underflowed to zero
     if not test.operand2.is_zero and f2 == 0:
         return None  # operand2 underflowed to zero (division by zero)
-    
+
     expected, result_is_nan = _compute_expected_bits(
         test, f1, f2, is_float32, bits1=bits1, bits2=bits2
     )
-    
+
     # Determine the Noir function to call
     op_func_map = {
         Operation.ADD: "add",
@@ -602,12 +654,24 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
         Operation.DIVIDE: "div",
     }
     op_func = op_func_map[test.operation]
-    
+
     test_name = generate_noir_test_name(test, index, force_f64=force_f64 and original_is_f32)
     bits1_str = render_special_or_hex(bits1, is_float32=is_float32)
     bits2_str = render_special_or_hex(bits2, is_float32=is_float32)
     expected_str = render_special_or_hex(expected, is_float32=is_float32)
-    
+
+    # Pick the call form: the default-rounding helper (``op_floatN``) for
+    # NEAREST_EVEN, the ``op_floatN_with_rounding`` helper otherwise. Keeping
+    # the NEAREST_EVEN path on the simpler API preserves the existing corpus
+    # byte-for-byte.
+    if test.rounding == RoundingMode.NEAREST_EVEN:
+        op_call = f"{op_func}_float{prec}(a, b)"
+    else:
+        rounding_const = _ROUNDING_NOIR_CONSTANT[test.rounding]
+        op_call = (
+            f"{op_func}_float{prec}_with_rounding(a, b, {rounding_const})"
+        )
+
     # Generate test body
     if result_is_nan:
         assertion = f"assert(float{prec}_is_nan(result));"
@@ -618,13 +682,13 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     else:
         assertion = f"""let result_bits = float{prec}_to_bits(result);
     assert(result_bits == {expected_str});"""
-    
+
     return f"""#[test]
 fn {test_name}() {{
     // {test.raw_line}
     let a = float{prec}_from_bits({bits1_str});
     let b = float{prec}_from_bits({bits2_str});
-    let result = {op_func}_float{prec}(a, b);
+    let result = {op_call};
     {assertion}
 }}
 """
@@ -639,6 +703,11 @@ _NAMED_CONSTANTS_USED_IN_EMITTED_NOIR: tuple[str, ...] = (
     "FLOAT64_ZERO", "FLOAT64_NEG_ZERO", "FLOAT64_ONE", "FLOAT64_NEG_ONE",
     "FLOAT64_INFINITY", "FLOAT64_NEG_INFINITY", "FLOAT64_NAN", "FLOAT64_SIGNALING_NAN",
     "FLOAT64_MIN_DENORMAL", "FLOAT64_MAX_DENORMAL", "FLOAT64_MIN_NORMAL", "FLOAT64_MAX_NORMAL",
+    # Rounding-mode constants -- only emitted when a test exercises a
+    # non-default rounding mode via the ``op_floatN_with_rounding`` helpers.
+    "ROUNDING_MODE_NEAREST_EVEN", "ROUNDING_MODE_NEAREST_AWAY",
+    "ROUNDING_MODE_TOWARD_POSITIVE", "ROUNDING_MODE_TOWARD_NEGATIVE",
+    "ROUNDING_MODE_TOWARD_ZERO",
 )
 
 
@@ -648,20 +717,37 @@ def analyze_test_code(test_code: list[str]) -> dict[str, bool]:
     Returns a dict of import flags.
     """
     code_str = "\n".join(test_code)
+    # Default-rounding helpers (``add_float32`` etc.) and their non-default
+    # ``_with_rounding`` siblings are separate items in the Noir library's
+    # ``use`` namespace, so we detect them independently. The default name is
+    # a strict prefix of the rounding-aware name, so we use a word-boundary
+    # match to keep ``add_float32`` from lighting up just because
+    # ``add_float32_with_rounding`` is present.
+    def _has_word(symbol: str) -> bool:
+        return re.search(rf'\b{re.escape(symbol)}\b', code_str) is not None
+
     flags = {
         # Float32 operations.
-        'add_float32': "add_float32" in code_str,
-        'sub_float32': "sub_float32" in code_str,
-        'mul_float32': "mul_float32" in code_str,
-        'div_float32': "div_float32" in code_str,
+        'add_float32': _has_word("add_float32"),
+        'add_float32_with_rounding': "add_float32_with_rounding" in code_str,
+        'sub_float32': _has_word("sub_float32"),
+        'sub_float32_with_rounding': "sub_float32_with_rounding" in code_str,
+        'mul_float32': _has_word("mul_float32"),
+        'mul_float32_with_rounding': "mul_float32_with_rounding" in code_str,
+        'div_float32': _has_word("div_float32"),
+        'div_float32_with_rounding': "div_float32_with_rounding" in code_str,
         'float32_from_bits': "float32_from_bits" in code_str,
         'float32_to_bits': "float32_to_bits" in code_str,
         'float32_is_nan': "float32_is_nan" in code_str,
         # Float64 operations.
-        'add_float64': "add_float64" in code_str,
-        'sub_float64': "sub_float64" in code_str,
-        'mul_float64': "mul_float64" in code_str,
-        'div_float64': "div_float64" in code_str,
+        'add_float64': _has_word("add_float64"),
+        'add_float64_with_rounding': "add_float64_with_rounding" in code_str,
+        'sub_float64': _has_word("sub_float64"),
+        'sub_float64_with_rounding': "sub_float64_with_rounding" in code_str,
+        'mul_float64': _has_word("mul_float64"),
+        'mul_float64_with_rounding': "mul_float64_with_rounding" in code_str,
+        'div_float64': _has_word("div_float64"),
+        'div_float64_with_rounding': "div_float64_with_rounding" in code_str,
         'float64_from_bits': "float64_from_bits" in code_str,
         'float64_to_bits': "float64_to_bits" in code_str,
         'float64_is_nan': "float64_is_nan" in code_str,

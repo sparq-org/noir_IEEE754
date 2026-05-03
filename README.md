@@ -10,7 +10,7 @@ IEEE 754 compliant floating-point arithmetic library for [Noir](https://noir-lan
 
 > [!NOTE]
 > **Test Coverage Limitations**: The following IEEE 754 test cases are currently skipped:
-> - **Non-default rounding modes**: While all rounding modes are now implemented, the test suite currently only tests "round to nearest, ties to even" (`=0`). Tests for other modes (round toward +Infinity (`>`), -Infinity (`<`), zero (`0`), or nearest away (`=^`)) will be added in the future.
+> - **Non-default rounding modes**: All four IBM-FPgen-emitted modes -- round toward +Infinity (`>`), -Infinity (`<`), zero (`0`), and the (currently unused) nearest-away (`=^`) -- are now exercised end-to-end via the MPFR-backed reference oracle in `scripts/noir_ieee754_inputs/reference.py`. The cases the existing arithmetic circuits do not yet pass are tracked in `KNOWN_BAD_TESTS_BY_ROUNDING` (`scripts/noir_ieee754_inputs/fptest.py`); the size of that allow-list is the f64-hardening progress metric -- future PRs that fix circuit bugs shrink it.
 > - **Non-binary operations**: FMA (`*+`) and remainder (`%`) operations are not implemented.
 > - **Comparison and square root operations**: Not tested with the IBM FPgen suite (only unit tests).
 > - **Known bad tests in IBM FPgen suite**: The test `b32/ =0 +1.2CEE1BP-64 +1.50EFBDP-30` from `Divide-Divide-By-Zero-Exception.fptest` is skipped due to an incorrect expected result in the test suite.
@@ -346,7 +346,7 @@ The library implements IEEE 754 arithmetic for both float32 and float64 with ful
 1. ✅ **Support Multiple Rounding Modes**: Round toward +Infinity, -Infinity, zero _(Completed in Phase 1)_
 2. **Optimize Performance**: Reduce constraint count for ZK circuits
 3. **Add FMA operation**: `fma_float32`/`fma_float64`
-4. **Generate tests for all rounding modes**: Extend test generation script to cover all rounding modes
+4. ✅ **Generate tests for all rounding modes**: IBM FPgen tests for all four directed rounding modes are now generated via the MPFR-backed reference oracle. The remaining gap is tracked in `KNOWN_BAD_TESTS_BY_ROUNDING` (see "Test Coverage Limitations" above).
 
 ## Contributing
 
