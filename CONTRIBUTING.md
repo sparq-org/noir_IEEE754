@@ -86,11 +86,12 @@ This project uses the [IBM FPgen IEEE 754 test suite](https://github.com/sergev/
 The `scripts/generate_tests.py` script performs the following:
 
 1. **Downloads and caches** `.fptest` files from the [IBM FPgen test suite](https://github.com/sergev/ieee754-test-suite)
-2. **Parses test cases** extracting operands, operations, and precision from each line
+2. **Parses test cases** extracting operands, operations, precision and rounding mode from each line
 3. **Converts operands to IEEE 754 bit patterns** handling normal, denormal, zero, infinity, and NaN values
-4. **Computes expected results using Python's IEEE 754 hardware** via the `struct` module — this ensures tests verify against actual IEEE 754 behavior rather than potentially inaccurate values in the test files
-5. **Generates Noir test functions** that call the implementation and assert against expected bit patterns
+4. **Computes expected results** using Python's IEEE 754 hardware (`struct.pack`) for round-to-nearest-even, and the MPFR-backed reference oracle (`scripts/noir_ieee754_inputs/reference.py`, `gmpy2`) for the four directed rounding modes -- this ensures tests verify against actual IEEE 754 behaviour rather than potentially inaccurate values in the test files
+5. **Generates Noir test functions** that call the implementation and assert against expected bit patterns. Non-default rounding modes are emitted via the `op_floatN_with_rounding` helpers; the `_with_rounding` helpers are imported automatically by `analyze_test_code`
 6. **Organises tests into separate Noir packages** (one per source `.fptest` file) with chunks of 25 tests per file for faster parallel compilation
+7. **Drops tests in `KNOWN_BAD_TESTS_BY_ROUNDING`** -- a cross-cutting allow-list of cases the existing arithmetic circuits cannot yet pass under non-default rounding modes. The list size is the f64-hardening progress metric (see [`questions/enable-non-default-rounding-modes.md`](https://github.com/jeswr/zkp-sparql-workspace/blob/main/questions/enable-non-default-rounding-modes.md), decision C); future PRs that fix the underlying circuit bugs shrink it. Each entry carries a comment naming the bug class.
 
 ### Test Package Structure
 
