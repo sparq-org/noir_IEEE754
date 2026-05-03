@@ -6,7 +6,8 @@ pub mod float;
 pub mod unconstrained_ops;
 
 pub use crate::unconstrained_ops::{
-    count_leading_zeros_u23_verified, shift_right_sticky_u64_verified,
+    count_leading_zeros_u23_verified, shift_right_sticky_u128_verified,
+    shift_right_sticky_u64_verified,
 };
 
 // Re-export public API
