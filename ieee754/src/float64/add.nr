@@ -247,7 +247,19 @@ pub fn add_float64_with_rounding(
         }
     }
     if a_is_zero & b_is_zero {
-        result = float64_zero(a.sign & b.sign);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // matching signs propagate; opposite-sign zero operands sum to
+        // ``+0`` under every rounding-direction attribute except
+        // ``roundTowardNegative``, which yields ``-0``.
+        let signs_match = a.sign == b.sign;
+        let zero_sign: u1 = if signs_match {
+            a.sign
+        } else if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float64_zero(zero_sign);
     } else if a_is_zero {
         result = b;
     } else if b_is_zero {

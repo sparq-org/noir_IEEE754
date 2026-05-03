@@ -214,7 +214,21 @@ pub fn add_float32_with_rounding(
         }
     }
     if a_is_zero & b_is_zero {
-        result = float32_zero(a.sign & b.sign);
+        // IEEE 754-2019 sec 6.3 (signedness of zero results from sums):
+        // for two operand zeros (the early short-circuit path), the sum
+        // shares the sign of both operands when they agree
+        // (``+0 + +0 = +0``, ``-0 + -0 = -0``); for opposite signs the
+        // sum is ``+0`` under every rounding-direction attribute except
+        // ``roundTowardNegative``, under which it is ``-0``.
+        let signs_match = a.sign == b.sign;
+        let zero_sign: u1 = if signs_match {
+            a.sign
+        } else if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+            1
+        } else {
+            0
+        };
+        result = float32_zero(zero_sign);
     } else if a_is_zero {
         result = b;
     } else if b_is_zero {
