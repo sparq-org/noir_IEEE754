@@ -275,6 +275,40 @@ pub fn should_round_up_4bit(guard_bits: u64, result_mant: u64, result_sign: u1, 
     }
 }
 
+/// IEEE 754-2019 sec 7.4: under directed rounding, an overflow may either
+/// saturate to ``+/- Inf`` or clamp to ``+/- max-finite`` depending on the
+/// rounding mode and the sign of the would-be result.
+///
+/// Returns ``true`` when the rounded-up overflow should produce ``+/- Inf``;
+/// ``false`` when it should clamp to ``+/- max-finite``. Matrix:
+///
+/// ```text
+/// rounding mode             | sign +    | sign -    |
+/// --------------------------+-----------+-----------+
+/// roundTiesToEven  (RNE)    | +Inf      | -Inf      |
+/// roundTiesToAway  (RNA)    | +Inf      | -Inf      |
+/// roundTowardPositive (RNDU)| +Inf      | -max      |
+/// roundTowardNegative (RNDD)| +max      | -Inf      |
+/// roundTowardZero  (RNDZ)   | +max      | -max      |
+/// ```
+///
+/// Per the standard the "max-finite" target is the destination format's
+/// largest finite magnitude with the sign of the intermediate result.
+pub fn directed_overflow_saturates_to_inf(rounding_mode: u8, result_sign: u1) -> bool {
+    if rounding_mode == ROUNDING_MODE_TOWARD_ZERO {
+        false
+    } else if rounding_mode == ROUNDING_MODE_TOWARD_POSITIVE {
+        result_sign == 0
+    } else if rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+        result_sign == 1
+    } else {
+        // ROUNDING_MODE_NEAREST_EVEN, ROUNDING_MODE_NEAREST_AWAY, or any
+        // other unrecognised value defaults to the IEEE 754 sec 7.4
+        // round-to-nearest behaviour (always Inf).
+        true
+    }
+}
+
 /// Determine if a value should round up based on guard bits and rounding mode (8-bit version)
 /// This version is for operations that use 8 guard bits (like float64 addition)
 ///

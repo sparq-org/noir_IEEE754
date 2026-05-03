@@ -4,13 +4,13 @@
 
 use crate::float32::helpers::{
     float32_infinity, float32_is_denormal, float32_is_infinity, float32_is_nan, float32_is_zero,
-    float32_nan, float32_zero,
+    float32_max_finite, float32_nan, float32_zero,
 };
 use crate::types::{
     FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
     ROUNDING_MODE_TOWARD_NEGATIVE,
 };
-use crate::utils::should_round_up;
+use crate::utils::{directed_overflow_saturates_to_inf, should_round_up};
 
 // IEEE 754 compliant addition for 32-bit floats with rounding mode
 pub fn add_float32_with_rounding(
@@ -199,7 +199,19 @@ pub fn add_float32_with_rounding(
         result = float32_zero(cancellation_sign);
     }
     if overflows_to_inf {
-        result = float32_infinity(result_sign);
+        // IEEE 754-2019 sec 7.4 (overflow under directed rounding): under
+        // ``roundTowardZero`` the overflow result is the destination's
+        // largest finite with the sign of the intermediate result; under
+        // ``roundTowardPositive`` / ``roundTowardNegative`` it is +/- Inf
+        // when the rounding direction matches the result sign and
+        // +/- max-finite otherwise. Round-to-nearest modes always go to
+        // +/- Inf. ``directed_overflow_saturates_to_inf`` centralises the
+        // rule (bug class 1, per PR #49).
+        if directed_overflow_saturates_to_inf(rounding_mode, result_sign) {
+            result = float32_infinity(result_sign);
+        } else {
+            result = float32_max_finite(result_sign);
+        }
     }
     if a_is_zero & b_is_zero {
         result = float32_zero(a.sign & b.sign);

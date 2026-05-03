@@ -4,13 +4,13 @@
 
 use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
-    float64_nan, float64_zero,
+    float64_max_finite, float64_nan, float64_zero,
 };
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
     ROUNDING_MODE_TOWARD_NEGATIVE,
 };
-use crate::utils::should_round_up_8bit;
+use crate::utils::{directed_overflow_saturates_to_inf, should_round_up_8bit};
 
 // IEEE 754 compliant addition for 64-bit doubles with rounding mode
 pub fn add_float64_with_rounding(
@@ -238,7 +238,13 @@ pub fn add_float64_with_rounding(
         result = float64_zero(cancellation_sign);
     }
     if overflows_to_inf {
-        result = float64_infinity(result_sign);
+        // IEEE 754-2019 sec 7.4: directed rounding may clamp overflow to
+        // +/-max-finite instead of +/-Inf. Bug class 1 (per PR #49).
+        if directed_overflow_saturates_to_inf(rounding_mode, result_sign) {
+            result = float64_infinity(result_sign);
+        } else {
+            result = float64_max_finite(result_sign);
+        }
     }
     if a_is_zero & b_is_zero {
         result = float64_zero(a.sign & b.sign);
