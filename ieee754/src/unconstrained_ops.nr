@@ -361,10 +361,7 @@ fn test_clz_u23_hint_bit_above_fails() {
 /// Crate-private deliberately: a downstream caller must not be able to bypass
 /// the verifier by importing the raw hint. The only sanctioned consumer is
 /// `shift_right_sticky_u64_verified` immediately below.
-unconstrained fn shift_right_sticky_u64_unconstrained(
-    value: u64,
-    shift: u64,
-) -> (u64, u64, u1) {
+unconstrained fn shift_right_sticky_u64_unconstrained(value: u64, shift: u64) -> (u64, u64, u1) {
     if shift == 0_u64 {
         (value, 0_u64, 0_u1)
     } else if shift >= 64_u64 {
@@ -507,10 +504,7 @@ fn verify_shr_sticky_u64_relation(
         );
 
         // Clause (3b): remainder < pow2. Both sides are u64 here.
-        assert(
-            remainder < pow2,
-            "shift_right_sticky_u64: remainder above pow2",
-        );
+        assert(remainder < pow2, "shift_right_sticky_u64: remainder above pow2");
 
         // Clause (3c): sticky direction -- pinned by two constraints plus a
         // witnessed Field inverse hint.
