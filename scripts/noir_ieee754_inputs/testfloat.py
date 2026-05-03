@@ -189,7 +189,25 @@ def _finite_float_to_fpvalue(f: float, *, is_float32: bool) -> FPValue:
 
 
 def bits_to_fpvalue(bits: int, *, is_float32: bool) -> FPValue:
-    """Public entry point: decode IEEE 754 bits into an :class:`FPValue`."""
+    """Public entry point: decode IEEE 754 bits into an :class:`FPValue`.
+
+    .. note::
+        NaN payload bits are intentionally discarded -- ``FPValue`` carries
+        only ``is_nan`` / ``is_snan`` boolean flags. The downstream emission
+        path (``_compute_expected_bits`` in ``generate_tests.py``) reacts
+        to ``is_nan=True`` results by emitting a ``floatN_is_nan(result)``
+        predicate assertion rather than a bit-equality assertion against
+        a specific NaN bit pattern, so the payload information is
+        irrelevant to test pass/fail. The same applies to NaN *operands*:
+        the FPgen-canonical ``FLOAT*_NAN`` / ``FLOAT*_SIGNALING_NAN`` bit
+        patterns drive the circuit, not the original TestFloat-generated
+        payload. Mirrors design-doc decision C.3 (2026-05-03).
+
+        If a future test asserts on a specific NaN payload, ``FPValue``
+        will need a payload field and ``fp_value_to_bits`` a payload-
+        preserving path -- ``noir_ieee754_inputs.fptest.fp_value_to_bits``
+        is the symmetric edit point on the FPgen side.
+    """
     return _bits32_to_fpvalue(bits) if is_float32 else _bits64_to_fpvalue(bits)
 
 

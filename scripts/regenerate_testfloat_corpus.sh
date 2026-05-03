@@ -146,6 +146,7 @@ level = int("$LEVEL")
 # Reverse-index: ``(operation, precision) -> testfloat function``.
 fn_by_op = {(fn.operation, fn.precision): fn for fn in SUPPORTED_FUNCTIONS.values()}
 
+pair_set = set()
 pairs = []
 for key, srcs in OPERATION_SOURCES.items():
     if SourceCorpus.TESTFLOAT not in srcs:
@@ -153,6 +154,16 @@ for key, srcs in OPERATION_SOURCES.items():
     fn = fn_by_op.get((key.operation, key.precision))
     if fn is None:
         continue
+    # Deduplicate -- ``OPERATION_SOURCES`` is keyed on ``(operation,
+    # precision, rounding)``; the same ``(function_name, rounding)`` pair
+    # can never legitimately appear twice (function uniquely determines
+    # the (operation, precision) pair via SUPPORTED_FUNCTIONS), but a
+    # future table edit that maps two entries to the same testfloat_gen
+    # invocation would otherwise emit duplicate captures.
+    dedup_key = (fn.name, key.rounding)
+    if dedup_key in pair_set:
+        continue
+    pair_set.add(dedup_key)
     pairs.append((fn, key.rounding))
 
 print(f"Generating {len(pairs)} TestFloat captures into {cache_dir} (seed={seed}, level={level})")
