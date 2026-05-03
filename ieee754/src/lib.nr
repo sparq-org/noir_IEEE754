@@ -7,7 +7,6 @@ pub mod unconstrained_ops;
 
 pub use crate::unconstrained_ops::{
     count_leading_zeros_u23_verified, count_leading_zeros_u64_verified,
-    count_leading_zeros_u64_verified_bitdecomp,
 };
 
 // Re-export public API
