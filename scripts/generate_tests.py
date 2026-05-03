@@ -704,6 +704,43 @@ def generate_noir_test_name(test: TestCase, index: int, force_f64: bool = False)
     return f"test_{precision}_{op}_{index}"
 
 
+def _compute_expected_bits(test: 'TestCase', f1: float, f2: float, is_float32: bool) -> tuple[int, bool]:
+    """Compute the expected result bits for this test case using Python's hardware float.
+
+    Returns (expected_bits, is_nan).
+    """
+    if test.result.is_nan:
+        expected = _FLOAT32_SPECIAL['qnan'] if is_float32 else _FLOAT64_SPECIAL['qnan']
+        return expected, True
+
+    if test.operation == Operation.ADD:
+        result_float = f1 + f2
+    elif test.operation == Operation.SUBTRACT:
+        result_float = f1 - f2
+    elif test.operation == Operation.MULTIPLY:
+        result_float = f1 * f2
+    elif test.operation == Operation.DIVIDE:
+        if f2 == 0:
+            # Division by zero — fall back to the test file's expected bits since
+            # Python raises ZeroDivisionError instead of producing IEEE Inf/NaN.
+            to_bits_result = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
+            return to_bits_result(test.result), False
+        result_float = f1 / f2
+
+    if math.isnan(result_float):
+        expected = _FLOAT32_SPECIAL['qnan'] if is_float32 else _FLOAT64_SPECIAL['qnan']
+        return expected, True
+    if math.isinf(result_float):
+        if result_float > 0:
+            expected = _FLOAT32_SPECIAL['pos_inf'] if is_float32 else _FLOAT64_SPECIAL['pos_inf']
+        else:
+            expected = _FLOAT32_SPECIAL['neg_inf'] if is_float32 else _FLOAT64_SPECIAL['neg_inf']
+        return expected, False
+    if is_float32:
+        return float32_to_bits(result_float), False
+    return float64_to_bits(result_float), False
+
+
 def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, force_f64: bool = False) -> Optional[str]:
     """Generate Noir test code for a single test case.
     
@@ -760,44 +797,7 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     if not test.operand2.is_zero and f2 == 0:
         return None  # operand2 underflowed to zero (division by zero)
     
-    # Compute expected result using IEEE arithmetic
-    # This ensures the test verifies IEEE 754 compliance, not the test file's precision
-    result_is_nan = False
-    if test.result.is_nan:
-        result_is_nan = True
-        expected = _FLOAT32_SPECIAL['qnan'] if is_float32 else _FLOAT64_SPECIAL['qnan']
-    else:
-        # Compute result using Python (IEEE 754 compliant)
-        if test.operation == Operation.ADD:
-            result_float = f1 + f2
-        elif test.operation == Operation.SUBTRACT:
-            result_float = f1 - f2
-        elif test.operation == Operation.MULTIPLY:
-            result_float = f1 * f2
-        elif test.operation == Operation.DIVIDE:
-            if f2 == 0:
-                # Division by zero - use test file's expected result
-                to_bits_result = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
-                expected = to_bits_result(test.result)
-            else:
-                result_float = f1 / f2
-        
-        if test.operation != Operation.DIVIDE or f2 != 0:
-            # Check for special results
-            if math.isnan(result_float):
-                result_is_nan = True
-                expected = _FLOAT32_SPECIAL['qnan'] if is_float32 else _FLOAT64_SPECIAL['qnan']
-            elif math.isinf(result_float):
-                if result_float > 0:
-                    expected = _FLOAT32_SPECIAL['pos_inf'] if is_float32 else _FLOAT64_SPECIAL['pos_inf']
-                else:
-                    expected = _FLOAT32_SPECIAL['neg_inf'] if is_float32 else _FLOAT64_SPECIAL['neg_inf']
-            else:
-                # Convert result to target precision bits
-                if is_float32:
-                    expected = float32_to_bits(result_float)
-                else:
-                    expected = float64_to_bits(result_float)
+    expected, result_is_nan = _compute_expected_bits(test, f1, f2, is_float32)
     
     # Determine the Noir function to call
     op_func_map = {
