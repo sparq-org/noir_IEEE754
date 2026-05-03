@@ -253,18 +253,26 @@ Two angles worth measuring in a future spike, *not* this one:
 
 ### Process
 
-- Four commits on the branch: source-level primitive (`9c1f8cb` after
+- Five commits on the branch: source-level primitive (`9c1f8cb` after
   rebase onto `e6d7107`), adversarial test follow-up (`0f497e5`)
   addressing roborev's flagged `shift>=64 sticky direction wrong` test
-  gap, benchmark harness (`2b563e5`), and harness-comment + primitive
-  comparison (`2c4f142`) addressing the second roborev round, then this
-  ledger update.
+  gap, benchmark harness (`2b563e5`), harness-comment + primitive
+  comparison (`2c4f142`) addressing the second roborev round, this
+  ledger update, then a follow-up commit regenerating the JSON against
+  the SPIKES commit.
 - 36 ieee754 tests passed (15 baseline + 21 new shr_sticky tests, of
   which 11 happy-path + 10 adversarial).
 - Roborev (codex / gpt-5.5) returned "No issues found" on the
   adversarial-test commit and on the harness-improvement commit;
   earlier roborev rounds raised the test-gap and stale-`git_commit`
   findings that those commits closed.
+
+**Provenance note.** The committed JSON's `git_commit` field points at
+the *parent* of the JSON's commit (the harness used to capture it can't
+know its own commit hash before commit). After every bench run, the
+recorded `git_commit` is therefore the most recent commit at run time;
+to interpret a number against a future repo state, look at the
+`git_commit` field plus the commit that introduced the JSON itself.
 
 ---
 
