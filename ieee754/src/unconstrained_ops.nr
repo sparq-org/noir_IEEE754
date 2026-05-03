@@ -92,8 +92,8 @@ unconstrained fn count_leading_zeros_u23_unconstrained(value: u32) -> u32 {
 ///      a. bit `top_bit_pos` of `low23` is set, i.e.
 ///         `(low23 >> top_bit_pos) & 1 == 1`; and
 ///      b. no bits of `low23` above `top_bit_pos` are set, i.e.
-///         `low23 < (1 << (top_bit_pos + 1))`, equivalently
-///         `low23 < pow2_u32(23 - count)`.
+///         `low23 >> (top_bit_pos + 1) == 0`, equivalently
+///         `low23 < 2^(top_bit_pos + 1) = 2^(23 - count)`.
 ///
 /// **Uniqueness** (no second `count'` satisfies `R(value, count')`):
 ///
