@@ -384,20 +384,68 @@ def known_bad_allow_list_scoping(t: TestRunner) -> None:
     enforced after the codex roborev finding on commit 3ce1e4f -- is that an
     allow-list entry only suppresses generated tests at the same effective
     precision as the entry. A b32 entry must NOT mask the f64-converted
-    version of the same source line. The test below picks one b32 entry and
-    one b64 entry that are known to coexist for the same raw line and asserts
-    each precision-scoped lookup behaves correctly.
+    version of the same source line.
+
+    We assert two things, ALWAYS:
+
+    1. **b32-only entries flip on precision override.** Pick an entry whose
+       ``(op, rounding, raw_line)`` triple does NOT also have a b64 sibling;
+       assert ``effective_precision=BINARY32`` returns True but
+       ``effective_precision=BINARY64`` returns False. This is the load-bearing
+       check: a regression that drops the ``effective_precision`` argument and
+       always uses ``test.precision`` (b32 here) would silently pass any
+       paired-entry assertion -- it must fail this one.
+    2. **Paired b32/b64 entries match both ways.** When such a pair exists in
+       the allow-list (the bootstrap has exactly one -- ``b32+ < +0.000064P-126
+       -0.000063P-126``), assert every effective-precision lookup returns True.
+       This catches a regression that *over*-scopes (e.g. requires the source
+       precision to match the override).
+
+    Falls through cleanly when the allow-list shrinks past the bootstrap state
+    in either direction; future PRs that shrink the list don't break this
+    test.
     """
-    # Find a (raw_line, modes) pair that has BOTH a b32 entry and a b64 entry
-    # with the same operation / rounding -- if such a pair exists, scoping
-    # must let them differ. When the allow-list contains no such pair (e.g.
-    # a future PR shrinks it past the bootstrap state), pick any b32 entry
-    # and assert the b64 lookup is False.
-    by_raw = {}
+    by_raw: dict[tuple[str, str, str], set[str]] = {}
     for entry in KNOWN_BAD_TESTS_BY_ROUNDING:
         prec, op, rnd, raw = entry
         by_raw.setdefault((op, rnd, raw), set()).add(prec)
 
+    # ----- Check 1: b32-only entry flips on override. ---------------------
+    b32_only_entry = next(
+        ((op, rnd, raw) for (op, rnd, raw), precs in by_raw.items()
+         if "b32" in precs and "b64" not in precs),
+        None,
+    )
+    if b32_only_entry is not None:
+        op, rnd, raw = b32_only_entry
+        test = parse_test_line(raw, 1)
+        if test is None:
+            t.failed += 1
+            t.failures.append(f"could not parse known-bad raw line: {raw!r}")
+        else:
+            b32 = is_known_bad_for_rounding(test, Precision.BINARY32)
+            b64 = is_known_bad_for_rounding(test, Precision.BINARY64)
+            default = is_known_bad_for_rounding(test)
+            if b32 and not b64 and default:
+                t.passed += 1
+            else:
+                t.failed += 1
+                t.failures.append(
+                    f"b32-only entry: b32={b32} b64={b64} default={default} "
+                    f"-- expected (True, False, True) for raw_line {raw!r}; "
+                    "looks like effective_precision is being ignored."
+                )
+    else:
+        # Allow-list has no b32-only entries -- skip the load-bearing check.
+        # This is unusual (current allow-list has 110+ b32-only entries); flag
+        # so the next reader knows the regression test is degenerate.
+        print(
+            "# WARN: KNOWN_BAD_TESTS_BY_ROUNDING has no b32-only entries; "
+            "precision-scoping regression test is degenerate.",
+            file=sys.stderr,
+        )
+
+    # ----- Check 2: paired b32 + b64 entries match either way. ------------
     paired = next(
         ((op, rnd, raw) for (op, rnd, raw), precs in by_raw.items()
          if {"b32", "b64"} <= precs),
@@ -405,55 +453,22 @@ def known_bad_allow_list_scoping(t: TestRunner) -> None:
     )
     if paired is not None:
         op, rnd, raw = paired
-        # ``parse_test_line`` extracts precision from the leading token of the
-        # raw line, so we feed a b32 line. The override must let the b64 query
-        # still match.
-        # The raw line in the allow-list begins with the precision token.
         test = parse_test_line(raw, 1)
         if test is None:
             t.failed += 1
             t.failures.append(f"could not parse known-bad raw line: {raw!r}")
-            return
-        b32 = is_known_bad_for_rounding(test, Precision.BINARY32)
-        b64 = is_known_bad_for_rounding(test, Precision.BINARY64)
-        default = is_known_bad_for_rounding(test)
-        if not (b32 and b64 and default):
-            t.failed += 1
-            t.failures.append(
-                f"paired b32/b64 entry: b32={b32} b64={b64} default={default} "
-                f"-- expected all True for raw_line {raw!r}"
-            )
         else:
-            t.passed += 1
-        return
-
-    # Fallback: pick any b32-only entry and confirm the override flips the
-    # answer. This covers the steady-state case where every b32 entry is
-    # f32-specific (no f64 manifestation).
-    b32_only = next(
-        (entry for entry in KNOWN_BAD_TESTS_BY_ROUNDING if entry[0] == "b32"),
-        None,
-    )
-    if b32_only is None:
-        # Allow-list is empty for b32 -- nothing to test, but that's fine.
-        t.passed += 1
-        return
-    _, op, rnd, raw = b32_only
-    test = parse_test_line(raw, 1)
-    if test is None:
-        t.failed += 1
-        t.failures.append(f"could not parse known-bad raw line: {raw!r}")
-        return
-    b32 = is_known_bad_for_rounding(test, Precision.BINARY32)
-    b64 = is_known_bad_for_rounding(test, Precision.BINARY64)
-    if b32 and not b64:
-        t.passed += 1
-    else:
-        t.failed += 1
-        t.failures.append(
-            f"b32-only entry: b32={b32} b64={b64} -- expected (True, False) "
-            f"for raw_line {raw!r}"
-        )
+            b32 = is_known_bad_for_rounding(test, Precision.BINARY32)
+            b64 = is_known_bad_for_rounding(test, Precision.BINARY64)
+            default = is_known_bad_for_rounding(test)
+            if b32 and b64 and default:
+                t.passed += 1
+            else:
+                t.failed += 1
+                t.failures.append(
+                    f"paired b32/b64 entry: b32={b32} b64={b64} default={default} "
+                    f"-- expected all True for raw_line {raw!r}"
+                )
 
 
 def main() -> int:
