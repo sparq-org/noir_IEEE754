@@ -203,7 +203,15 @@ def fp_value_to_bits(val: FPValue, is_float32: bool = True) -> int:
     frac_hex = val.significand[1:] or "0"
     hex_literal = f"{sign_str}0x{int_part}.{frac_hex}P{val.exponent:+d}"
 
-    f = float.fromhex(hex_literal)
+    try:
+        f = float.fromhex(hex_literal)
+    except OverflowError:
+        # Magnitude exceeded the binary64 finite range. The hand-rolled
+        # implementation flushed these to signed infinity in the target
+        # format; preserve that contract.
+        if is_float32:
+            return constants.FLOAT32_NEG_INFINITY if val.sign else constants.FLOAT32_INFINITY
+        return constants.FLOAT64_NEG_INFINITY if val.sign else constants.FLOAT64_INFINITY
 
     if is_float32:
         try:
