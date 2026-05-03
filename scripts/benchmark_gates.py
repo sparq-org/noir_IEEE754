@@ -157,12 +157,19 @@ fn shr_sticky_u64_baseline(value: u64, shift: u64) -> u64 {
 """,
         "return_type": "pub u64",
     },
-    # -- Composed: emulate the denormal-mantissa shift step that float64
-    #    `mul`, `div`, and `sqrt` perform (a `shift_right_sticky_u64` driven
-    #    by a witness-dependent `denorm_shift`). The baseline copies the
-    #    in-tree code; the candidate replaces it with the verified primitive.
-    #    This is the measurement that actually answers
-    #    "should we swap call sites?".
+    # -- Composed: emulate the denormal-mantissa shift step that
+    #    `float64/mul.nr` performs (a `shift_right_sticky_u64` driven by a
+    #    witness-dependent `denorm_shift = 1 - result_exp`, with a
+    #    `denorm_shift < 56` short-circuit copied verbatim from line 303 of
+    #    `ieee754/src/float64/mul.nr`). The baseline copies the in-tree code;
+    #    the candidate replaces the inner primitive with the verified one.
+    #    Other call sites use different short-circuit thresholds (27/28 in
+    #    float32, 57 in float64/{div,sqrt}); the verifier branches dynamically
+    #    on `shift` so the threshold does not affect the per-call cost shape,
+    #    but the surrounding straight-line code does, so this benchmark is the
+    #    apples-to-apples measurement only for the float64/mul.nr call site.
+    #    See `bench/SPIKES.md` for the verdict and §3.2 of the
+    #    `noir-optimisation` skill for the cost model.
     "shr_sticky_u64_composed_verified": {
         "extra_use": "use ieee754::shift_right_sticky_u64_verified;",
         "prelude": """
@@ -539,6 +546,27 @@ def print_comparison(old_results: dict, new_results: dict):
         total_pct = (total_diff / total_old * 100)
         print(f"{'TOTAL':<20} {total_old:>12} {total_new:>12} {total_diff:+d} ({total_pct:+.1f}%)")
     print("=" * 60)
+
+    # Also surface PRIMITIVE_BENCHMARKS deltas if either side has them.
+    old_primitives = old_results.get("primitive_benchmarks", {})
+    new_primitives = new_results.get("primitive_benchmarks", {})
+    if old_primitives or new_primitives:
+        print("\n" + "-" * 60)
+        print("PRIMITIVE BENCHMARKS")
+        print("-" * 60)
+        print(f"{'Variant':<40} {'Old W/A':>10} {'New W/A':>10}")
+        print("-" * 60)
+        for name in sorted(set(old_primitives.keys()) | set(new_primitives.keys())):
+            old_info = old_primitives.get(name, {})
+            new_info = new_primitives.get(name, {})
+            old_w = old_info.get("expression_width", "N/A")
+            old_a = old_info.get("acir_opcodes", "N/A")
+            new_w = new_info.get("expression_width", "N/A")
+            new_a = new_info.get("acir_opcodes", "N/A")
+            old_cell = f"{old_w}/{old_a}"
+            new_cell = f"{new_w}/{new_a}"
+            print(f"{name:<40} {old_cell:>10} {new_cell:>10}")
+        print("=" * 60)
 
 
 def print_summary(results: dict):
