@@ -310,6 +310,65 @@ def non_default_rounding_smoke(t: TestRunner) -> None:
             f"max_f32 + max_f32 RTA -> 0x{overflow_rta:08X}, expected 0x7F800000 (+Inf)"
         )
 
+    # Negative halfway tie: -1.0 + -2^-24 sits halfway between -1.0
+    # (0xBF800000) and -(1 + 2^-23) (0xBF800001). RTA picks the away
+    # neighbour, which for negative numbers means *more negative*
+    # -> 0xBF800001. RNE picks the even-bit neighbour 0xBF800000.
+    neg_a32 = _f32_bits(-1.0)
+    neg_b32 = (1 << 31) | (103 << 23) | 0  # -(2^-24) in binary32
+    rta_neg = compute_expected_bits(Operation.ADD, neg_a32, neg_b32, RoundingMode.NEAREST_AWAY, 24)
+    rne_neg = compute_expected_bits(Operation.ADD, neg_a32, neg_b32, RoundingMode.NEAREST_EVEN, 24)
+    if rta_neg == 0xBF800001 and rne_neg == 0xBF800000:
+        t.passed += 1
+    else:
+        t.failed += 1
+        t.failures.append(
+            f"halfway-tie negative (-1 + -2^-24) RTA=0x{rta_neg:08X} (want 0xBF800001), "
+            f"RNE=0x{rne_neg:08X} (want 0xBF800000)"
+        )
+
+    # Negative overflow: -max_f32 + -max_f32 RTA -> -Inf.
+    neg_max = max_f32 | 0x80000000
+    neg_overflow_rta = compute_expected_bits(
+        Operation.ADD, neg_max, neg_max, RoundingMode.NEAREST_AWAY, 24
+    )
+    if neg_overflow_rta == 0xFF800000:
+        t.passed += 1
+    else:
+        t.failed += 1
+        t.failures.append(
+            f"-max_f32 + -max_f32 RTA -> 0x{neg_overflow_rta:08X}, expected 0xFF800000"
+        )
+
+    # binary64 halfway tie: 1.0 + 2^-53 sits exactly halfway between
+    # 1.0 (0x3FF0000000000000) and 1 + 2^-52 (0x3FF0000000000001).
+    # 2^-53 in binary64: exp = 1023 - 53 = 970, mantissa = 0.
+    a64 = _f64_bits(1.0)
+    b64 = (0 << 63) | (970 << 52) | 0
+    rta_64 = compute_expected_bits(Operation.ADD, a64, b64, RoundingMode.NEAREST_AWAY, 53)
+    rne_64 = compute_expected_bits(Operation.ADD, a64, b64, RoundingMode.NEAREST_EVEN, 53)
+    if rta_64 == 0x3FF0000000000001 and rne_64 == 0x3FF0000000000000:
+        t.passed += 1
+    else:
+        t.failed += 1
+        t.failures.append(
+            f"halfway-tie f64 (1 + 2^-53) RTA=0x{rta_64:016X} (want 0x3FF0000000000001), "
+            f"RNE=0x{rne_64:016X} (want 0x3FF0000000000000)"
+        )
+
+    # binary64 overflow: max_f64 + max_f64 RTA -> +Inf.
+    max_f64 = 0x7FEFFFFFFFFFFFFF
+    overflow_rta_64 = compute_expected_bits(
+        Operation.ADD, max_f64, max_f64, RoundingMode.NEAREST_AWAY, 53
+    )
+    if overflow_rta_64 == 0x7FF0000000000000:
+        t.passed += 1
+    else:
+        t.failed += 1
+        t.failures.append(
+            f"max_f64 + max_f64 RTA -> 0x{overflow_rta_64:016X}, expected 0x7FF0000000000000"
+        )
+
 
 def main() -> int:
     t = TestRunner()
