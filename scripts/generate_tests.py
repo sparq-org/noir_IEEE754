@@ -264,12 +264,15 @@ def fp_value_to_bits(val: FPValue, is_float32: bool = True) -> int:
         # Pad/truncate to exactly 6 hex digits
         frac_hex_padded = frac_hex.ljust(6, '0')[:6]
         frac_bits_24 = int(frac_hex_padded, 16)
-        # Round from 24 bits to 23 bits (round to nearest, ties to even)
+        # Round from 24 bits to 23 bits (round to nearest, ties to even).
+        # No sticky bits apply here: a 24-bit value rounded to 23 bits has no
+        # bits beyond the round bit, so the half-way tie reduces to "round up
+        # only when the LSB of the result is odd".
         lsb = (frac_bits_24 >> 1) & 1
         round_bit = frac_bits_24 & 1
         frac_bits_23 = frac_bits_24 >> 1
-        if round_bit and (lsb or (frac_bits_24 & 0)):  # round up
-            frac_bits_23 += round_bit
+        if round_bit and lsb:  # exact half, LSB odd -> round up to even
+            frac_bits_23 += 1
         mantissa = frac_bits_23 & 0x7FFFFF
     else:
         # Float64: 52-bit mantissa, 11-bit exponent (bias 1023)
