@@ -100,6 +100,189 @@ BENCHMARKS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Primitive (isolated and composed) benchmarks for the unconstrained-with-
+# verifier pattern. These let us measure individual helpers from
+# `ieee754::unconstrained_ops` against the in-tree binary-search baseline
+# they aim to replace, without yet swapping any call sites.
+#
+# Each entry has the same shape as `BENCHMARKS` plus optional `extra_use`
+# and `prelude` keys for extra imports and helper functions injected
+# above `main`. Measurements are written into a separate
+# `primitive_benchmarks` block in the JSON output so they don't pollute
+# the headline `benchmarks` table.
+# ---------------------------------------------------------------------------
+
+PRIMITIVE_BENCHMARKS = {
+    # -- Isolated: the verifier on its own vs. an inlined binary-search
+    #    baseline. This matches the "clean room" comparison reported for
+    #    `clz_u23` in PR #36; if anything, this number is friendlier to
+    #    the baseline because the constant inputs of a one-shot caller
+    #    can fold large parts of the binary search away.
+    "clz_u64_isolated_verified": {
+        "extra_use": "use ieee754::count_leading_zeros_u64_verified;",
+        "prelude": "",
+        "inputs": "value: pub u64",
+        "body": """
+    count_leading_zeros_u64_verified(value)
+""",
+        "return_type": "pub u64",
+    },
+    "clz_u64_isolated_binsearch_baseline": {
+        "extra_use": "",
+        "prelude": """
+fn clz_u64_binsearch(value: u64) -> u64 {
+    let mut leading_zeros: u64 = 0;
+    let mut v = value;
+    if v & 0xFFFFFFFF00000000 == 0 {
+        leading_zeros += 32;
+        v <<= 32;
+    }
+    if v & 0xFFFF000000000000 == 0 {
+        leading_zeros += 16;
+        v <<= 16;
+    }
+    if v & 0xFF00000000000000 == 0 {
+        leading_zeros += 8;
+        v <<= 8;
+    }
+    if v & 0xF000000000000000 == 0 {
+        leading_zeros += 4;
+        v <<= 4;
+    }
+    if v & 0xC000000000000000 == 0 {
+        leading_zeros += 2;
+        v <<= 2;
+    }
+    if v & 0x8000000000000000 == 0 {
+        leading_zeros += 1;
+    }
+    leading_zeros
+}
+""",
+        "inputs": "value: pub u64",
+        "body": """
+    clz_u64_binsearch(value)
+""",
+        "return_type": "pub u64",
+    },
+    # -- Composed: emulate the leading-zero subnormal-normalisation step
+    #    that `add_float64` performs (binary-search CLZ followed by a
+    #    bounded left shift driven by the count). The baseline copies the
+    #    in-tree code verbatim from `ieee754/src/float64/add.nr`; the
+    #    candidate replaces the binary search with the verified primitive.
+    #    This is the measurement that actually answers
+    #    "should we swap call sites?".
+    "clz_u64_composed_verified": {
+        "extra_use": "use ieee754::count_leading_zeros_u64_verified;",
+        "prelude": """
+fn normalise_with_verified(result_mant: u64, result_exp: u64) -> (u64, u64) {
+    let target_bit: u64 = 60;
+    let leading_zeros: u64 = count_leading_zeros_u64_verified(result_mant);
+    let shift_needed = leading_zeros - (64 - target_bit - 1);
+    let max_shift = if result_exp > 1 { result_exp - 1 } else { 0 };
+    let actual_shift = if shift_needed <= max_shift {
+        shift_needed
+    } else {
+        max_shift
+    };
+    let new_mant = result_mant << actual_shift;
+    let new_exp = result_exp - actual_shift;
+    (new_mant, new_exp)
+}
+""",
+        "inputs": "result_mant: pub u64, result_exp: pub u64",
+        "body": """
+    let (m, e) = normalise_with_verified(result_mant, result_exp);
+    m + e
+""",
+        "return_type": "pub u64",
+    },
+    "clz_u64_composed_binsearch_baseline": {
+        "extra_use": "",
+        "prelude": """
+fn normalise_with_binsearch(result_mant: u64, result_exp: u64) -> (u64, u64) {
+    let target_bit: u64 = 60;
+    let mut leading_zeros: u64 = 0;
+    let mut v = result_mant;
+    if v & 0xFFFFFFFF00000000 == 0 {
+        leading_zeros += 32;
+        v <<= 32;
+    }
+    if v & 0xFFFF000000000000 == 0 {
+        leading_zeros += 16;
+        v <<= 16;
+    }
+    if v & 0xFF00000000000000 == 0 {
+        leading_zeros += 8;
+        v <<= 8;
+    }
+    if v & 0xF000000000000000 == 0 {
+        leading_zeros += 4;
+        v <<= 4;
+    }
+    if v & 0xC000000000000000 == 0 {
+        leading_zeros += 2;
+        v <<= 2;
+    }
+    if v & 0x8000000000000000 == 0 {
+        leading_zeros += 1;
+    }
+    let shift_needed = leading_zeros - (64 - target_bit - 1);
+    let max_shift = if result_exp > 1 { result_exp - 1 } else { 0 };
+    let actual_shift = if shift_needed <= max_shift {
+        shift_needed
+    } else {
+        max_shift
+    };
+    let new_mant = result_mant << actual_shift;
+    let new_exp = result_exp - actual_shift;
+    (new_mant, new_exp)
+}
+""",
+        "inputs": "result_mant: pub u64, result_exp: pub u64",
+        "body": """
+    let (m, e) = normalise_with_binsearch(result_mant, result_exp);
+    m + e
+""",
+        "return_type": "pub u64",
+    },
+}
+
+
+def create_primitive_benchmark_project(tmpdir: Path, name: str, benchmark: dict) -> Path:
+    """Create a temporary Noir project for a primitive (isolated or composed)
+    benchmark. Differs from `create_benchmark_project` only in that the
+    `main` body may pull in additional `use` lines and helper functions
+    via the `extra_use` and `prelude` keys.
+    """
+    project_dir = tmpdir / name
+    project_dir.mkdir(parents=True)
+    src_dir = project_dir / "src"
+    src_dir.mkdir()
+
+    nargo_toml = f"""[package]
+name = "{name}"
+type = "bin"
+authors = ["benchmark"]
+
+[dependencies]
+ieee754 = {{ path = "{get_project_root() / 'ieee754'}" }}
+"""
+    (project_dir / "Nargo.toml").write_text(nargo_toml)
+
+    extra_use = benchmark.get("extra_use", "")
+    prelude = benchmark.get("prelude", "")
+
+    main_nr = f"""{extra_use}
+{prelude}
+fn main({benchmark['inputs']}) -> {benchmark['return_type']} {{{benchmark['body']}}}
+"""
+    (src_dir / "main.nr").write_text(main_nr)
+
+    return project_dir
+
+
 def get_project_root():
     """Get the project root directory."""
     script_dir = Path(__file__).parent
@@ -167,6 +350,16 @@ def run_nargo_info(project_dir: Path) -> dict:
             if len(parts) >= 4:
                 # parts: [Package, Function, Expression Width, ACIR Opcodes, Brillig Opcodes]
                 try:
+                    width_str = parts[2].strip()
+                    if width_str != 'N/A':
+                        # Width comes through as e.g. "Bounded { width: 4 }"
+                        # or just an integer. Extract the trailing integer.
+                        m = re.search(r'(\d+)', width_str)
+                        if m:
+                            info["expression_width"] = int(m.group(1))
+                except (ValueError, IndexError):
+                    pass
+                try:
                     acir_str = parts[3].strip()
                     if acir_str != 'N/A':
                         info["acir_opcodes"] = int(acir_str)
@@ -200,13 +393,20 @@ def run_nargo_compile_and_info(project_dir: Path) -> dict:
     return run_nargo_info(project_dir)
 
 
-def benchmark_all(output_file: Path = None):
-    """Run all benchmarks and collect gate counts."""
+def benchmark_all(output_file: Path = None, primitives: bool = True):
+    """Run all benchmarks and collect gate counts.
+
+    Also runs the `PRIMITIVE_BENCHMARKS` (verifier vs. binary-search baseline,
+    isolated and composed) and writes them under the `primitive_benchmarks`
+    key when `primitives` is true.
+    """
     results = {
         "timestamp": datetime.now().isoformat(),
         "git_commit": get_git_commit(),
         "benchmarks": {},
     }
+    if primitives:
+        results["primitive_benchmarks"] = {}
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
@@ -218,7 +418,7 @@ def benchmark_all(output_file: Path = None):
                 project_dir = create_benchmark_project(tmpdir, name, benchmark)
                 info = run_nargo_compile_and_info(project_dir)
                 results["benchmarks"][name] = info
-                
+
                 # Print summary
                 if "error" in info:
                     print(f"ERROR: {info['error'][:50]}...")
@@ -233,6 +433,32 @@ def benchmark_all(output_file: Path = None):
             except Exception as e:
                 print(f"ERROR: {e}")
                 results["benchmarks"][name] = {"error": str(e)}
+
+        if primitives:
+            print()
+            for name, benchmark in PRIMITIVE_BENCHMARKS.items():
+                print(f"Benchmarking primitive {name}...", end=" ", flush=True)
+                try:
+                    project_dir = create_primitive_benchmark_project(
+                        tmpdir, name, benchmark
+                    )
+                    info = run_nargo_compile_and_info(project_dir)
+                    results["primitive_benchmarks"][name] = info
+
+                    if "error" in info:
+                        print(f"ERROR: {info['error'][:50]}...")
+                    elif "acir_opcodes" in info:
+                        print(f"ACIR: {info['acir_opcodes']}", end="")
+                        if "expression_width" in info:
+                            print(f", Width: {info['expression_width']}", end="")
+                        if "brillig_opcodes" in info:
+                            print(f", Brillig: {info['brillig_opcodes']}", end="")
+                        print()
+                    else:
+                        print(f"OK (parsing failed - check raw output)")
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                    results["primitive_benchmarks"][name] = {"error": str(e)}
 
     # Save results
     if output_file is None:
