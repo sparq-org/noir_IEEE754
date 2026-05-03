@@ -716,6 +716,17 @@ fn test_shr_sticky_u64_bad_sticky_zero_shift_64() {
     verify_shr_sticky_u64_relation(0xABCD_u64, 64_u64, 0_u64, 0xABCD_u64, 0_u1);
 }
 
+#[test(should_fail_with = "shift>=64 sticky direction wrong")]
+fn test_shr_sticky_u64_bad_sticky_one_value_zero_shift_64() {
+    // shift == 64, value == 0, sticky claimed 1 -- rejected by the
+    // existence-of-inverse clause `value * value_inv == sticky` (0 * inv == 0
+    // != 1). This isolates the second sticky-direction constraint in the
+    // shift >= 64 branch (mirrors the `< 64` adversarial test
+    // `bad_sticky_one_with_zero_remainder`).
+    // Safety: adversarial path.
+    verify_shr_sticky_u64_relation(0_u64, 64_u64, 0_u64, 0_u64, 1_u1);
+}
+
 #[test]
 fn test_shr_sticky_u64_shift_far_above_64() {
     // Drop-in compatibility with the baseline: very large shifts collapse to
