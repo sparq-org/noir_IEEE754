@@ -242,6 +242,61 @@ fn denorm_shift_baseline(result_mant: u64, result_exp: i64) -> (u64, u64) {
 """,
         "return_type": "pub u64",
     },
+    # ------------------------------------------------------------------
+    # Constant-shift spike (DECIDED 2026-05-03 by Jesse).
+    #
+    # `float32/mul.nr:201` calls `shift_right_sticky_u64(result_mant,
+    # guard_shift)` where `guard_shift = 46 - 26 = 20` is known at
+    # compile time. Hypothesis: with a constant shift the verifier's
+    # `1 << shift` constant-folds and the `if shift == 0 / >= 64 / else`
+    # branches collapse, potentially inverting the cost shape vs. the
+    # PR #43 dynamic-shift verdict (-7% Width / +303% ACIR).
+    #
+    # `value` stays a `pub u64` witness so the operation does not
+    # collapse to a literal; only `shift` is a compile-time constant.
+    # See `bench/SPIKES.md` for the dynamic-shift entry this compares
+    # against.
+    # ------------------------------------------------------------------
+    "shr_sticky_u64_const20_baseline": {
+        "extra_use": "",
+        "prelude": """
+fn shr_sticky_u64_baseline_const20(value: u64) -> u64 {
+    let shift: u64 = 20;
+    if shift == 0 {
+        value
+    } else if shift >= 64 {
+        if value != 0 {
+            1
+        } else {
+            0
+        }
+    } else {
+        let mask = (1 << shift) - 1;
+        let shifted_out = value & mask;
+        let result = value >> shift;
+        if shifted_out != 0 {
+            result | 1
+        } else {
+            result
+        }
+    }
+}
+""",
+        "inputs": "value: pub u64",
+        "body": """
+    shr_sticky_u64_baseline_const20(value)
+""",
+        "return_type": "pub u64",
+    },
+    "shr_sticky_u64_const20_verified": {
+        "extra_use": "use ieee754::shift_right_sticky_u64_verified;",
+        "prelude": "",
+        "inputs": "value: pub u64",
+        "body": """
+    shift_right_sticky_u64_verified(value, 20_u64)
+""",
+        "return_type": "pub u64",
+    },
 }
 
 
