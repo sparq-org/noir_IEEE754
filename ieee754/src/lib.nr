@@ -3,6 +3,9 @@ pub mod utils;
 pub mod float32;
 pub mod float64;
 pub mod float;
+pub mod unconstrained_ops;
+
+pub use crate::unconstrained_ops::count_leading_zeros_u23_verified;
 
 // Re-export public API
 pub use crate::float::{
