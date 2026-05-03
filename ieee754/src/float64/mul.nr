@@ -9,9 +9,8 @@ use crate::float64::helpers::{
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
 };
-use crate::utils::{
-    mul_u64_to_u128, shift_right_sticky_u128, shift_right_sticky_u64, should_round_up,
-};
+use crate::unconstrained_ops::shift_right_sticky_u128_verified;
+use crate::utils::{mul_u64_to_u128, shift_right_sticky_u64, should_round_up};
 
 // IEEE 754 compliant multiplication for 64-bit floats with rounding mode
 pub fn mul_float64_with_rounding(
@@ -162,7 +161,7 @@ pub fn mul_float64_with_rounding(
             result_exp = result_exp + 1;
             // Shift from position 105 to position 55 (52 + 3 guard bits)
             // That's a shift of 105 - 55 = 50
-            result_mant = shift_right_sticky_u128(product, 50);
+            result_mant = shift_right_sticky_u128_verified(product, 50);
         } else {
             // Product in [1, 2) for normalized, or lower for denormal inputs
             // First check if leading bit is at position 104
@@ -172,7 +171,7 @@ pub fn mul_float64_with_rounding(
                 // Normal case: implicit bit at position 104
                 // Shift from position 104 to position 55
                 // That's a shift of 104 - 55 = 49
-                result_mant = shift_right_sticky_u128(product, 49);
+                result_mant = shift_right_sticky_u128_verified(product, 49);
             } else {
                 // Denormal case: leading bit is below position 104
                 // Need to find leading bit and normalize
@@ -278,7 +277,7 @@ pub fn mul_float64_with_rounding(
                 let target_pos: i64 = 55;
                 if leading_pos >= target_pos {
                     let shift_amount = (leading_pos - target_pos) as u64;
-                    result_mant = shift_right_sticky_u128(product, shift_amount);
+                    result_mant = shift_right_sticky_u128_verified(product, shift_amount);
                 } else {
                     // Need to shift left - this means the product is very small
                     // Shift from 128-bit to get all significant bits into result_mant
