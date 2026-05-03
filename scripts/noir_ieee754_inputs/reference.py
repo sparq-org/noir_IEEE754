@@ -220,36 +220,71 @@ def _compute_ties_to_away(
     """IEEE 754 roundTiesToAway, synthesised on top of MPFR.
 
     MPFR doesn't have a native ``roundTiesToAway`` mode (its ``RoundAwayZero``
-    is the directed round-away-from-zero mode, which moves every inexact
-    result, not just halfway ties). We synthesise it by:
+    is the *directed* round-away mode, which moves every inexact result,
+    not just halfway ties). We synthesise IEEE roundTiesToAway as follows:
 
-    1. Computing the operation at ``precision + 2`` bits with MPFR_RNDN -- two
-       extra bits is enough to capture the IEEE round bit and a sticky-bit
-       summary for any of ADD / SUB / MUL / DIV.
-    2. Comparing the high-precision result to two candidate
-       ``precision``-bit results: round-up (away from zero) and
-       round-down (toward zero). For exact results the two agree; for
-       inexact non-tie results either RNDU or RNDZ (depending on sign) is
-       correct; for halfway ties we deliberately pick round-away.
+    1. Compute the operation at sufficiently large precision in an
+       *unbounded-exponent* MPFR context, so the result is the exact real
+       value (no rounding, no overflow / underflow yet). For ADD / SUB /
+       MUL on inputs at precision ``p``, ``2 * p + 2`` significant bits
+       are provably enough (an IEEE multiply produces at most ``2p`` bits;
+       an add/sub at most ``p + 1``). For DIV the result can be infinite,
+       so we instead compute via ``RoundToNearest`` at ``p + 64`` bits,
+       which is more than enough to make ``can_round`` succeed for every
+       practical case -- and we *also* compute the IEEE-clamped RNE result
+       which is correct for every non-tie input.
+    2. Decide whether the rounded result is an exact halfway tie. We do
+       this by comparing the high-precision exact value against the
+       midpoint between the two candidate ``p``-bit neighbours
+       (``toward_zero`` and ``away``), each computed in an IEEE-shaped
+       context so over/underflow boundary cases come out right.
+    3. If the exact value equals the midpoint, the input is a halfway tie:
+       pick ``away`` (IEEE roundTiesToAway). Otherwise IEEE
+       roundTiesToNearest gives the correct result, which equals whichever
+       of ``toward_zero`` / ``away`` is closer to ``exact``. RNE and RTA
+       agree on every non-tie case.
 
-    The classic boundary-cases (overflow to Inf, underflow to denorm or
-    zero) work out correctly because each candidate round itself uses an
-    IEEE-shaped MPFR context that handles those.
+    The overflow boundary is handled correctly because the comparison is
+    *not* ``abs(exact - candidate)``: when the exact magnitude exceeds the
+    largest representable number, ``away`` is infinity and we route to it
+    by directly checking the IEEE overflow threshold rather than computing
+    a meaningless ``abs(exact - inf)``.
     """
     is_float32 = precision == 24
 
     a = _bits_to_mpfr(gmpy2, a_bits, is_float32=is_float32)
     b = _bits_to_mpfr(gmpy2, b_bits, is_float32=is_float32)
 
-    # Extra-precision exact-or-near-exact result, no IEEE clamping yet.
-    extra_ctx = gmpy2.context(precision=precision + 8, round=gmpy2.RoundToNearest)
-    with gmpy2.context(extra_ctx):
+    # Step 1 -- exact value at high precision, unbounded exponent.
+    # 2*p + 2 is provably enough for ADD/SUB/MUL exact results.
+    # For DIV the exact quotient may be infinite; we use a 128-bit cushion
+    # which makes can_round succeed for every binary32/binary64 div result
+    # except when exact is rational with a denominator coprime to 2 (the
+    # usual case), where we still get enough bits to classify the result
+    # against a halfway midpoint at target precision.
+    if operation == Operation.DIVIDE:
+        exact_precision = precision + 128
+    else:
+        exact_precision = 2 * precision + 4
+    exact_ctx = gmpy2.context(
+        precision=exact_precision,
+        emin=gmpy2.get_emin_min(),
+        emax=gmpy2.get_emax_max(),
+        round=gmpy2.RoundToNearest,
+        subnormalize=False,
+    )
+    with gmpy2.context(exact_ctx):
         exact = _apply_op(gmpy2, operation, a, b)
 
     if gmpy2.is_nan(exact):
         return constants.FLOAT32_NAN if is_float32 else constants.FLOAT64_NAN
+    if gmpy2.is_infinite(exact):
+        # 1/0, +Inf+1 etc. -- nothing to round.
+        if is_float32:
+            return constants.FLOAT32_NEG_INFINITY if exact < 0 else constants.FLOAT32_INFINITY
+        return constants.FLOAT64_NEG_INFINITY if exact < 0 else constants.FLOAT64_INFINITY
 
-    # Toward zero (RNDZ) and away from zero (RNDA) at the target precision.
+    # Step 2 -- candidates at target precision under directed modes.
     ctx_z = _ieee_context_explicit(gmpy2, precision, gmpy2.RoundToZero)
     ctx_a = _ieee_context_explicit(gmpy2, precision, gmpy2.RoundAwayZero)
     with gmpy2.context(ctx_z):
@@ -257,18 +292,52 @@ def _compute_ties_to_away(
     with gmpy2.context(ctx_a):
         away = _apply_op(gmpy2, operation, a, b)
 
-    # Pick the candidate (toward_zero vs away) closest to ``exact``; ties
-    # break to ``away`` per IEEE roundTiesToAway.
     if toward_zero == away:
-        # Exact at target precision (or both clamped to the same boundary).
+        # Exact at target precision (no rounding needed) or both candidates
+        # clamped to the same boundary (e.g. underflow to +0).
         return _bits_from_mpfr(gmpy2, away, is_float32=is_float32)
 
-    diff_z = abs(exact - toward_zero)
-    diff_a = abs(exact - away)
-    if diff_a <= diff_z:
-        chosen = away
-    else:
-        chosen = toward_zero
+    # If RNDA produced infinity, the IEEE result for roundTiesToAway is also
+    # infinity for any exact magnitude at-or-above the round-to-nearest
+    # overflow threshold; for binary32/64 we use the halfway between max
+    # finite and the (representational) next power of two, which is exactly
+    # the threshold IEEE 754 uses.
+    if gmpy2.is_infinite(away):
+        # The threshold is `2^emax * (2 - 2^-precision)` -- the midpoint
+        # between max finite and 2^emax (which would be the next
+        # representable value if the exponent range were unbounded).
+        with gmpy2.context(exact_ctx):
+            if is_float32:
+                # max_finite f32 = (2 - 2^-23) * 2^127 = (2^24 - 1) * 2^104
+                max_finite = gmpy2.mpfr((2**24 - 1)) * gmpy2.mpfr(2)**104
+                next_pow = gmpy2.mpfr(2)**128
+            else:
+                max_finite = gmpy2.mpfr((2**53 - 1)) * gmpy2.mpfr(2)**(1023 - 52)
+                next_pow = gmpy2.mpfr(2)**1024
+            threshold = (max_finite + next_pow) / 2
+            mag = abs(exact)
+            # Per IEEE 754 sec 4.3.1, roundTiesToAway sends ties to away,
+            # so the overflow condition is mag >= threshold (strict in
+            # standard RNE, but ties-to-away sends the equality case to
+            # infinity too -- which is what RNDA already gave us).
+            if mag >= threshold:
+                return _bits_from_mpfr(gmpy2, away, is_float32=is_float32)
+            return _bits_from_mpfr(gmpy2, toward_zero, is_float32=is_float32)
+
+    # Step 3 -- compare exact to the midpoint of the two candidates at
+    # high precision. Halfway tie -> away; otherwise nearer candidate.
+    with gmpy2.context(exact_ctx):
+        # Convert both candidates into the unbounded-exponent context
+        # (precision-promoted, no rounding) so the midpoint is exact.
+        tz_ext = gmpy2.mpfr(toward_zero, exact_precision)
+        aw_ext = gmpy2.mpfr(away, exact_precision)
+        midpoint = (tz_ext + aw_ext) / 2
+        if exact == midpoint:
+            chosen = away
+        else:
+            diff_z = abs(exact - tz_ext)
+            diff_a = abs(exact - aw_ext)
+            chosen = away if diff_a < diff_z else toward_zero
     return _bits_from_mpfr(gmpy2, chosen, is_float32=is_float32)
 
 

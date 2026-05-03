@@ -269,25 +269,46 @@ def non_default_rounding_smoke(t: TestRunner) -> None:
             "leaked through where roundTiesToAway was needed."
         )
 
-    # And a case where roundTiesToAway differs from roundTiesToEven: the
-    # canonical example is rounding 0.5 to integer (1, not 0). At
-    # binary-floating-point granularity, halfway ties on a 24-bit
-    # significand are easy to construct: take a value with significand
-    # 0x800001 << 1 + 1 (a 25-bit value whose bottom bit is exactly the
-    # round-bit halfway), produced by an exact MUL.
-    # Concrete: 0x40000001 * 0x40000000 in binary32 -- ADD instead, which
-    # we can build directly.
-    # Actually a simpler construction: 2^24 + 1 (representable in f32) plus
-    # 0.5 (representable) is exactly 16777217.5, which sits halfway
-    # between 16777217 and 16777218. Both are representable; RNE rounds to
-    # 16777218 (last bit even); roundTiesToAway rounds away from zero,
-    # which for a positive value also goes up to 16777218 -- same bit
-    # pattern. Halfway-ties-going-different-ways need a case where RNE
-    # picks the toward-zero neighbour. Construct: 2^24 - 1 (= 0x4B7FFFFF)
-    # plus 0.5 (= 0x3F000000). Exact result = 16777215.5; RNE rounds to
-    # 16777216 (even last bit), roundTiesToAway rounds to 16777216 too
-    # (positive -> away = up). Hard to construct distinguishing cases at
-    # binary32 add granularity; we settle for the smoke-check above.
+    # Halfway tie that distinguishes IEEE roundTiesToAway from
+    # roundTiesToEven. Construction:
+    #   a = 1.0 (0x3F800000, bit pattern's last bit = 0, "even")
+    #   b = 2^-24 (0x33800000, exact f32)
+    #   exact a + b = 1 + 2^-24, exactly halfway between 1.0 (0x3F800000)
+    #     and 1 + 2^-23 (0x3F800001).
+    # RNE picks the neighbour with the even last bit -> 0x3F800000.
+    # RTA picks the neighbour away from zero (further from 0)
+    #   -> 0x3F800001.
+    # Any code path that conflates RTA with directed RoundAwayZero would
+    # give RNDU here (which happens to also be 0x3F800001), so we *also*
+    # cross-check against RNE (must differ from RTA on this input).
+    a32 = _f32_bits(1.0)
+    b32 = (0 << 31) | (103 << 23) | 0  # 2^-24 in binary32
+    rta_bits = compute_expected_bits(Operation.ADD, a32, b32, RoundingMode.NEAREST_AWAY, 24)
+    rne_bits = compute_expected_bits(Operation.ADD, a32, b32, RoundingMode.NEAREST_EVEN, 24)
+    rndd_bits = compute_expected_bits(Operation.ADD, a32, b32, RoundingMode.TOWARD_NEGATIVE, 24)
+    if rta_bits == 0x3F800001 and rne_bits == 0x3F800000 and rndd_bits == 0x3F800000:
+        t.passed += 1
+    else:
+        t.failed += 1
+        t.failures.append(
+            f"halfway-tie (1 + 2^-24) RTA=0x{rta_bits:08X} (want 0x3F800001), "
+            f"RNE=0x{rne_bits:08X} (want 0x3F800000), "
+            f"RNDD=0x{rndd_bits:08X} (want 0x3F800000)"
+        )
+
+    # Overflow boundary: max_finite_f32 + max_finite_f32 must round to +Inf
+    # under every rounding mode that can saturate, including RTA.
+    max_f32 = 0x7F7FFFFF
+    overflow_rta = compute_expected_bits(
+        Operation.ADD, max_f32, max_f32, RoundingMode.NEAREST_AWAY, 24
+    )
+    if overflow_rta == 0x7F800000:
+        t.passed += 1
+    else:
+        t.failed += 1
+        t.failures.append(
+            f"max_f32 + max_f32 RTA -> 0x{overflow_rta:08X}, expected 0x7F800000 (+Inf)"
+        )
 
 
 def main() -> int:
