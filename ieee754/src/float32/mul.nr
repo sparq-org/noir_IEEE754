@@ -202,19 +202,26 @@ pub fn mul_float32_with_rounding(
 
     // Handle underflow to denormal BEFORE rounding
     // We need to shift the mantissa (which still has 3 guard bits at positions 0-2)
-    // into position first, then round
+    // into position first, then round.
+    //
+    // IEEE 754-2019 sec 7.5 (underflow exception): underflow detection is
+    // *before* rounding under directed-rounding modes -- the rounded value
+    // matters for whether the result is inexact, but the flush-to-zero
+    // behaviour is *not* part of any IEEE rounding-direction attribute.
+    // Tiny products that are non-zero must propagate a sticky bit through
+    // the right-shift so the rounding step can lift them up to
+    // +/-min-denormal under roundTowardPositive / roundTowardNegative
+    // (depending on sign).
+    //
+    // ``shift_right_sticky_u64`` already handles the ``shift >= 64`` case
+    // by collapsing a non-zero value to a sticky-1 -- the pre-fix code was
+    // explicitly zero-filling at ``denorm_shift >= 27``, which lost the
+    // sticky bit and forced underflow flushing under every rounding mode.
+    // Bug class 2 (per PR #49 report).
     let mut is_denormal_result = false;
     if result_exp <= 0 {
-        // Shift mantissa right to create denormal
-        // denorm_shift is how many extra positions we need to shift
-        // The mantissa currently has implicit bit at position 26 (23 mantissa + 3 guard)
         let denorm_shift = 1 - result_exp;
-        if denorm_shift < 27 {
-            // Shift right, preserving sticky bits
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
-        } else {
-            result_mant = 0;
-        }
+        result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
         result_exp = 0;
         is_denormal_result = true;
     }

@@ -215,20 +215,19 @@ pub fn div_float32_with_rounding(
 
     // Handle underflow to denormal BEFORE rounding
     // Currently implicit bit is at position 27, we want to keep 4 guard bits
-    // So target implicit position is 27 (with guard bits at 3-0)
+    // So target implicit position is 27 (with guard bits at 3-0).
+    //
+    // IEEE 754-2019 sec 7.5 (underflow exception): tiny non-zero quotients
+    // must propagate a sticky bit so directed rounding can lift them to
+    // +/-min-denormal. ``shift_right_sticky_u64`` collapses any non-zero
+    // value shifted by >= 64 to a sticky-1; the pre-fix code zero-filled
+    // at ``denorm_shift >= 28``, losing the sticky and forcing a
+    // round-to-zero flush even under roundTowardPositive /
+    // roundTowardNegative. Bug class 2 (per PR #49 report).
     let mut is_denormal_result = false;
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
-        // Need to shift more to account for denormalization
-        // The result_mant currently has implicit at position 27
-        // We need to shift by (denorm_shift + 4) to put implicit at position (23 - denorm_shift)
-        // But we keep 4 guard bits, so effectively we shift by denorm_shift here
-        // and then the normal shift of 4 later
-        if denorm_shift < 28 {
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
-        } else {
-            result_mant = 0;
-        }
+        result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
         result_exp = 0;
         is_denormal_result = true;
     }
