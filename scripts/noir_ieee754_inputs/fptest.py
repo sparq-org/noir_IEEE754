@@ -21,9 +21,12 @@ that the noir_IEEE754 test generator consumes.
 from __future__ import annotations
 
 import re
+import struct
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
+
+from . import constants
 
 
 # Known bad test cases in the IBM FPgen test suite (bugs in expected values).
@@ -126,88 +129,89 @@ def parse_fp_value(value_str: str) -> FPValue:
     return FPValue(sign=sign, significand=significand, exponent=exponent)
 
 
-# Special bit patterns for IEEE 754 (kept for fp_value_to_bits; phase 2c will
-# replace this hand-rolled bit decomposition with a float.fromhex + struct
-# pipeline).
-_FLOAT32_SPECIAL = {
-    'qnan': 0x7FC00000,
-    'snan': 0x7F800001,
-    'pos_inf': 0x7F800000,
-    'neg_inf': 0xFF800000,
-    'pos_zero': 0x00000000,
-    'neg_zero': 0x80000000,
-}
+def _float64_to_bits(f: float) -> int:
+    """Independent IEEE 754 binary64 bit extraction via ``struct``.
 
-_FLOAT64_SPECIAL = {
-    'qnan': 0x7FF8000000000000,
-    'snan': 0x7FF0000000000001,
-    'pos_inf': 0x7FF0000000000000,
-    'neg_inf': 0xFFF0000000000000,
-    'pos_zero': 0x0000000000000000,
-    'neg_zero': 0x8000000000000000,
-}
+    Goes through the canonical big-endian binary64 layout written by
+    ``struct.pack('>d', ...)`` and unpacks as an unsigned 64-bit integer.
+    Independent of any hand-rolled bit-twiddling under test.
+    """
+    return struct.unpack('>Q', struct.pack('>d', f))[0]
+
+
+def _float32_to_bits(f: float) -> int:
+    """Independent IEEE 754 binary32 bit extraction via ``struct``.
+
+    ``struct.pack('>f', ...)`` rounds the input through binary32 using the
+    platform's IEEE 754 round-to-nearest-even, mirroring what the f32
+    circuit will see. Raises ``OverflowError`` on values whose magnitude
+    exceeds the binary32 finite range; callers must handle that path
+    explicitly.
+    """
+    return struct.unpack('>I', struct.pack('>f', f))[0]
 
 
 def fp_value_to_bits(val: FPValue, is_float32: bool = True) -> int:
-    """Convert an FPValue to IEEE 754 bits using direct bit manipulation.
+    """Convert an ``FPValue`` to IEEE 754 bits.
 
-    The test format uses 24 bits (6 hex digits) for float32 mantissa and
-    52 bits (13 hex digits) for float64. We convert directly to avoid
-    precision loss from Python float arithmetic.
+    Layered implementation, independent of any hand-rolled bit-twiddling:
+
+    1. Special values (``+Inf`` / ``-Inf`` / ``+Zero`` / ``-Zero`` / ``Q`` /
+       ``S``) resolve to named bit patterns from
+       :mod:`noir_ieee754_inputs.constants`.
+    2. Finite values get rendered as a Python hex literal in the form
+       ``[+-]0x<int>.<frac>P<exp>`` and parsed with :func:`float.fromhex`,
+       which is CPython core and accepts exactly the IBM FPgen syntax
+       once a leading ``0x`` is prepended.
+    3. The resulting Python ``float`` is repacked via ``struct.pack`` --
+       ``'>d'`` for binary64, ``'>f'`` for binary32 (which also performs
+       round-to-nearest-even down-rounding from the 64-bit Python value to
+       the 32-bit format).
+    4. Magnitudes that overflow the binary32 finite range are returned as
+       ``+/- FLOAT32_INFINITY`` to match the historical behaviour of the
+       hand-rolled implementation -- ``struct.pack('>f', x)`` would raise
+       ``OverflowError`` otherwise. Underflow to zero is left to
+       :func:`float.fromhex` / ``struct.pack`` themselves, which round to
+       nearest-even.
+
+    Round-to-nearest-even is the only rounding mode supported here, which
+    matches the current generator (it skips every test with a different
+    rounding mode). When non-default rounding modes ship, swap this for an
+    MPFR-backed (``gmpy2``) implementation.
     """
-    special = _FLOAT32_SPECIAL if is_float32 else _FLOAT64_SPECIAL
-
     if val.is_nan:
-        return special['snan'] if val.is_snan else special['qnan']
+        if val.is_snan:
+            # Legacy "low-bit payload" SNaN encoding the generator has always
+            # emitted; the Noir library uses 0x7FA00000 / 0x7FF4_..._0000
+            # instead. Both are valid SNaN per IEEE 754-2019 sec 6.2.1; the
+            # design doc tracks the alignment as an open question (Q.C.3),
+            # so this round preserves byte-for-byte parity with previous
+            # generator output.
+            return 0x7F800001 if is_float32 else 0x7FF0000000000001
+        return constants.FLOAT32_NAN if is_float32 else constants.FLOAT64_NAN
     if val.is_inf:
-        return special['neg_inf'] if val.sign else special['pos_inf']
+        if is_float32:
+            return constants.FLOAT32_NEG_INFINITY if val.sign else constants.FLOAT32_INFINITY
+        return constants.FLOAT64_NEG_INFINITY if val.sign else constants.FLOAT64_INFINITY
     if val.is_zero:
-        return special['neg_zero'] if val.sign else special['pos_zero']
+        if is_float32:
+            return constants.FLOAT32_NEG_ZERO if val.sign else constants.FLOAT32_ZERO
+        return constants.FLOAT64_NEG_ZERO if val.sign else constants.FLOAT64_ZERO
 
-    int_part = int(val.significand[0])
-    frac_hex = val.significand[1:]
+    sign_str = "-" if val.sign else "+"
+    int_part = val.significand[0]
+    frac_hex = val.significand[1:] or "0"
+    hex_literal = f"{sign_str}0x{int_part}.{frac_hex}P{val.exponent:+d}"
 
-    if is_float32:
-        # Float32: 23-bit mantissa, 8-bit exponent (bias 127).
-        EXP_BIAS = 127
-        EXP_MAX = 254
-        # Test format uses 6 hex digits = 24 bits, we need 23. Pad/truncate to
-        # exactly 6 hex digits, then round to nearest, ties to even. No sticky
-        # bits apply here, so the half-way tie reduces to "round up only when
-        # the LSB of the result is odd".
-        frac_hex_padded = frac_hex.ljust(6, '0')[:6]
-        frac_bits_24 = int(frac_hex_padded, 16)
-        lsb = (frac_bits_24 >> 1) & 1
-        round_bit = frac_bits_24 & 1
-        frac_bits_23 = frac_bits_24 >> 1
-        if round_bit and lsb:
-            frac_bits_23 += 1
-        mantissa = frac_bits_23 & 0x7FFFFF
-    else:
-        # Float64: 52-bit mantissa, 11-bit exponent (bias 1023).
-        EXP_BIAS = 1023
-        EXP_MAX = 2046
-        frac_hex_padded = frac_hex.ljust(13, '0')[:13]
-        mantissa = int(frac_hex_padded, 16) & ((1 << 52) - 1)
-
-    biased_exp = val.exponent + EXP_BIAS
-
-    if int_part == 0:
-        # Denormal: exponent field is 0, mantissa as-is.
-        biased_exp = 0
-    elif biased_exp <= 0:
-        # Underflow to denormal.
-        biased_exp = 0
-    elif biased_exp > EXP_MAX:
-        # Overflow to infinity.
-        return special['neg_inf'] if val.sign else special['pos_inf']
+    f = float.fromhex(hex_literal)
 
     if is_float32:
-        bits = (val.sign << 31) | (biased_exp << 23) | mantissa
-    else:
-        bits = (val.sign << 63) | (biased_exp << 52) | mantissa
-
-    return bits
+        try:
+            return _float32_to_bits(f)
+        except OverflowError:
+            # Magnitude exceeded the binary32 finite range.
+            return constants.FLOAT32_NEG_INFINITY if val.sign else constants.FLOAT32_INFINITY
+    return _float64_to_bits(f)
 
 
 def fp_value_to_bits32(val: FPValue) -> int:
