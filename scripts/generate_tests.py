@@ -323,7 +323,13 @@ _F64_MANTISSA_MASK = (1 << 52) - 1
 
 
 def bits_to_fpvalue(bits: int) -> FPValue:
-    """Inverse of fp_value_to_bits for float64: decode IEEE 754 binary64 bits into an FPValue."""
+    """Decode IEEE 754 binary64 bits into an FPValue for synthetic-test scaffolding.
+
+    Lossy on NaN: any NaN maps to ``is_nan=True`` with no payload and no
+    signalling/quiet distinction. Sufficient for the synthetic-f64 generators,
+    which never construct payloaded NaNs, so this is not a true inverse of
+    ``fp_value_to_bits``.
+    """
     sign = (bits >> 63) & 1
     exp = (bits >> 52) & 0x7FF
     mant = bits & _F64_MANTISSA_MASK
@@ -437,7 +443,13 @@ def _gen_underflow_div(start_line: int) -> list['TestCase']:
 
 
 def _gen_hamming_add_sub(start_line: int) -> list['TestCase']:
-    """Adjacent values differing by 1 ULP: addition and subtraction (Hamming-distance edge cases)."""
+    """Adjacent values differing by 1 ULP: addition and subtraction (Hamming-distance edge cases).
+
+    Both operands of each test share a single sign bit so the 1-ULP adjacency
+    invariant (``base + diff == ulp`` and ``ulp - diff == base``) holds for
+    negative operands too: with a shared sign s, ``s·base + s·diff == s·ulp``.
+    Independent signs would break the relationship for the mixed-sign cases.
+    """
     tests = []
     line_num = start_line
     for i in range(30):
@@ -450,15 +462,17 @@ def _gen_hamming_add_sub(start_line: int) -> list['TestCase']:
         ulp = float64_from_bits(ulp_bits)
         diff = ulp - base
 
-        a_bits = float64_to_bits(base) | _random_sign_bit()
-        b_bits = float64_to_bits(diff) | _random_sign_bit()
+        sign_add = _random_sign_bit()
+        a_bits = float64_to_bits(base) | sign_add
+        b_bits = float64_to_bits(diff) | sign_add
         tests.append(_make_synthetic_f64_test(
             Operation.ADD, a_bits, b_bits, line_num, f"hamming_add_{i}"
         ))
         line_num += 1
 
-        a_bits_sub = float64_to_bits(ulp) | _random_sign_bit()
-        b_bits_sub = float64_to_bits(diff) | _random_sign_bit()
+        sign_sub = _random_sign_bit()
+        a_bits_sub = float64_to_bits(ulp) | sign_sub
+        b_bits_sub = float64_to_bits(diff) | sign_sub
         tests.append(_make_synthetic_f64_test(
             Operation.SUBTRACT, a_bits_sub, b_bits_sub, line_num, f"hamming_sub_{i}"
         ))
