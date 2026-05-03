@@ -150,13 +150,14 @@ fn verify_clz_u23_relation(value: u32, count: u32) -> u32 {
         assert(probe == 1_u32, "count_leading_zeros_u23: leading bit not set");
 
         // Clause (3b): no bits of low23 are set above `top_bit_pos`.
-        // Equivalent to `low23 < 2^(top_bit_pos + 1) = 2^(23 - count)`.
-        // Build the bound using a left shift on a u32; the shift amount
-        // `23 - count` is in 1..=23 because count is in 0..=22, so the
-        // shift is well within u32's 32-bit range.
-        let shift_amount: u32 = 23_u32 - count;
-        let bound: u32 = 1_u32 << shift_amount;
-        assert(low23 < bound, "count_leading_zeros_u23: bit set above leading position");
+        // Expressed as a single right-shift comparison: shifting low23
+        // right by `top_bit_pos + 1` must yield zero. This avoids
+        // constructing `1 << (23 - count)` as a dynamic left-shift,
+        // which is expensive in ACIR. The shift amount `top_bit_pos + 1`
+        // is in 1..=23, so it stays within u32's 32-bit range.
+        let above_shift: u32 = top_bit_pos + 1_u32;
+        let above: u32 = low23 >> above_shift;
+        assert(above == 0_u32, "count_leading_zeros_u23: bit set above leading position");
     }
 
     count
