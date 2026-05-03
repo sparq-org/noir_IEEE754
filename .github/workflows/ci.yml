@@ -51,8 +51,18 @@ jobs:
       - name: Cross-check MPFR vs legacy reference oracle
         run: python3 scripts/test_reference.py
 
+      - name: Build Berkeley TestFloat corpus
+        # Builds Berkeley SoftFloat-3 + TestFloat-3 from upstream sources
+        # and runs ``testfloat_gen`` once per (function, rounding) tuple
+        # the dispatch table in ``noir_ieee754_inputs.sources`` flags as
+        # TestFloat-sourced. Captures live under ``.testfloat_cache/``
+        # for the next step to consume. The full level-1 corpus is ~3 GB
+        # raw; we trim it via ``--testfloat-max-per-function`` at parse
+        # time to keep the test count tractable.
+        run: ./scripts/regenerate_testfloat_corpus.sh
+
       - name: Generate IEEE 754 tests and CI matrix
-        run: python3 scripts/generate_tests.py --all --packages --synthetic-f64 --generate-f64 --output-dir test_packages --ci-matrix .github/test-matrix.json
+        run: python3 scripts/generate_tests.py --all --packages --synthetic-f64 --generate-f64 --output-dir test_packages --ci-matrix .github/test-matrix.json --testfloat-cache .testfloat_cache --testfloat-max-per-function 2000
 
       - name: Read test matrix
         id: matrix
