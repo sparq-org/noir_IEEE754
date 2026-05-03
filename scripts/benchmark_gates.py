@@ -132,32 +132,43 @@ PRIMITIVE_BENCHMARKS = {
         "extra_use": "",
         "prelude": """
 fn clz_u64_binsearch(value: u64) -> u64 {
-    let mut leading_zeros: u64 = 0;
-    let mut v = value;
-    if v & 0xFFFFFFFF00000000 == 0 {
-        leading_zeros += 32;
-        v <<= 32;
+    // The 6-step binary-search count-leading-zeros baseline returns 63
+    // for `value == 0` (only the last conditional fires). To make this
+    // an apples-to-apples comparison against
+    // `count_leading_zeros_u64_verified` -- which specifies 64 for the
+    // zero case -- we add an explicit zero short-circuit. Without this
+    // the two circuits agree on every nonzero input but diverge at
+    // zero, which would invalidate the benchmark.
+    if value == 0 {
+        64
+    } else {
+        let mut leading_zeros: u64 = 0;
+        let mut v = value;
+        if v & 0xFFFFFFFF00000000 == 0 {
+            leading_zeros += 32;
+            v <<= 32;
+        }
+        if v & 0xFFFF000000000000 == 0 {
+            leading_zeros += 16;
+            v <<= 16;
+        }
+        if v & 0xFF00000000000000 == 0 {
+            leading_zeros += 8;
+            v <<= 8;
+        }
+        if v & 0xF000000000000000 == 0 {
+            leading_zeros += 4;
+            v <<= 4;
+        }
+        if v & 0xC000000000000000 == 0 {
+            leading_zeros += 2;
+            v <<= 2;
+        }
+        if v & 0x8000000000000000 == 0 {
+            leading_zeros += 1;
+        }
+        leading_zeros
     }
-    if v & 0xFFFF000000000000 == 0 {
-        leading_zeros += 16;
-        v <<= 16;
-    }
-    if v & 0xFF00000000000000 == 0 {
-        leading_zeros += 8;
-        v <<= 8;
-    }
-    if v & 0xF000000000000000 == 0 {
-        leading_zeros += 4;
-        v <<= 4;
-    }
-    if v & 0xC000000000000000 == 0 {
-        leading_zeros += 2;
-        v <<= 2;
-    }
-    if v & 0x8000000000000000 == 0 {
-        leading_zeros += 1;
-    }
-    leading_zeros
 }
 """,
         "inputs": "value: pub u64",
