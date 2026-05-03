@@ -198,5 +198,77 @@
         "acir_opcodes": 34
       }
     }
+  },
+  {
+    "timestamp": "2026-05-03T17:16:16.382238",
+    "git_commit": "53327088",
+    "benchmarks": {
+      "add_float32": {
+        "expression_width": 610,
+        "acir_opcodes": 34
+      },
+      "mul_float32": {
+        "expression_width": 1053,
+        "acir_opcodes": 34
+      },
+      "sub_float32": {
+        "expression_width": 611,
+        "acir_opcodes": 34
+      },
+      "div_float32": {
+        "expression_width": 959,
+        "acir_opcodes": 34
+      },
+      "add_float64": {
+        "expression_width": 714,
+        "acir_opcodes": 34
+      },
+      "mul_float64": {
+        "expression_width": 1710,
+        "acir_opcodes": 183
+      },
+      "sub_float64": {
+        "expression_width": 715,
+        "acir_opcodes": 34
+      },
+      "div_float64": {
+        "expression_width": 4589,
+        "acir_opcodes": 34
+      }
+    },
+    "primitive_benchmarks": {
+      "shr_sticky_u64_isolated_verified": {
+        "expression_width": 67,
+        "acir_opcodes": 137
+      },
+      "shr_sticky_u64_isolated_baseline": {
+        "expression_width": 72,
+        "acir_opcodes": 34
+      },
+      "shr_sticky_u64_composed_verified": {
+        "expression_width": 101,
+        "acir_opcodes": 137
+      },
+      "shr_sticky_u64_composed_baseline": {
+        "expression_width": 106,
+        "acir_opcodes": 34
+      },
+      "shr_sticky_u128_isolated_verified": {
+        "expression_width": 125,
+        "acir_opcodes": 183
+      },
+      "shr_sticky_u128_isolated_baseline": {
+        "expression_width": 190,
+        "acir_opcodes": 34
+      },
+      "shr_sticky_u128_composed_verified": {
+        "expression_width": 242,
+        "acir_opcodes": 183
+      },
+      "shr_sticky_u128_composed_baseline": {
+        "expression_width": 304,
+        "acir_opcodes": 34
+      }
+    }
   }
 ]
