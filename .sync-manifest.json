@@ -1,0 +1,17 @@
+{
+  "profile": "noir",
+  "ci_hooks": [
+    "generate-tests"
+  ],
+  "files": {
+    ".roborev.toml": "8e45a85b98fcaaa625c57cbc584a4826b7d0691bf729313932b462dca111c1a3",
+    ".github/noir-versions.json": "8bfc115aa4ad34f8e7715a4df76ccca454248a54b662a218795a7ea903348a45",
+    ".github/workflows/release.yml": "94ab10aa361839291eafaf2f2e86f425494beabb9683a67e3e236169091c6cf7",
+    ".github/workflows/gate-count-pr.yml": "32c11e0969445de00eb0844d199e0401a2715e66b023dbfc73da7ef5dd5f0a6b",
+    ".github/workflows/automerge.yml": "548ba3f7178aed11fb297da363dc2ce775126fd88d7de4e05deff94760fc1b50",
+    ".github/workflows/check-noir-version.yml": "db0648fc41095f02590deb6015f1b579bef23d9339ddbf42ac498bd5527c8e3c",
+    ".github/workflows/ci.yml": "f062d92f3934f52846be3466810fa35566e586a4d63fd909f31d58b0f4437c49",
+    ".github/workflows/gate-count-main.yml": "b0dcf3ab29c8876fd309a7075c13affe2edcab1bda25c230a5c1300f7234146a",
+    ".github/dependabot.yml": "6b87fd2bddf82475526be07c08cba7a9b897316db4559d3223d32cabb05856f3"
+  }
+}
