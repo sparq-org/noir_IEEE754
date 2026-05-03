@@ -741,6 +741,33 @@ def _compute_expected_bits(test: 'TestCase', f1: float, f2: float, is_float32: b
     return float64_to_bits(result_float), False
 
 
+def _operand_bits_and_floats(test: 'TestCase', force_f64: bool) -> tuple[int, int, float, float]:
+    """Convert test operands to in-circuit bit representations and Python floats.
+
+    Handles the f32->f64 coercion case (force_f64 with float32 inputs).
+    Returns (bits_a, bits_b, float_a, float_b).
+    """
+    original_is_f32 = test.precision == Precision.BINARY32
+    is_float32 = original_is_f32 and not force_f64
+
+    if force_f64 and original_is_f32:
+        # Round through float32 first so the f64 circuit sees the same value
+        # the source f32 test case carried.
+        bits1_f32 = fp_value_to_bits32(test.operand1)
+        bits2_f32 = fp_value_to_bits32(test.operand2)
+        f1 = float32_from_bits(bits1_f32)
+        f2 = float32_from_bits(bits2_f32)
+        bits1 = float64_to_bits(f1)
+        bits2 = float64_to_bits(f2)
+        return bits1, bits2, f1, f2
+
+    to_bits = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
+    from_bits = float32_from_bits if is_float32 else float64_from_bits
+    bits1 = to_bits(test.operand1)
+    bits2 = to_bits(test.operand2)
+    return bits1, bits2, from_bits(bits1), from_bits(bits2)
+
+
 def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, force_f64: bool = False) -> Optional[str]:
     """Generate Noir test code for a single test case.
     
@@ -772,23 +799,7 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     sign_bit = 0x80000000 if is_float32 else 0x8000000000000000
     hex_width = 8 if is_float32 else 16
     
-    # Convert operands to bits
-    # For force_f64 mode, first convert to f32, then to f64 value, then to f64 bits
-    if force_f64 and original_is_f32:
-        # Get the float32 values first
-        bits1_f32 = fp_value_to_bits32(test.operand1)
-        bits2_f32 = fp_value_to_bits32(test.operand2)
-        f1 = float32_from_bits(bits1_f32)
-        f2 = float32_from_bits(bits2_f32)
-        # Convert to f64 bits (Python floats are f64, so this is straightforward)
-        bits1 = float64_to_bits(f1)
-        bits2 = float64_to_bits(f2)
-    else:
-        to_bits = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
-        from_bits = float32_from_bits if is_float32 else float64_from_bits
-        bits1 = to_bits(test.operand1)
-        bits2 = to_bits(test.operand2)
-        f1, f2 = from_bits(bits1), from_bits(bits2)
+    bits1, bits2, f1, f2 = _operand_bits_and_floats(test, force_f64)
     
     # Skip tests where an operand underflows to zero when it wasn't supposed to be zero
     # The test file may expect a finite result, but IEEE float32 will give infinity/NaN
