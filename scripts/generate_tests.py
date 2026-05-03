@@ -683,9 +683,14 @@ def parse_fptest_file(filepath: str) -> list[TestCase]:
     return tests
 
 
-def generate_noir_test_name(test: TestCase, index: int) -> str:
-    """Generate a Noir test function name for a test case."""
-    precision = "f32" if test.precision == Precision.BINARY32 else "f64"
+def generate_noir_test_name(test: TestCase, index: int, force_f64: bool = False) -> str:
+    """Generate a Noir test function name for a test case.
+
+    When force_f64 is True the name reflects the effective f64 precision
+    even if the source TestCase is f32.
+    """
+    is_f32 = test.precision == Precision.BINARY32 and not force_f64
+    precision = "f32" if is_f32 else "f64"
     op_names = {
         Operation.ADD: "add",
         Operation.SUBTRACT: "sub",
@@ -803,11 +808,7 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     }
     op_func = op_func_map[test.operation]
     
-    # Format values - use modified test name for f64-converted tests
-    if force_f64 and original_is_f32:
-        test_name = f"test_f64_{op_func_map[test.operation]}_{index}"
-    else:
-        test_name = generate_noir_test_name(test, index)
+    test_name = generate_noir_test_name(test, index, force_f64=force_f64 and original_is_f32)
     bits1_str = f"0x{bits1:0{hex_width}X}"
     bits2_str = f"0x{bits2:0{hex_width}X}"
     expected_str = f"0x{expected:0{hex_width}X}"
