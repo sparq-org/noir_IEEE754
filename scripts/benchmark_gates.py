@@ -128,6 +128,22 @@ PRIMITIVE_BENCHMARKS = {
 """,
         "return_type": "pub u64",
     },
+    # Spike: PR #38 (`spike/clz-bit-decomposition`). Same surface as
+    # `clz_u64_isolated_verified` but the verifier asserts an explicit
+    # bit-decomposition relation with a one-hot leading-bit indicator and
+    # a cumulative `saw_one` prefix flag, in place of the merged
+    # dynamic-shift verifier. The point of this entry is to measure
+    # whether replacing `value >> top_bit_pos` with a 64-element bit
+    # decomposition closes the gap to the binary-search baseline.
+    "clz_u64_isolated_verified_bitdecomp": {
+        "extra_use": "use ieee754::count_leading_zeros_u64_verified_bitdecomp;",
+        "prelude": "",
+        "inputs": "value: pub u64",
+        "body": """
+    count_leading_zeros_u64_verified_bitdecomp(value)
+""",
+        "return_type": "pub u64",
+    },
     "clz_u64_isolated_binsearch_baseline": {
         "extra_use": "",
         "prelude": """
@@ -205,6 +221,35 @@ fn normalise_with_verified(result_mant: u64, result_exp: u64) -> (u64, u64) {
         "inputs": "result_mant: pub u64, result_exp: pub u64",
         "body": """
     let (m, e) = normalise_with_verified(result_mant, result_exp);
+    m + e
+""",
+        "return_type": "pub u64",
+    },
+    # Spike (PR #38): the same composed normalisation block but driven
+    # by the bit-decomposition verifier. Compared head-to-head against
+    # `clz_u64_composed_verified` (merged dynamic-shift) and
+    # `clz_u64_composed_binsearch_baseline` (in-tree binary search).
+    "clz_u64_composed_verified_bitdecomp": {
+        "extra_use": "use ieee754::count_leading_zeros_u64_verified_bitdecomp;",
+        "prelude": """
+fn normalise_with_verified_bd(result_mant: u64, result_exp: u64) -> (u64, u64) {
+    let target_bit: u64 = 60;
+    let leading_zeros: u64 = count_leading_zeros_u64_verified_bitdecomp(result_mant);
+    let shift_needed = leading_zeros - (64 - target_bit - 1);
+    let max_shift = if result_exp > 1 { result_exp - 1 } else { 0 };
+    let actual_shift = if shift_needed <= max_shift {
+        shift_needed
+    } else {
+        max_shift
+    };
+    let new_mant = result_mant << actual_shift;
+    let new_exp = result_exp - actual_shift;
+    (new_mant, new_exp)
+}
+""",
+        "inputs": "result_mant: pub u64, result_exp: pub u64",
+        "body": """
+    let (m, e) = normalise_with_verified_bd(result_mant, result_exp);
     m + e
 """,
         "return_type": "pub u64",
