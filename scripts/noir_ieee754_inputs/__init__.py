@@ -4,10 +4,14 @@ This package factors out the file-format and bit-pattern logic that previously
 lived inline in ``scripts/generate_tests.py`` so that the generator stays
 focused on Noir-test emission. The submodule layout is:
 
+- :mod:`constants` -- Python mirrors of the ``FLOAT*_*`` ``pub global``s in
+  ``ieee754::types``, plus ``f32_pack`` / ``f64_pack`` helpers and
+  ``render_special_or_hex`` for emitting Noir source.
 - :mod:`fptest` -- IBM FPgen ``.fptest`` parser plus the ``fp_value_to_bits``
   helper.
 """
 
+from . import constants
 from .fptest import (
     FPValue,
     KNOWN_BAD_TESTS,
@@ -30,6 +34,7 @@ __all__ = [
     "Precision",
     "RoundingMode",
     "TestCase",
+    "constants",
     "fp_value_to_bits",
     "fp_value_to_bits32",
     "fp_value_to_bits64",
