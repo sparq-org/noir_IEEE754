@@ -113,7 +113,136 @@ BENCHMARKS = {
 # the headline `benchmarks` table.
 # ---------------------------------------------------------------------------
 
-PRIMITIVE_BENCHMARKS = {}
+PRIMITIVE_BENCHMARKS = {
+    # -- Isolated: the verifier on its own vs. the in-tree baseline copied
+    #    from `ieee754/src/utils.rs::shift_right_sticky_u64`. The shift is
+    #    a `pub u64` witness so constant-folding cannot collapse the
+    #    runtime branch.
+    "shr_sticky_u64_isolated_verified": {
+        "extra_use": "use ieee754::shift_right_sticky_u64_verified;",
+        "prelude": "",
+        "inputs": "value: pub u64, shift: pub u64",
+        "body": """
+    shift_right_sticky_u64_verified(value, shift)
+""",
+        "return_type": "pub u64",
+    },
+    "shr_sticky_u64_isolated_baseline": {
+        "extra_use": "",
+        "prelude": """
+fn shr_sticky_u64_baseline(value: u64, shift: u64) -> u64 {
+    if shift == 0 {
+        value
+    } else if shift >= 64 {
+        if value != 0 {
+            1
+        } else {
+            0
+        }
+    } else {
+        let mask = (1 << shift) - 1;
+        let shifted_out = value & mask;
+        let result = value >> shift;
+        if shifted_out != 0 {
+            result | 1
+        } else {
+            result
+        }
+    }
+}
+""",
+        "inputs": "value: pub u64, shift: pub u64",
+        "body": """
+    shr_sticky_u64_baseline(value, shift)
+""",
+        "return_type": "pub u64",
+    },
+    # -- Composed: emulate the denormal-mantissa shift step that
+    #    `float64/mul.nr` performs (a `shift_right_sticky_u64` driven by a
+    #    witness-dependent `denorm_shift = 1 - result_exp`, with a
+    #    `denorm_shift < 56` short-circuit copied verbatim from line 303 of
+    #    `ieee754/src/float64/mul.nr`). The baseline copies the in-tree code;
+    #    the candidate replaces the inner primitive with the verified one.
+    #    Other call sites use different short-circuit thresholds (27/28 in
+    #    float32, 57 in float64/{div,sqrt}); the verifier branches dynamically
+    #    on `shift` so the threshold does not affect the per-call cost shape,
+    #    but the surrounding straight-line code does, so this benchmark is the
+    #    apples-to-apples measurement only for the float64/mul.nr call site.
+    #    See `bench/SPIKES.md` for the verdict and §3.2 of the
+    #    `noir-optimisation` skill for the cost model.
+    "shr_sticky_u64_composed_verified": {
+        "extra_use": "use ieee754::shift_right_sticky_u64_verified;",
+        "prelude": """
+fn denorm_shift_verified(result_mant: u64, result_exp: i64) -> (u64, u64) {
+    let mut new_mant: u64 = result_mant;
+    let mut new_exp: u64 = 0;
+    if result_exp <= 0 {
+        let denorm_shift = (1 - result_exp) as u64;
+        if denorm_shift < 56 {
+            new_mant = shift_right_sticky_u64_verified(result_mant, denorm_shift);
+        } else {
+            new_mant = 0;
+        }
+    } else {
+        new_exp = result_exp as u64;
+    }
+    (new_mant, new_exp)
+}
+""",
+        "inputs": "result_mant: pub u64, result_exp: pub i64",
+        "body": """
+    let (m, e) = denorm_shift_verified(result_mant, result_exp);
+    m + e
+""",
+        "return_type": "pub u64",
+    },
+    "shr_sticky_u64_composed_baseline": {
+        "extra_use": "",
+        "prelude": """
+fn shr_sticky_u64_baseline(value: u64, shift: u64) -> u64 {
+    if shift == 0 {
+        value
+    } else if shift >= 64 {
+        if value != 0 {
+            1
+        } else {
+            0
+        }
+    } else {
+        let mask = (1 << shift) - 1;
+        let shifted_out = value & mask;
+        let result = value >> shift;
+        if shifted_out != 0 {
+            result | 1
+        } else {
+            result
+        }
+    }
+}
+fn denorm_shift_baseline(result_mant: u64, result_exp: i64) -> (u64, u64) {
+    let mut new_mant: u64 = result_mant;
+    let mut new_exp: u64 = 0;
+    if result_exp <= 0 {
+        let denorm_shift = (1 - result_exp) as u64;
+        if denorm_shift < 56 {
+            new_mant = shr_sticky_u64_baseline(result_mant, denorm_shift);
+        } else {
+            new_mant = 0;
+        }
+    } else {
+        new_exp = result_exp as u64;
+    }
+    (new_mant, new_exp)
+}
+""",
+        "inputs": "result_mant: pub u64, result_exp: pub i64",
+        "body": """
+    let (m, e) = denorm_shift_baseline(result_mant, result_exp);
+    m + e
+""",
+        "return_type": "pub u64",
+    },
+}
 
 
 def create_primitive_benchmark_project(tmpdir: Path, name: str, benchmark: dict) -> Path:
@@ -417,6 +546,27 @@ def print_comparison(old_results: dict, new_results: dict):
         total_pct = (total_diff / total_old * 100)
         print(f"{'TOTAL':<20} {total_old:>12} {total_new:>12} {total_diff:+d} ({total_pct:+.1f}%)")
     print("=" * 60)
+
+    # Also surface PRIMITIVE_BENCHMARKS deltas if either side has them.
+    old_primitives = old_results.get("primitive_benchmarks", {})
+    new_primitives = new_results.get("primitive_benchmarks", {})
+    if old_primitives or new_primitives:
+        print("\n" + "-" * 60)
+        print("PRIMITIVE BENCHMARKS")
+        print("-" * 60)
+        print(f"{'Variant':<40} {'Old W/A':>10} {'New W/A':>10}")
+        print("-" * 60)
+        for name in sorted(set(old_primitives.keys()) | set(new_primitives.keys())):
+            old_info = old_primitives.get(name, {})
+            new_info = new_primitives.get(name, {})
+            old_w = old_info.get("expression_width", "N/A")
+            old_a = old_info.get("acir_opcodes", "N/A")
+            new_w = new_info.get("expression_width", "N/A")
+            new_a = new_info.get("acir_opcodes", "N/A")
+            old_cell = f"{old_w}/{old_a}"
+            new_cell = f"{new_w}/{new_a}"
+            print(f"{name:<40} {old_cell:>10} {new_cell:>10}")
+        print("=" * 60)
 
 
 def print_summary(results: dict):
