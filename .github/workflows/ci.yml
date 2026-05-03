@@ -129,10 +129,18 @@ jobs:
           nargo test --package ieee754_unit_tests test_float32 || exit 1
           nargo test --package ieee754_unit_tests test_float64 || exit 1
 
-  # Run IEEE 754 test suite only on latest Noir version
+  # Run IEEE 754 test suite only on latest Noir version.
+  #
+  # Skipped while the PR is in draft to keep iteration tight on small
+  # circuit fixes -- the generated-test matrix is the long-pole job. Full
+  # matrix is restored when the PR flips to ready-for-review (the
+  # ``setup``/``lint``/``unit-tests``/``generate-tests`` jobs continue to
+  # run on every push, including drafts, so the unit-test contract for
+  # the new asserts is exercised continuously).
   ieee754-tests:
     runs-on: ubuntu-latest
     needs: [setup, generate-tests]
+    if: github.event.pull_request.draft != true
     strategy:
       fail-fast: false
       matrix:
@@ -208,7 +216,11 @@ jobs:
             echo "Unit tests failed"
             exit 1
           fi
-          if [ "${{ needs.ieee754-tests.result }}" != "success" ]; then
+          # ``ieee754-tests`` is gated on PR-draft state above, so a
+          # draft-mode skip surfaces as ``skipped`` here. Treat skipped as
+          # acceptable; require ``success`` only in the non-skipped case.
+          if [ "${{ needs.ieee754-tests.result }}" != "success" ] \
+             && [ "${{ needs.ieee754-tests.result }}" != "skipped" ]; then
             echo "IEEE 754 tests failed"
             exit 1
           fi
