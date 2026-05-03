@@ -377,6 +377,100 @@ def non_default_rounding_smoke(t: TestRunner) -> None:
         )
 
 
+def mixed_zero_cancellation(t: TestRunner) -> None:
+    """MPFR-oracle pin for IEEE 754-2019 sec 6.3 (signedness of zero results
+    from sums) for the mixed-zero short-circuit short-cited by Copilot's
+    review of PR #50.
+
+    Contract:
+      * ``+0 + -0`` and ``-0 + +0`` are ``+0`` under RNE / RNA / RNDU /
+        RNDZ; ``-0`` only under RNDD.
+      * ``+0 + +0 = +0`` and ``-0 + -0 = -0`` under every mode.
+      * Subtraction is implemented as ``a + (-b)``, so we exercise the
+        same matrix via SUBTRACT operands too.
+
+    The MPFR oracle (``compute_expected_bits``) is the ground truth; this
+    block computes the expected bit pattern under each rounding mode and
+    compares against the explicit IEEE 754-2019 sec 6.3 table. A
+    regression in either side (oracle drift OR table drift) fails here.
+    """
+    pos32 = 0x00000000  # +0 binary32
+    neg32 = 0x80000000  # -0
+    pos64 = 0x0000000000000000  # +0 binary64
+    neg64 = 0x8000000000000000  # -0
+
+    # Per IEEE 754-2019 sec 6.3: the sign of an exact-zero sum is
+    # ``+`` under every rounding-direction attribute except
+    # roundTowardNegative, which yields ``-``.
+    mixed_expected = {
+        RoundingMode.NEAREST_EVEN:    (pos32, pos64),
+        RoundingMode.NEAREST_AWAY:    (pos32, pos64),
+        RoundingMode.TOWARD_POSITIVE: (pos32, pos64),
+        RoundingMode.TOWARD_NEGATIVE: (neg32, neg64),
+        RoundingMode.TOWARD_ZERO:     (pos32, pos64),
+    }
+
+    for rm, (want32, want64) in mixed_expected.items():
+        # +0 + -0
+        got32 = compute_expected_bits(Operation.ADD, pos32, neg32, rm, 24)
+        t.assert_eq(f"f32 +0 + -0 {rm.name}", got32, want32, 8)
+        got64 = compute_expected_bits(Operation.ADD, pos64, neg64, rm, 53)
+        t.assert_eq(f"f64 +0 + -0 {rm.name}", got64, want64, 16)
+        # -0 + +0 (commutative)
+        got32 = compute_expected_bits(Operation.ADD, neg32, pos32, rm, 24)
+        t.assert_eq(f"f32 -0 + +0 {rm.name}", got32, want32, 8)
+        got64 = compute_expected_bits(Operation.ADD, neg64, pos64, rm, 53)
+        t.assert_eq(f"f64 -0 + +0 {rm.name}", got64, want64, 16)
+
+        # +0 - +0  ==  +0 + -0  (mixed sign)
+        got32 = compute_expected_bits(Operation.SUBTRACT, pos32, pos32, rm, 24)
+        t.assert_eq(f"f32 +0 - +0 {rm.name}", got32, want32, 8)
+        got64 = compute_expected_bits(Operation.SUBTRACT, pos64, pos64, rm, 53)
+        t.assert_eq(f"f64 +0 - +0 {rm.name}", got64, want64, 16)
+        # -0 - -0 == -0 + +0 (mixed sign)
+        got32 = compute_expected_bits(Operation.SUBTRACT, neg32, neg32, rm, 24)
+        t.assert_eq(f"f32 -0 - -0 {rm.name}", got32, want32, 8)
+        got64 = compute_expected_bits(Operation.SUBTRACT, neg64, neg64, rm, 53)
+        t.assert_eq(f"f64 -0 - -0 {rm.name}", got64, want64, 16)
+
+    # Like-sign zero sums propagate the shared sign in every mode.
+    for rm in RoundingMode:
+        for sign_pair, want32, want64 in (
+            ((pos32, pos32), pos32, pos64),
+            ((neg32, neg32), neg32, neg64),
+        ):
+            a32, b32 = sign_pair
+            a64 = pos64 if a32 == pos32 else neg64
+            b64 = pos64 if b32 == pos32 else neg64
+            got32 = compute_expected_bits(Operation.ADD, a32, b32, rm, 24)
+            t.assert_eq(
+                f"f32 like-sign 0+0 ({a32:#x}+{b32:#x}) {rm.name}",
+                got32,
+                want32,
+                8,
+            )
+            got64 = compute_expected_bits(Operation.ADD, a64, b64, rm, 53)
+            t.assert_eq(
+                f"f64 like-sign 0+0 ({a64:#x}+{b64:#x}) {rm.name}",
+                got64,
+                want64,
+                16,
+            )
+
+    # +0 - -0 = +0 + +0; -0 - +0 = -0 + -0. Like-sign through subtract.
+    for rm in RoundingMode:
+        # +0 - -0 -> +0 (every mode)
+        got32 = compute_expected_bits(Operation.SUBTRACT, pos32, neg32, rm, 24)
+        t.assert_eq(f"f32 +0 - -0 {rm.name}", got32, pos32, 8)
+        got64 = compute_expected_bits(Operation.SUBTRACT, pos64, neg64, rm, 53)
+        t.assert_eq(f"f64 +0 - -0 {rm.name}", got64, pos64, 16)
+        # -0 - +0 -> -0 (every mode)
+        got32 = compute_expected_bits(Operation.SUBTRACT, neg32, pos32, rm, 24)
+        t.assert_eq(f"f32 -0 - +0 {rm.name}", got32, neg32, 8)
+        got64 = compute_expected_bits(Operation.SUBTRACT, neg64, pos64, rm, 53)
+        t.assert_eq(f"f64 -0 - +0 {rm.name}", got64, neg64, 16)
+
+
 def known_bad_allow_list_scoping(t: TestRunner) -> None:
     """Regression test for the precision-scoped ``KNOWN_BAD_TESTS_BY_ROUNDING``.
 
@@ -477,6 +571,7 @@ def main() -> int:
     randomised(t, is_float32=True, n=1024)
     randomised(t, is_float32=False, n=1024)
     non_default_rounding_smoke(t)
+    mixed_zero_cancellation(t)
     known_bad_allow_list_scoping(t)
     return t.report()
 
