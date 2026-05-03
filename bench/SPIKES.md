@@ -277,6 +277,124 @@ to interpret a number against a future repo state, look at the
 
 ---
 
+## 2026-05-03 -- `shr_sticky_u64` constant-shift verifier (`shift = 20`)
+
+**Verdict:** **NO-GO.** Constant folding helps the in-tree baseline far
+more than the verifier; the verifier regresses on **both** Width
+(+2 / +13%) and ACIR (+94 / +553%) vs. the constant-shift baseline. No
+call sites swapped.
+
+**Branch:** `spike/shr-sticky-const-shift` (PR #47; benchmark + ledger
+entry only -- no source-level changes shipped).
+
+**Toolchain:** `nargo 1.0.0-beta.17` on macOS, against `origin/main` at
+`e4b9097` (post-PR #43 merge of the dynamic-shift verifier, post-PR #46
+docs sweep).
+
+### Motivation
+
+The dynamic-shift `shift_right_sticky_u64_verified` shipped in PR #43
+with a MIXED verdict (-7% Width / +303% ACIR -- see the entry above).
+The PR-43 agent flagged that `float32/mul.nr:201` calls
+`shift_right_sticky_u64(result_mant, guard_shift)` with
+`guard_shift = 46 - 26 = 20` known at compile time, and hypothesised
+that with a constant shift the verifier's `1 << shift` would
+constant-fold and the `if shift == 0 / >= 64 / else` cascade would
+collapse, possibly inverting the cost shape (and unlocking a targeted
+call-site swap).
+
+The user (Jesse) chose option A on
+`questions/shr-sticky-constant-shift-spike.md` -- spike the
+constant-shift case in isolation; defer the composed regime unless
+isolation shows a clear win.
+
+### Numbers
+
+Measured by `scripts/benchmark_gates.py`'s `PRIMITIVE_BENCHMARKS` --
+the new `shr_sticky_u64_const20_*` entries -- in the same run as the
+existing dynamic-shift `_isolated_*` and `_composed_*` rows, so the
+toolchain and harness are identical.
+
+| Variant                              | Width | ACIR |
+|--------------------------------------|------:|-----:|
+| `shr_sticky_u64_isolated_baseline`   |    72 |   34 |
+| `shr_sticky_u64_isolated_verified`   |    67 |  137 |
+| `shr_sticky_u64_const20_baseline`    |    15 |   17 |
+| `shr_sticky_u64_const20_verified`    |    17 |  111 |
+
+Constant folding cuts the **baseline** from 72 / 34 down to 15 / 17 --
+a 79% Width / 50% ACIR reduction. The branch cascade collapses
+entirely (only the `else` branch survives), `1 << 20` is a literal,
+`value >> 20` becomes a constant-divisor right shift, and the
+`mask = 0xFFFFF` becomes a literal AND. ACIR drops to 17.
+
+The **verifier** also benefits from constant folding -- Width 67 -> 17
+-- because the `if shift == 0 / >= 64 / else` cascade in
+`verify_shr_sticky_u64_relation` collapses to its third branch, and
+`pow2 = 1_u64 << shift` becomes the literal `0x100000`. But the
+relation-check ACIR opcodes are *unchanged* by constant folding:
+
+- `value_f == quotient_f * pow2_f + remainder_f` is one `AssertZero`
+  on Field witnesses (`quotient`, `remainder`) regardless of whether
+  `pow2` is a literal.
+- `remainder < pow2` is a u64 range check; the `pow2` constant just
+  sets the comparison constant.
+- `(1 - sticky) * remainder == 0` and
+  `remainder * remainder_inv == sticky` are unchanged -- they witness
+  unconstrained values (`sticky`, `remainder_inv`) and pin them via
+  Field equalities.
+
+So the verifier's ACIR floor (~110) is **structural in the witnessed
+relation**, not in the `pow2` compute, and constant folding cannot
+move it. Net: at `shift = 20` the verifier costs +2 Width and +94
+ACIR vs. the baseline.
+
+### Why the cost shape did *not* invert
+
+The PR #43 verdict (dynamic shift) was -7% Width / +303% ACIR. The
+hypothesis was that constant-folding `1 << shift` in the verifier
+would close the +303% ACIR gap.
+
+What actually happened: constant folding helped the baseline more
+than the verifier, because the baseline's *entire body* is in-circuit
+arithmetic (mask + shift + AND + OR), all of which fold under a
+literal shift; the verifier's body is mostly *witnessed* (`quotient`,
+`remainder`, `sticky`, `remainder_inv` are all unconstrained outputs)
+plus `AssertZero`s, which do not fold. The verifier's relation cost is
+a fixed tax that constant folding cannot amortise.
+
+### Implication for follow-on work
+
+- **Do not swap `float32/mul.nr:201`** to the verified primitive. The
+  in-tree `utils::shift_right_sticky_u64` is the right choice for any
+  compile-time-constant shift call site.
+- **Do not spike further constant-shift variants.** Other call sites
+  with literal shifts (e.g. `mul.nr:158` and `div.nr:164` use
+  `shift = 1`) will see the same structural verifier tax, just on a
+  smaller baseline. The baseline at `shift = 1` is even cheaper than
+  at `shift = 20`, so the gap widens, not narrows.
+- The verified primitive remains a stable public-API target for the
+  Lampe extraction round per the PR #43 entry; nothing here changes
+  that decision.
+- The `shr_sticky_u128` axis (float64/mul.nr:281) remains unexplored
+  -- the U128 baseline is more complex than the u64 one, so a U128
+  verified variant *might* win where u64 doesn't. Out of scope for
+  this round; flagged for a future spike.
+
+### Process
+
+- Spike-branch source change (`scripts/benchmark_gates.py`): two new
+  `PRIMITIVE_BENCHMARKS` entries `shr_sticky_u64_const20_baseline` and
+  `shr_sticky_u64_const20_verified`. No changes to `ieee754/src/`. The
+  merged `shift_right_sticky_u64_verified` primitive is untouched.
+- Bench run recorded in `gate_counts.json` on the spike branch.
+- Roborev (codex / gpt-5.5) "No issues found" on the bench-harness
+  commit; this ledger commit was reviewed in the same agent/model and
+  the low-severity wording / placeholder findings were addressed in a
+  follow-up commit.
+
+---
+
 ## Template
 
 ```
