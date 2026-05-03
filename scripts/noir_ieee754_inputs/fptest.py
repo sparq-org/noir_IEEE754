@@ -87,6 +87,11 @@ KNOWN_BAD_TESTS_BY_ROUNDING: set[tuple[str, str, str, str]] = {
     # f32 ADD round-toward-negative underflow flush-to-zero (bug class 2):
     # tiny denormal sum should round up to +min-denormal under RNDD.
     ("b32", "+", "<", "b32+ < +0.000064P-126 -0.000063P-126 -> +0.000001P-126"),
+    # The same source line, generated as f64 under ``--generate-f64``: the
+    # operands are exact in f64 but the f64 add-with-RNDD circuit produces
+    # a wrong sign of zero (expected -0 by IEEE 754 sec 6.3, got +0). This
+    # is a b64 manifestation of bug class 2's signed-zero handling.
+    ("b64", "+", "<", "b32+ < +0.000064P-126 -0.000063P-126 -> +0.000001P-126"),
     # f32 ADD round-toward-negative overflow boundary (bug class 1).
     ("b32", "+", "<", "b32+ < +1.682A0BP127 +1.789BF2P127 -> +1.7FFFFFP127 xo"),
     ("b32", "+", "<", "b32+ < +1.72F71CP127 +1.536292P127 -> +1.7FFFFFP127 xo"),
@@ -218,16 +223,32 @@ KNOWN_BAD_TESTS_BY_ROUNDING: set[tuple[str, str, str, str]] = {
 }
 
 
-def is_known_bad_for_rounding(test: "TestCase") -> bool:
+def is_known_bad_for_rounding(
+    test: "TestCase",
+    effective_precision: Optional["Precision"] = None,
+) -> bool:
     """Return ``True`` if ``test`` is in :data:`KNOWN_BAD_TESTS_BY_ROUNDING`.
 
     ``raw_line`` is the verbatim source line; we strip whitespace to match the
     canonicalisation used when entries are added (the parser already strips
     each line before passing it to the constructor, so this is a no-op for
     well-formed entries -- guarded for safety).
+
+    ``effective_precision`` overrides ``test.precision`` for the lookup. The
+    test generator uses this when running in ``--generate-f64`` mode: the
+    source ``.fptest`` line is binary32 (``b32``), but the *generated* Noir
+    test exercises the f64 circuit on the b32 operand re-encoded as b64. An
+    f32-circuit failure should not silently skip the f64-circuit version --
+    the allow-list must let f32 and f64 entries differ, otherwise it conflates
+    coverage of two distinct circuit families. Pass the precision the
+    generated test will run against.
     """
+    precision_str = (
+        effective_precision.value if effective_precision is not None
+        else test.precision.value
+    )
     key = (
-        test.precision.value,
+        precision_str,
         test.operation.value,
         test.rounding.value,
         test.raw_line.strip(),

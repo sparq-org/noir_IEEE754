@@ -611,17 +611,25 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
     if test.operand2 is None:
         return None
 
-    # Drop tests the existing circuits cannot pass under non-default rounding
-    # modes. The list is the f64-hardening progress metric (decision C from
-    # questions/enable-non-default-rounding-modes.md): future PRs that fix
-    # the underlying circuit bugs shrink it; a too-empty list means CI breaks.
-    if test.rounding != RoundingMode.NEAREST_EVEN and is_known_bad_for_rounding(test):
-        return None
-
     # Determine if we're generating f32 or f64 test
     # If force_f64 is True and the test is f32, convert to f64
     original_is_f32 = test.precision == Precision.BINARY32
     is_float32 = original_is_f32 and not force_f64
+
+    # Drop tests the existing circuits cannot pass under non-default rounding
+    # modes. The list is the f64-hardening progress metric (decision C from
+    # questions/enable-non-default-rounding-modes.md): future PRs that fix
+    # the underlying circuit bugs shrink it; a too-empty list means CI breaks.
+    # The allow-list is keyed by *effective* precision (the precision of the
+    # generated Noir test, not necessarily the source ``.fptest`` line) so
+    # ``--generate-f64`` runs of an f32 source consult only the b64 entries
+    # -- f32 and f64 circuits fail differently and the list must distinguish.
+    if test.rounding != RoundingMode.NEAREST_EVEN:
+        effective_precision = (
+            Precision.BINARY32 if is_float32 else Precision.BINARY64
+        )
+        if is_known_bad_for_rounding(test, effective_precision):
+            return None
 
     prec = "32" if is_float32 else "64"
 
