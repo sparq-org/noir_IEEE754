@@ -989,16 +989,10 @@ fn verify_shr_sticky_u128_relation(
         );
 
         // Clause (3b): remainder < pow2_eff. Both u64.
-        assert(
-            remainder < pow2_eff,
-            "shift_right_sticky_u128: 64<=shift<128 remainder above pow2",
-        );
+        assert(remainder < pow2_eff, "shift_right_sticky_u128: 64<=shift<128 remainder above pow2");
 
         // Clause (3c): high_top must be zero in this branch.
-        assert(
-            high_top == 0_u64,
-            "shift_right_sticky_u128: 64<=shift<128 high_top nonzero",
-        );
+        assert(high_top == 0_u64, "shift_right_sticky_u128: 64<=shift<128 high_top nonzero");
 
         // Clause (3d): sticky == ((val.low != 0) | (remainder != 0)). Use the
         // combined-sum + existence-of-inverse trick. val.low + remainder fits
@@ -1046,10 +1040,7 @@ fn verify_shr_sticky_u128_relation(
         );
 
         // Clause (4b): remainder < pow2. Both u64.
-        assert(
-            remainder < pow2,
-            "shift_right_sticky_u128: 1<=shift<64 remainder above pow2",
-        );
+        assert(remainder < pow2, "shift_right_sticky_u128: 1<=shift<64 remainder above pow2");
 
         // Clause (4c): sticky direction -- pinned by two constraints plus a
         // witnessed Field inverse hint.
