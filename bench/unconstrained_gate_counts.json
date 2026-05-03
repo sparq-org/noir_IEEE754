@@ -1,63 +1,7 @@
 [
   {
-    "timestamp": "2026-05-03T15:53:27.957917",
-    "git_commit": "44ec2fca",
-    "benchmarks": {
-      "add_float32": {
-        "expression_width": 610,
-        "acir_opcodes": 34
-      },
-      "mul_float32": {
-        "expression_width": 1053,
-        "acir_opcodes": 34
-      },
-      "sub_float32": {
-        "expression_width": 611,
-        "acir_opcodes": 34
-      },
-      "div_float32": {
-        "expression_width": 959,
-        "acir_opcodes": 34
-      },
-      "add_float64": {
-        "expression_width": 714,
-        "acir_opcodes": 34
-      },
-      "mul_float64": {
-        "expression_width": 1783,
-        "acir_opcodes": 34
-      },
-      "sub_float64": {
-        "expression_width": 715,
-        "acir_opcodes": 34
-      },
-      "div_float64": {
-        "expression_width": 4589,
-        "acir_opcodes": 34
-      }
-    },
-    "primitive_benchmarks": {
-      "shr_sticky_u64_isolated_verified": {
-        "expression_width": 67,
-        "acir_opcodes": 137
-      },
-      "shr_sticky_u64_isolated_baseline": {
-        "expression_width": 72,
-        "acir_opcodes": 34
-      },
-      "shr_sticky_u64_composed_verified": {
-        "expression_width": 101,
-        "acir_opcodes": 137
-      },
-      "shr_sticky_u64_composed_baseline": {
-        "expression_width": 106,
-        "acir_opcodes": 34
-      }
-    }
-  },
-  {
-    "timestamp": "2026-05-03T15:59:31.253573",
-    "git_commit": "a339a40d",
+    "timestamp": "2026-05-03T16:07:22.804959",
+    "git_commit": "2c4f1424",
     "benchmarks": {
       "add_float32": {
         "expression_width": 610,

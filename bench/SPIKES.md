@@ -147,6 +147,127 @@ the noir-optimisation skill's section 3.3.
 
 ---
 
+## 2026-05-03 -- `shr_sticky_u64` Euclidean-division verifier
+
+**Verdict:** **MIXED.** Verifier wins -5 Width / -7% in both regimes
+but loses +103 ACIR / +303% in both; per the workspace rule
+"Width is what the prover pays for under Barretenberg" the trade is
+not strong enough to justify swapping call sites, so the primitive ships
+as a stable public-API target only.
+
+**Branch:** `feat/shr-sticky-u64-verified` (this PR; primitive +
+benchmarks shipped, no call sites swapped).
+
+**Toolchain:** `nargo 1.0.0-beta.17` on macOS, against `origin/main` at
+`22dafd9` (post-PR #41 CI sync, post-PR #40 `clz_u64` deletion).
+
+### Motivation
+
+The first-round task asked: do the cost numbers for
+`shift_right_sticky_u64_verified` look like `clz_u64`'s (regress on both
+metrics, drop) or do they pay off? The relation shape is genuinely
+different -- Euclidean-division reconstruction
+`value = quotient * (1 << shift) + remainder` over `Field` plus an
+existence-of-inverse witness for the sticky-direction clause -- so the
+empirical answer was unknown until measurement.
+
+### Constraint shape
+
+For `shift == 0` and `shift >= 64` the verifier short-circuits to direct
+equality / inequality assertions (cheap). For `1 <= shift <= 63`:
+
+| Clause   | Constraint                                                                     |
+|----------|--------------------------------------------------------------------------------|
+| (3a)     | `value == quotient * pow2 + remainder` over `Field` (pow2 = `1 << shift`)      |
+| (3b)     | `remainder < pow2` (range check on a u64 difference)                           |
+| (3c.i)   | `(1 - sticky) * remainder == 0`  (`sticky == 0 => remainder == 0`)             |
+| (3c.ii)  | `remainder * remainder_inv == sticky` with witnessed `remainder_inv: Field`    |
+
+Plus one dynamic left-shift `1 << shift`. The baseline does two dynamic
+shifts (`>> shift` and `1 << shift` for the mask), so the verifier nets
+out *one fewer dynamic shift* in exchange for one Field multiplication
+and the boolean-direction pinning.
+
+### Numbers
+
+Measured by `scripts/benchmark_gates.py`'s `PRIMITIVE_BENCHMARKS`,
+isolated regime (verifier on its own, `(value, shift)` as `pub u64` to
+defeat constant-folding) and composed regime (the `denorm_shift < 56`
+denormal-mantissa shift block from `float64/mul.nr` line 303). Both
+variants measured in the same run.
+
+| Variant                                | Width | ACIR |
+|----------------------------------------|------:|-----:|
+| `shr_sticky_u64_isolated_baseline`     |    72 |   34 |
+| `shr_sticky_u64_isolated_verified`     |    67 |  137 |
+| `shr_sticky_u64_composed_baseline`     |   106 |   34 |
+| `shr_sticky_u64_composed_verified`     |   101 |  137 |
+
+Verifier delta: **-5 Width (-7%) / +103 ACIR (+303%)** in both regimes.
+The composed delta is exactly the same as the isolated delta, so the
+regression is structural (not a constant-folding artefact in the
+isolated harness).
+
+### Why the trade looks like this
+
+The verifier saves one dynamic shift relative to the baseline (the
+baseline computes both `(1 << shift) - 1` for the mask AND `value >>
+shift` for the quotient; the verifier computes only `1 << shift` for
+`pow2`). That's the -5 Width win.
+
+But the verifier adds: a Field multiplication `quotient * pow2`, a
+Field equality, two boolean-direction constraints, plus the `Field`
+inverse witness's multiplicative constraint. Each of those is small in
+Width but adds an `AssertZero` ACIR opcode -- hence the +103 ACIR
+regression.
+
+Comparison to the `clz_u64` round (PR #37, deleted in PR #40): clz_u64
+regressed on **both** Width AND ACIR; this primitive regresses only on
+ACIR. The difference is the relation shape -- Euclidean-division has
+constant-multiplier structure (the `pow2` multiplier is small relative
+to the BN254 modulus, so the Field multiplication has narrow expression
+width); CLZ's two dynamic shifts contribute to Width additively.
+
+### Implication for follow-on work
+
+The Width edge is too small (-7%) to motivate swapping call sites: if a
+future Lampe extraction round needs the verified-relation shape (because
+the soundness proof depends on the algebraic relation rather than the
+binary-search baseline's straight-line shifts), the primitive is
+available. Otherwise, the in-tree `utils::shift_right_sticky_u64` is the
+right choice.
+
+Two angles worth measuring in a future spike, *not* this one:
+
+- **Constant-shift call site.** The float32/mul.nr line 201 call has
+  `guard_shift = 46 - 26 = 20` known at compile time; the verifier's
+  `1 << shift` would constant-fold and the relation might collapse to
+  cheaper-than-baseline. A focused `shr_sticky_u64_const20_*` benchmark
+  would answer this; if the verifier wins by enough Width there, swap
+  *that* call site only.
+
+- **`shr_sticky_u128`.** The float64/mul.nr line 281 call uses the U128
+  variant. Its in-circuit baseline is more complex; a U128 verified
+  variant could plausibly win where the u64 one only marginally does.
+  Out of scope for this round.
+
+### Process
+
+- Four commits on the branch: source-level primitive (`9c1f8cb` after
+  rebase onto `e6d7107`), adversarial test follow-up (`0f497e5`)
+  addressing roborev's flagged `shift>=64 sticky direction wrong` test
+  gap, benchmark harness (`2b563e5`), and harness-comment + primitive
+  comparison (`2c4f142`) addressing the second roborev round, then this
+  ledger update.
+- 36 ieee754 tests passed (15 baseline + 21 new shr_sticky tests, of
+  which 11 happy-path + 10 adversarial).
+- Roborev (codex / gpt-5.5) returned "No issues found" on the
+  adversarial-test commit and on the harness-improvement commit;
+  earlier roborev rounds raised the test-gap and stale-`git_commit`
+  findings that those commits closed.
+
+---
+
 ## Template
 
 ```
