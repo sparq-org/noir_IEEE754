@@ -909,22 +909,20 @@ def _source_to_module_name(source_file: str) -> str:
 
 
 def generate_ci_matrix(
-    tests_by_file: dict[str, list[TestCase]], 
+    tests_by_file: dict[str, list[TestCase]],
     output_path: str,
     chunk_size: int = 25,
     max_tests_per_package: int = 1250,
     force_f64: bool = False,
     generate_both: bool = False,
-    use_packages: bool = True
 ) -> list[dict]:
     """Generate a CI matrix JSON file for GitHub Actions.
-    
+
     Lists all packages that will be generated. Large test files are automatically
     split into multiple packages by generate_noir_packages.
-    
+
     Args:
         max_tests_per_package: Maximum tests per package (50 chunks * 25 tests = 1250)
-        use_packages: If True, generate matrix for separate packages (new style)
     """
     import json
     
@@ -1108,99 +1106,6 @@ ieee754 = {{ path = "../../ieee754" }}
     return results
 
 
-def generate_noir_file_per_source(
-    tests_by_file: dict[str, list[TestCase]], 
-    output_dir: str, 
-    add_debug: bool = False,
-    chunk_size: int = 25,
-    force_f64: bool = False,
-    generate_both: bool = False
-) -> dict[str, int]:
-    """Generate separate Noir test files for each source file, chunked into groups.
-    
-    Args:
-        tests_by_file: Dict mapping source filenames to test cases
-        output_dir: Output directory for generated files
-        add_debug: Add println statements for debugging
-        chunk_size: Number of tests per chunk file
-        force_f64: If True, convert f32 tests to f64 only
-        generate_both: If True, generate both f32 and f64 tests (overrides force_f64)
-    """
-    results = {}
-    module_names = []
-    
-    for source_file, tests in tests_by_file.items():
-        module_name = _source_to_module_name(source_file)
-        
-        # Generate all test code
-        if generate_both:
-            # Generate both f32 tests (index 0..n-1) and f64 tests (index n..2n-1)
-            # For native f64 tests (like synthetic tests), only generate once (in the f64 pass)
-            f32_tests = [
-                code for i, test in enumerate(tests)
-                if test.precision == Precision.BINARY32 and (code := generate_noir_test(test, i, add_debug, force_f64=False))
-            ]
-            # For native f64 tests, don't set force_f64 (they're already f64)
-            # For f32 tests, convert to f64
-            f64_tests = []
-            for i, test in enumerate(tests):
-                if test.precision == Precision.BINARY64:
-                    # Native f64 test - generate directly
-                    code = generate_noir_test(test, len(tests) + i, add_debug, force_f64=False)
-                else:
-                    # f32 test - convert to f64
-                    code = generate_noir_test(test, len(tests) + i, add_debug, force_f64=True)
-                if code:
-                    f64_tests.append(code)
-            all_test_code = f32_tests + f64_tests
-        else:
-            all_test_code = [
-                code for i, test in enumerate(tests)
-                if (code := generate_noir_test(test, i, add_debug, force_f64))
-            ]
-        
-        if not all_test_code:
-            continue
-        
-        # Create folder and write chunks
-        module_dir = os.path.join(output_dir, module_name)
-        os.makedirs(module_dir, exist_ok=True)
-        
-        chunks = [all_test_code[i:i + chunk_size] for i in range(0, len(all_test_code), chunk_size)]
-        chunk_names = []
-        
-        for chunk_idx, chunk in enumerate(chunks):
-            chunk_name = f"chunk_{chunk_idx:04d}"
-            chunk_names.append(chunk_name)
-            
-            # Analyze this chunk to determine required imports
-            analysis = analyze_test_code(chunk)
-            header = generate_noir_header_from_analysis(f"{source_file} (chunk {chunk_idx})", analysis)
-            
-            with open(os.path.join(module_dir, f"{chunk_name}.nr"), 'w') as f:
-                f.write(header)
-                f.write('\n'.join(chunk))
-        
-        # Generate mod.nr for this module
-        with open(os.path.join(module_dir, "mod.nr"), 'w') as f:
-            f.write(f"// Auto-generated module index for {source_file}\n")
-            f.write(f"// Contains {len(all_test_code)} tests in {len(chunks)} chunks of {chunk_size}\n\n")
-            f.writelines(f"mod {name};\n" for name in chunk_names)
-        
-        print(f"Generated {len(all_test_code)} tests in {len(chunks)} chunks to {module_dir}/")
-        results[source_file] = len(all_test_code)
-        module_names.append(module_name)
-    
-    # Generate top-level module index
-    with open(os.path.join(output_dir, "mod.nr"), 'w') as f:
-        f.write("// Auto-generated module index for IEEE 754 tests\n")
-        f.write("// Each module corresponds to a source .fptest file\n\n")
-        f.writelines(f"mod {name};\n" for name in sorted(module_names))
-    
-    print(f"\nGenerated module index at {output_dir}/mod.nr")
-    return results
-
-
 def get_cache_dir() -> Path:
     """Get the cache directory path, creating it if needed."""
     # Cache directory is relative to the project root (parent of scripts/)
@@ -1251,7 +1156,6 @@ Examples:
   %(prog)s --files Add-Shift.fptest     # Use specific file(s)
   %(prog)s --all                        # Use all available test files
   %(prog)s --all --packages             # Generate separate test packages (recommended)
-  %(prog)s --all --split                # Generate chunked test folders per source (old style)
   %(prog)s --all --packages --chunk-size 50  # Use 50 tests per chunk file
   %(prog)s --list                       # List available test files
   %(prog)s --local test.fptest          # Use a local file instead of downloading
@@ -1287,12 +1191,7 @@ Examples:
     parser.add_argument(
         '--output-dir',
         default=None,
-        help='Output directory for split test files (use with --split)'
-    )
-    parser.add_argument(
-        '--split',
-        action='store_true',
-        help='Generate separate test files for each source file (old style, as modules in src/)'
+        help='Output directory for generated test packages (use with --packages)'
     )
     parser.add_argument(
         '--packages',
@@ -1303,7 +1202,7 @@ Examples:
         '--chunk-size',
         type=int,
         default=25,
-        help='Number of tests per chunk file when using --split (default: 25)'
+        help='Number of tests per chunk file within a package (default: 25)'
     )
     parser.add_argument(
         '--max-tests-per-package',
@@ -1336,7 +1235,7 @@ Examples:
         '--max-tests',
         type=int,
         default=None,
-        help='Maximum number of tests to generate (per file when using --split)'
+        help='Maximum number of tests to generate (per source file)'
     )
     parser.add_argument(
         '--debug',
@@ -1351,7 +1250,7 @@ Examples:
     parser.add_argument(
         '--ci-matrix',
         metavar='PATH',
-        help='Generate CI matrix JSON file for GitHub Actions (use with --split)'
+        help='Generate CI matrix JSON file for GitHub Actions (use with --packages)'
     )
     
     args = parser.parse_args()
@@ -1485,51 +1384,14 @@ Examples:
         # Generate CI matrix if requested
         if args.ci_matrix:
             generate_ci_matrix(
-                tests_by_file, 
-                args.ci_matrix, 
-                chunk_size=args.chunk_size, 
+                tests_by_file,
+                args.ci_matrix,
+                chunk_size=args.chunk_size,
                 max_tests_per_package=args.max_tests_per_package,
-                force_f64=args.generate_f64, 
+                force_f64=args.generate_f64,
                 generate_both=args.generate_f64,
-                use_packages=True
             )
     
-    elif args.split:
-        # Generate separate files per source
-        output_dir = args.output_dir or "src/ieee754_tests"
-        os.makedirs(output_dir, exist_ok=True)
-        
-        tests_by_file = {}
-        total_parsed = 0
-        
-        for filepath in fptest_files:
-            source_name = os.path.basename(filepath)
-            print(f"Parsing {source_name}...")
-            tests = parse_fptest_file(filepath)
-            total_parsed += len(tests)
-            filtered = filter_tests(tests)
-            if filtered:
-                tests_by_file[source_name] = filtered
-                print(f"  {len(tests)} parsed, {len(filtered)} after filtering")
-        
-        print(f"\nParsed {total_parsed} total test cases")
-        
-        results = generate_noir_file_per_source(
-            tests_by_file, 
-            output_dir, 
-            add_debug=args.debug,
-            chunk_size=args.chunk_size,
-            force_f64=args.generate_f64,
-            generate_both=args.generate_f64  # When --generate-f64 is set, generate both
-        )
-        
-        total_generated = sum(results.values())
-        print(f"\nTotal: {total_generated} tests generated across {len(results)} files")
-        
-        # Generate CI matrix if requested
-        if args.ci_matrix:
-            generate_ci_matrix(tests_by_file, args.ci_matrix, chunk_size=args.chunk_size, force_f64=args.generate_f64, generate_both=args.generate_f64)
-        
     else:
         # Parse all test files into one list
         all_tests = []

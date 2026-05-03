@@ -61,15 +61,19 @@ Common scopes in this project:
 
 ```
 noir_IEEE754/
-├── Nargo.toml              # Noir project configuration
-├── src/
-│   ├── lib.nr              # Module exports and basic tests
-│   ├── float.nr            # IEEE 754 implementation
-│   └── ieee754_tests/      # Auto-generated test suite (~18k tests)
-│       ├── mod.nr          # Module declarations
-│       └── test_*/         # Test modules by source file
+├── Nargo.toml              # Workspace manifest
+├── ieee754/                # Core IEEE 754 implementation crate
+│   ├── Nargo.toml
+│   └── src/
+│       ├── lib.nr          # Module exports
+│       └── float.nr        # IEEE 754 implementation
+├── ieee754_unit_tests/     # Hand-written unit tests
+├── test_packages/          # Auto-generated test packages (gitignored, ~18k tests)
+│   └── ieee754_test_*/     # One Noir bin package per source .fptest file
 ├── scripts/
-│   └── generate_tests.py   # Test generation script
+│   ├── generate_tests.py   # Test generation script
+│   ├── regenerate_tests.sh # Regenerate the full test suite
+│   └── run_tests.py        # Run packages with optional filtering
 └── .ieee754_test_cache/    # Downloaded test files (gitignored)
 ```
 
@@ -86,52 +90,60 @@ The `scripts/generate_tests.py` script performs the following:
 3. **Converts operands to IEEE 754 bit patterns** handling normal, denormal, zero, infinity, and NaN values
 4. **Computes expected results using Python's IEEE 754 hardware** via the `struct` module — this ensures tests verify against actual IEEE 754 behavior rather than potentially inaccurate values in the test files
 5. **Generates Noir test functions** that call the implementation and assert against expected bit patterns
-6. **Organizes tests into chunks** of 25 tests per file for faster parallel compilation
+6. **Organises tests into separate Noir packages** (one per source `.fptest` file) with chunks of 25 tests per file for faster parallel compilation
 
-### Test File Structure
+### Test Package Structure
 
-Tests are organized hierarchically by source file, with each module split into 25-test chunks:
+Each source `.fptest` file becomes its own Noir bin package under `test_packages/`, with tests sharded into 25-test chunks. Files larger than `--max-tests-per-package` (default 1250) are split across multiple `_partN` packages.
 
 ```
-src/ieee754_tests/
-├── mod.nr                           # Top-level module declarations
-├── test_add_shift/
-│   ├── mod.nr                       # Chunk module declarations
-│   ├── chunk_0000.nr                # Tests 0-24
-│   ├── chunk_0001.nr                # Tests 25-49
-│   └── chunk_0002.nr                # Tests 50-56
-├── test_add_cancellation/
-│   └── chunk_0000.nr                # Tests 0-17
-├── test_add_cancellation_and_subnorm_result/
-│   ├── chunk_0000.nr - chunk_0012.nr  # ~313 tests
-│   └── ...
+test_packages/
+├── ieee754_test_add_shift/
+│   ├── Nargo.toml                   # Depends on ../../ieee754
+│   └── src/
+│       ├── main.nr                  # Module index + fn main()
+│       ├── chunk_0000.nr            # Tests 0-24
+│       ├── chunk_0001.nr            # Tests 25-49
+│       └── chunk_0002.nr            # Tests 50-56
+├── ieee754_test_add_cancellation/
+│   └── src/
+│       └── chunk_0000.nr            # Tests 0-17
+├── ieee754_test_add_shift_and_special_significands_part0/
+│   └── ...                          # Large file, split into multiple packages
 └── ...
 ```
 
-This chunking strategy enables faster compilation and allows running targeted subsets of the ~18,000 total tests.
+This per-package chunking strategy enables faster compilation and allows running targeted subsets of the ~18,000 total tests.
 
 ### Generating Tests
 
-The `generate_tests.py` script automatically downloads test files and generates Noir test code:
+The recommended path is `scripts/regenerate_tests.sh`, which wraps `generate_tests.py --all --packages`:
 
 ```bash
-# Generate tests from Add-Shift.fptest (default)
-python3 scripts/generate_tests.py -o src/ieee754_tests.nr
+# Regenerate the full test suite (all packages + CI matrix)
+./scripts/regenerate_tests.sh
+
+# Regenerate only the addition tests
+./scripts/regenerate_tests.sh --operation add
+```
+
+For finer-grained control you can call `generate_tests.py` directly:
+
+```bash
+# Generate all test files as separate Noir packages
+python3 scripts/generate_tests.py --all --packages --output-dir test_packages
 
 # Use specific test files
-python3 scripts/generate_tests.py --files Add-Shift.fptest Rounding.fptest -o src/ieee754_tests.nr
-
-# Generate tests from all available test files
-python3 scripts/generate_tests.py --all -o src/ieee754_tests.nr
+python3 scripts/generate_tests.py --files Add-Shift.fptest Rounding.fptest --packages --output-dir test_packages
 
 # List available test files
 python3 scripts/generate_tests.py --list
 
 # Filter by operation type
-python3 scripts/generate_tests.py --operation add --precision f32 -o src/ieee754_tests.nr
+python3 scripts/generate_tests.py --operation add --precision f32 --packages --output-dir test_packages
 
 # Clear cache and re-download
-python3 scripts/generate_tests.py --clear-cache -o src/ieee754_tests.nr
+python3 scripts/generate_tests.py --clear-cache --all --packages --output-dir test_packages
 ```
 
 ### Available Test Files
@@ -158,54 +170,56 @@ python3 scripts/generate_tests.py --clear-cache -o src/ieee754_tests.nr
 
 ### Running Tests
 
-> ⚠️ **Warning**: Running `nargo test` without filters executes ~18k tests and takes several hours. Always run individual chunks or modules during development.
+> ⚠️ **Warning**: Running every package executes ~18k tests and takes several hours. Use `scripts/run_tests.py` with a filter during development.
 
 ```bash
-# Run all tests from a specific test module (recommended)
-nargo test ieee754_tests::test_add_shift::
+# List available packages
+python3 scripts/run_tests.py --list
 
-# Run a specific chunk of tests (~25 tests, fastest iteration)
-nargo test ieee754_tests::test_add_shift::chunk_0000::
+# Run a single package (fastest iteration)
+python3 scripts/run_tests.py --package ieee754_test_add_shift
 
-# Run a single specific test
-nargo test ieee754_tests::test_add_shift::chunk_0000::test_f32_add_0
+# Run packages whose name matches a substring
+python3 scripts/run_tests.py add_shift
 
-# Run the manual unit tests only
-nargo test test_float32
-nargo test test_float64
+# Regenerate test packages, then run them
+python3 scripts/run_tests.py --generate
 
-# Run all tests (takes several hours)
-nargo test
+# Run only the hand-written unit tests
+nargo test --package ieee754_unit_tests
+
+# Run every package in the workspace (takes several hours)
+nargo test --workspace
 ```
 
-### Test Modules
+### Test Packages
 
-Tests are split into separate modules by source file, with each module further divided into chunks of 25 tests:
+Tests are split into separate Noir packages by source file, each package further divided into chunks of 25 tests. Source files exceeding `--max-tests-per-package` are split into multiple `_partN` packages.
 
-| Module | Source File | Test Count | Chunks |
+| Package | Source File | Test Count | Chunks |
 |--------|-------------|------------|--------|
-| `test_add_shift` | Add-Shift.fptest | 57 | 3 |
-| `test_add_cancellation` | Add-Cancellation.fptest | 18 | 1 |
-| `test_add_cancellation_and_subnorm_result` | Add-Cancellation-And-Subnorm-Result.fptest | 313 | 13 |
-| `test_add_shift_and_special_significands` | Add-Shift-And-Special-Significands.fptest | ~16k | ~640 |
-| `test_basic_types_inputs` | Basic-Types-Inputs.fptest | 882 | 36 |
-| `test_basic_types_intermediate` | Basic-Types-Intermediate.fptest | 40 | 2 |
-| `test_hamming_distance` | Hamming-Distance.fptest | 55 | 3 |
-| `test_overflow` | Overflow.fptest | 62 | 3 |
-| `test_rounding` | Rounding.fptest | 16 | 1 |
-| `test_underflow` | Underflow.fptest | 20 | 1 |
-| `test_vicinity_of_rounding_boundaries` | Vicinity-Of-Rounding-Boundaries.fptest | 31 | 2 |
+| `ieee754_test_add_shift` | Add-Shift.fptest | 57 | 3 |
+| `ieee754_test_add_cancellation` | Add-Cancellation.fptest | 18 | 1 |
+| `ieee754_test_add_cancellation_and_subnorm_result` | Add-Cancellation-And-Subnorm-Result.fptest | 313 | 13 |
+| `ieee754_test_add_shift_and_special_significands_part*` | Add-Shift-And-Special-Significands.fptest | ~16k | ~640 |
+| `ieee754_test_basic_types_inputs` | Basic-Types-Inputs.fptest | 882 | 36 |
+| `ieee754_test_basic_types_intermediate` | Basic-Types-Intermediate.fptest | 40 | 2 |
+| `ieee754_test_hamming_distance` | Hamming-Distance.fptest | 55 | 3 |
+| `ieee754_test_overflow` | Overflow.fptest | 62 | 3 |
+| `ieee754_test_rounding` | Rounding.fptest | 16 | 1 |
+| `ieee754_test_underflow` | Underflow.fptest | 20 | 1 |
+| `ieee754_test_vicinity_of_rounding_boundaries` | Vicinity-Of-Rounding-Boundaries.fptest | 31 | 2 |
 
 ## Submitting Changes
 
 Please ensure all tests pass before submitting PRs:
 
 ```bash
-# Generate full test suite
-python3 scripts/generate_tests.py --all -o src/ieee754_tests.nr
+# Regenerate the full test suite (packages + CI matrix)
+./scripts/regenerate_tests.sh
 
-# Run all tests
-nargo test
+# Run every package in the workspace (takes several hours)
+nargo test --workspace
 ```
 
 ## References
