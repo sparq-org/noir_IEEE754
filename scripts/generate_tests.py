@@ -860,38 +860,27 @@ def analyze_test_code(test_code: list[str]) -> dict[str, bool]:
     }
 
 
-def generate_noir_header_from_analysis_for_package(source_info: str, analysis: dict[str, bool]) -> str:
-    """Generate Noir test file header with only required imports for separate packages."""
-    imports = [name for name, needed in analysis.items() if needed]
-    
-    # Sort imports for consistency
-    imports.sort()
+def _render_noir_header(source_info: str, analysis: dict[str, bool], use_path: str) -> str:
+    imports = sorted(name for name, needed in analysis.items() if needed)
     imports_str = ", ".join(imports)
-    
+
     return f"""// Auto-generated IEEE 754 test cases
 // Generated from: {source_info}
 // Test suite source: https://github.com/sergev/ieee754-test-suite
 
-use ieee754::float::{{{imports_str}}};
+use {use_path}::{{{imports_str}}};
 
 """
+
+
+def generate_noir_header_from_analysis_for_package(source_info: str, analysis: dict[str, bool]) -> str:
+    """Generate Noir test file header with only required imports for separate packages."""
+    return _render_noir_header(source_info, analysis, "ieee754::float")
 
 
 def generate_noir_header_from_analysis(source_info: str, analysis: dict[str, bool]) -> str:
     """Generate Noir test file header with only required imports."""
-    imports = [name for name, needed in analysis.items() if needed]
-    
-    # Sort imports for consistency
-    imports.sort()
-    imports_str = ", ".join(imports)
-    
-    return f"""// Auto-generated IEEE 754 test cases
-// Generated from: {source_info}
-// Test suite source: https://github.com/sergev/ieee754-test-suite
-
-use crate::float::{{{imports_str}}};
-
-"""
+    return _render_noir_header(source_info, analysis, "crate::float")
 
 
 def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str], add_debug: bool = False, force_f64: bool = False):
