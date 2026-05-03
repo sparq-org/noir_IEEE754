@@ -284,7 +284,7 @@ more than the verifier; the verifier regresses on **both** Width
 (+2 / +13%) and ACIR (+94 / +553%) vs. the constant-shift baseline. No
 call sites swapped.
 
-**Branch:** `spike/shr-sticky-const-shift` (PR #<n>; benchmark + ledger
+**Branch:** `spike/shr-sticky-const-shift` (PR #47; benchmark + ledger
 entry only -- no source-level changes shipped).
 
 **Toolchain:** `nargo 1.0.0-beta.17` on macOS, against `origin/main` at
@@ -383,13 +383,15 @@ a fixed tax that constant folding cannot amortise.
 
 ### Process
 
-- One source change (`scripts/benchmark_gates.py`): two new entries
-  `shr_sticky_u64_const20_baseline` and
-  `shr_sticky_u64_const20_verified` in `PRIMITIVE_BENCHMARKS`. No
-  changes to `ieee754/src/`. The merged `shift_right_sticky_u64_verified`
-  primitive is untouched.
-- Bench harness recorded in `gate_counts.json`.
-- Roborev (codex / gpt-5.5) per workspace rule.
+- Spike-branch source change (`scripts/benchmark_gates.py`): two new
+  `PRIMITIVE_BENCHMARKS` entries `shr_sticky_u64_const20_baseline` and
+  `shr_sticky_u64_const20_verified`. No changes to `ieee754/src/`. The
+  merged `shift_right_sticky_u64_verified` primitive is untouched.
+- Bench run recorded in `gate_counts.json` on the spike branch.
+- Roborev (codex / gpt-5.5) "No issues found" on the bench-harness
+  commit; this ledger commit was reviewed in the same agent/model and
+  the low-severity wording / placeholder findings were addressed in a
+  follow-up commit.
 
 ---
 
