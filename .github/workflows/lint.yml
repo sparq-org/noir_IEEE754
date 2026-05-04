@@ -65,9 +65,9 @@ jobs:
         with:
           node-version: "20"
       # Pin Prettier so CI mirrors the pre-commit hook
-      # (`mirrors-prettier` v4.0.0-alpha.8).
+      # (`mirrors-prettier` v4.0.0-alpha.8 → prettier@4.0.0-alpha.8).
       - run: |
-          npx -y prettier@3.3.3 --check '**/*.json' || \
+          npx -y prettier@4.0.0-alpha.8 --check '**/*.json' || \
             echo "::warning::JSON formatting drift; run 'npx prettier --write **/*.json'"
         continue-on-error: true
 
