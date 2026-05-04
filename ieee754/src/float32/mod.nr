@@ -13,7 +13,7 @@ pub(crate) mod convert;
 // Re-export all public functions
 pub use helpers::{
     float32_from_bits, float32_infinity, float32_is_denormal, float32_is_infinity, float32_is_nan,
-    float32_is_zero, float32_nan, float32_to_bits, float32_zero,
+    float32_is_zero, float32_max_finite, float32_nan, float32_to_bits, float32_zero,
 };
 
 pub use add::{add_float32, add_float32_with_rounding};

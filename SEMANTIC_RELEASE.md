@@ -42,12 +42,17 @@ The type of commit determines the version bump:
 
 When a PR is merged to `main`:
 
-1. **Commit Analysis**: Semantic-release analyzes all commits since the last release
+1. **Commit Analysis**: Semantic-release analyses all commits since the last release
 2. **Version Calculation**: Determines the next version based on commit types
-3. **Changelog Generation**: Creates/updates CHANGELOG.md with all changes
+3. **Release Notes Generation**: Renders release notes from commit messages
 4. **Git Tag Creation**: Creates a new git tag (e.g., `v0.5.0`)
-5. **GitHub Release**: Publishes a GitHub release with the changelog
-6. **Commit Changelog**: Commits the updated CHANGELOG.md back to main
+5. **GitHub Release**: Publishes a GitHub release whose body is the generated notes
+
+The repo-tracked `CHANGELOG.md` is intentionally **not** maintained by the
+release flow — `main` is a protected branch, and pushing the changelog
+back through `@semantic-release/git` violates the "all changes via PR"
+rule. The full per-release history lives on the
+[GitHub releases page](https://github.com/jeswr/noir_IEEE754/releases).
 
 ### 4. Configuration Files
 
@@ -59,11 +64,9 @@ When a PR is merged to `main`:
 
 The release process uses the following semantic-release plugins:
 
-1. **@semantic-release/commit-analyzer**: Analyzes commits to determine version bump
+1. **@semantic-release/commit-analyzer**: Analyses commits to determine version bump
 2. **@semantic-release/release-notes-generator**: Generates release notes from commits
-3. **@semantic-release/changelog**: Updates CHANGELOG.md file
-4. **@semantic-release/git**: Commits the changelog back to the repository
-5. **@semantic-release/github**: Creates GitHub releases and tags
+3. **@semantic-release/github**: Creates GitHub releases and tags
 
 ## Testing Locally
 
