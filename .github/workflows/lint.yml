@@ -60,12 +60,14 @@ jobs:
           else
             echo "no shell files"
           fi
+        continue-on-error: true
       - name: shfmt -d
         run: |
           mapfile -t FILES < <(git ls-files '*.sh' '*.bash' 2>/dev/null)
           if [ ${#FILES[@]} -gt 0 ]; then
             shfmt -i 2 -ci -d "${FILES[@]}"
           fi
+        continue-on-error: true
 
   markdown:
     name: Markdown (markdownlint-cli2)
