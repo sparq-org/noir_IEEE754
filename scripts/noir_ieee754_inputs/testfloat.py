@@ -355,9 +355,13 @@ class TestFloatGenError(RuntimeError):
 # Exit codes that we treat as "testfloat_gen was killed by SIGPIPE
 # because the consumer closed the pipe early". Python's
 # ``Popen.wait()`` returns the negative signal number on POSIX (so
-# ``-13`` for SIGPIPE), but some shells / runners report ``141`` /
-# ``143`` instead -- accept all conventions.
-_SIGPIPE_RCS: frozenset[int] = frozenset({-13, 141, 143})
+# ``-13`` for SIGPIPE); some shells / runners surface SIGPIPE as
+# ``128 + 13 = 141``. We deliberately do NOT include ``143`` here:
+# ``143 = 128 + 15`` is the convention for SIGTERM, and a
+# SIGTERM-killed ``testfloat_gen`` is a real failure (typically a
+# wrapper or CI hand-off bug) that we want to surface as an error
+# rather than silently accept (Roborev #448 follow-up).
+_SIGPIPE_RCS: frozenset[int] = frozenset({-13, 141})
 
 
 def run_testfloat_gen(

@@ -151,3 +151,30 @@ def test_unbounded_capture_paths_still_propagate_failures(tmp_path, f64_add_func
             max_tests=None,
             output_path=out,
         )
+
+
+def test_sigterm_exit_code_is_not_treated_as_sigpipe(tmp_path, f64_add_function):
+    """Roborev follow-up: ``143`` is ``128 + SIGTERM``, not SIGPIPE.
+    A stub that exits ``143`` (e.g. a wrapper killed by SIGTERM) must
+    raise rather than be silently accepted as a successful early
+    truncation."""
+    stub = _make_stub(
+        tmp_path,
+        textwrap.dedent(
+            """\
+            printf 'line 1\\n'
+            exit 143
+            """
+        ),
+    )
+    out = tmp_path / "f64_add_rne.tfgen"
+    with pytest.raises(TestFloatGenError) as exc:
+        run_testfloat_gen(
+            stub,
+            function=f64_add_function,
+            rounding=RoundingMode.NEAREST_EVEN,
+            max_tests=100,
+            output_path=out,
+        )
+    assert "rc=143" in str(exc.value)
+    assert not out.exists(), "partial capture must be wiped"
