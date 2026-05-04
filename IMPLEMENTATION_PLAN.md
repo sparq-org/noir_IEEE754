@@ -726,10 +726,12 @@ b32=? +1.0P+0 +1.0P+0 -> 1                               # Compare equal
 
 ## 11. Optimisation Backlog: Field-Element Migration Investigation
 
-Surfaced 2026-05-03 (workspace `notes/inbox/optimisation.md`, since
-processed); audited 2026-05-04 as part of the noir_IEEE754
-production-quality sweep. Tracked workspace-side in
-`STABILISATION-TODOS.md` § Optimisation backlog.
+Surfaced 2026-05-03 in the parent `zkp-sparql-workspace` repo
+(`notes/inbox/optimisation.md`, since processed); audited 2026-05-04 as
+part of the noir_IEEE754 production-quality sweep. Tracked workspace-side
+in `zkp-sparql-workspace`'s `STABILISATION-TODOS.md` § Optimisation backlog.
+Both files live in the parent workspace at
+`https://github.com/jeswr/zkp-sparql-workspace`, not in this repo.
 
 ### 11.1 Hypothesis
 
@@ -774,7 +776,10 @@ land before the equivalence proof closes.**
 
 ### 11.5 References
 
-- Workspace `STABILISATION-TODOS.md` § Optimisation backlog.
+- Parent-workspace `STABILISATION-TODOS.md` § Optimisation backlog
+  (`https://github.com/jeswr/zkp-sparql-workspace`).
 - PR #37, #38, #40 (`count_leading_zeros_u23/52/64`).
 - PR #43, #47, #48 (`shift_right_sticky_u64/u128`).
 - PR #53 (Lampe extraction spike, depends on stable `add.nr` shape).
+- PR #104 (workspace-side Lean f32 ADD equivalence proof — the
+  coordination constraint in §11.3).
