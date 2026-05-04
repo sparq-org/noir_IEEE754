@@ -186,12 +186,27 @@ pub fn add_float64_with_rounding(
         result_exp = result_exp - actual_shift;
     }
 
-    // Denormal result
+    // Denormal result.
+    //
+    // ``result_mant`` carries the working layout
+    // ``[guard:8 | mantissa+implicit:53 | _]`` whose value at biased
+    // exponent ``result_exp`` matches the IEEE 754 value
+    // ``result_mant * 2^(result_exp - bias - 60)``. When the underflow
+    // normaliser exits with ``result_exp == 1 & result_mant <
+    // normal_position`` the value cannot be expressed as a normal at exp 1
+    // and must be re-encoded as a denormal at exp 0. IEEE 754-2019 sec 6.2
+    // (denormalisation) requires only the exponent change -- the mantissa
+    // bits stay in their fixed-point slots, because at exp 0 the (omitted)
+    // implicit bit weighs the same as it did at exp 1 (both subtract one
+    // bias offset of 1023 from the value). The float32 sibling
+    // (`ieee754/src/float32/add.nr`) already encodes this correctly. The
+    // pre-fix circuit applied a stray ``result_mant >> 1`` here, which
+    // halved every denormal-output sum -- e.g. ``MIN_DENORMAL +
+    // MIN_DENORMAL`` returned ``0x1`` instead of ``0x2``. The Berkeley
+    // TestFloat corpus surfaces the bug across every directed-rounding
+    // mode and across f64-add/f64-sub (sub composes through add).
     let mut is_denormal_result = false;
     if (result_exp == 0) | ((result_exp == 1) & (result_mant < normal_position)) {
-        if result_exp == 1 {
-            result_mant = result_mant >> 1;
-        }
         result_exp = 0;
         is_denormal_result = true;
     }
