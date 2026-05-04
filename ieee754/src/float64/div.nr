@@ -10,16 +10,21 @@ use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
 };
 use crate::utils::{
-    directed_overflow_saturates_to_inf, div_u128_by_u64, shift_right_sticky_u64,
-    should_round_up_4bit, U128,
+    assert_valid_rounding_mode, directed_overflow_saturates_to_inf, div_u128_by_u64,
+    shift_right_sticky_u64, should_round_up_4bit, U128,
 };
 
-// IEEE 754 compliant division for 64-bit floats with rounding mode
+// IEEE 754 compliant division for 64-bit floats with rounding mode.
+//
+// `rounding_mode` must be one of the `ROUNDING_MODE_*` constants in
+// `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
+// failure -- see `add_float64_with_rounding` for the rationale.
 pub fn div_float64_with_rounding(
     a: IEEE754Float64,
     b: IEEE754Float64,
     rounding_mode: u8,
 ) -> IEEE754Float64 {
+    assert_valid_rounding_mode(rounding_mode);
     // Determine special cases
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
