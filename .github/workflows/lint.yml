@@ -3,8 +3,9 @@
 # Source of truth: zkp-sparql-workspace/templates/sub-repo/noir/.github/workflows/lint.yml.tmpl
 # Rendered by:    zkp-sparql-workspace/scripts/sync-standards.sh
 #
-# Covers: Noir (fmt + check), Python (ruff), shell (shellcheck + shfmt),
-# Markdown (markdownlint), TOML (taplo), JSON (prettier).
+# Covers: Noir (fmt + check), Python (ruff), YAML (yamllint),
+# shell (shellcheck + shfmt), Markdown (markdownlint), TOML (taplo),
+# JSON (prettier).
 #
 # The existing `ci.yml` workflow keeps its `nargo fmt --check` job for
 # back-compat; this file is additive. Some jobs run with
@@ -40,6 +41,36 @@ jobs:
         run: ruff format --check .
         continue-on-error: true
 
+  yaml:
+    name: YAML (yamllint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Pin to mirror the pre-commit hook (`yamllint` v1.35.1).
+      - run: pip install "yamllint==1.35.1"
+      - run: yamllint .
+        continue-on-error: true
+
+  json-prettier:
+    name: JSON (prettier --check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # Pin Prettier so CI mirrors the pre-commit hook
+      # (`mirrors-prettier` v4.0.0-alpha.8).
+      - run: |
+          npx -y prettier@3.3.3 --check '**/*.json' || \
+            echo "::warning::JSON formatting drift; run 'npx prettier --write **/*.json'"
+        continue-on-error: true
+
   shell:
     name: Shell (shellcheck + shfmt)
     runs-on: ubuntu-latest
@@ -47,10 +78,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install shellcheck + shfmt
+        # Pin shellcheck + shfmt to the same versions the pre-commit hook
+        # uses so local + CI lint never disagree.
+        env:
+          SHELLCHECK_VERSION: "v0.10.0"
+          SHFMT_VERSION: "v3.10.0"
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y shellcheck
-          curl -sSfL -o /tmp/shfmt https://github.com/mvdan/sh/releases/download/v3.10.0/shfmt_v3.10.0_linux_amd64
+          curl -sSfL -o /tmp/shellcheck.tar.xz \
+            "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
+          tar -xJf /tmp/shellcheck.tar.xz -C /tmp
+          sudo install -m 755 "/tmp/shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          curl -sSfL -o /tmp/shfmt \
+            "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64"
           sudo install -m 755 /tmp/shfmt /usr/local/bin/shfmt
       - name: shellcheck
         run: |

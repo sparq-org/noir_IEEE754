@@ -3,7 +3,8 @@
 # Source of truth: zkp-sparql-workspace/templates/lint/.pre-commit-config.yaml
 # Copy into a sub-repo's root (or extend) and run `pre-commit install`
 # to enable on `git commit`. Slow checks (mypy, eslint, pyshacl) live
-# in CI per `feedback_offload_to_ci.md`.
+# in CI; the workspace tracks this convention in its top-level
+# memory / docs.
 #
 # Pinned versions: bump these together; CI workflows mirror them.
 #
