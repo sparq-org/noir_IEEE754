@@ -721,3 +721,60 @@ b32=? +1.0P+0 +1.0P+0 -> 1                               # Compare equal
 - `>`  : Round toward +∞ (ceiling)
 - `<`  : Round toward -∞ (floor)
 - `0`  : Round toward zero (truncation)
+
+---
+
+## 11. Optimisation Backlog: Field-Element Migration Investigation
+
+Surfaced 2026-05-03 (workspace `notes/inbox/optimisation.md`, since
+processed); audited 2026-05-04 as part of the noir_IEEE754
+production-quality sweep. Tracked workspace-side in
+`STABILISATION-TODOS.md` § Optimisation backlog.
+
+### 11.1 Hypothesis
+
+> Many circuits operate on `(i|u)(8|16|32|64)` where the underlying
+> field arithmetic might be cheaper if the operands stayed as `Field`
+> elements (BN254). Range-bound integer types compile to range-checks
+> + bit-decomposition every time they are touched; Field-native
+> arithmetic skips that.
+
+### 11.2 Audit findings
+
+Surveyed `ieee754/src/{float32,float64}/{add,sub,mul,div,sqrt}.nr` for
+hot-path locals where the integer type is incidental.
+
+| Concern | Finding |
+| --- | --- |
+| Bitwise operations dominate hot paths | `add.nr`, `mul.nr`, `div.nr`, `sqrt.nr` rely on `<<`, `>>`, `&`, `|` for mantissa alignment, sticky-bit accumulation, normalisation, and round-bit extraction. Field-native arithmetic does not expose any of these; rebuilding them on top of `Field` requires the same bit-decomposition the integer types already encode. |
+| "Incidental counters" are rare | Almost every `u64` in `add.nr` (12) and `mul.nr` (5 in float64) is fed straight back into a shift or mask. The "loop counter that never overflows the field" archetype the hypothesis targets is not a meaningful share of the hot path. |
+| Existing optimisation pattern is healthier | `unconstrained fn` + per-clause verifier (PRs #37, #43, #48) gives O(constant) constraints in the verifier and gives the prover the full power of unconstrained Noir / native Rust-like control flow. The recent `count_leading_zeros_u23/52_verified` and `shift_right_sticky_u64/u128_verified` primitives are landing material gate reductions through this pattern, not through type changes. |
+| Range-check amortisation already happens | Where the same `u64` is used for many shifts in sequence (e.g. mantissa held across alignment + rounding + normalisation), `nargo` only emits the range check at the type boundary, not on every operation. The marginal saving from skipping a single boundary check does not warrant the rewrite cost. |
+
+### 11.3 Coordination constraint
+
+The f32 add equivalence proof (`#104`, Lean round-3 via Lampe) is in
+flight against `add_float32_with_rounding` and its dependencies in
+`add.nr`. Any rewrite of those types changes the Lampe extraction
+shape and re-opens the proof. **Field-element migration must not
+land before the equivalence proof closes.**
+
+### 11.4 Disposition
+
+- **Defer.** Investigation logged here; no code changes scheduled.
+- Re-evaluate **post-paper-submission**, after the Lampe round-3 proof
+  is closed and after the `unconstrained` + verifier pattern has been
+  rolled across all five binary ops -- only then is it meaningful to
+  measure whether residual integer-typed hot spots are worth a Field
+  port.
+- A Field-port spike, if attempted, should target one isolated
+  primitive (e.g. an alignment-shift counter that survives the verifier
+  refactor) and benchmark gate count via `gate_counts.json`. Anything
+  larger than one primitive is post-stabilisation work.
+
+### 11.5 References
+
+- Workspace `STABILISATION-TODOS.md` § Optimisation backlog.
+- PR #37, #38, #40 (`count_leading_zeros_u23/52/64`).
+- PR #43, #47, #48 (`shift_right_sticky_u64/u128`).
+- PR #53 (Lampe extraction spike, depends on stable `add.nr` shape).
