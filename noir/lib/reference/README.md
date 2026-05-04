@@ -28,11 +28,14 @@ noir/lib/reference/
 Round 1 (2026-05-04 spike): only `add_f32_reference` is implemented.
 Smoke tests live at `../reference_tests/` and run via `nargo test`.
 Bit-for-bit equivalence against `add_float32_with_rounding` on every
-round-1 corpus case has been verified locally. The Lean equivalence
-theorem (`add_f32_equivalence`) is at
-`proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/AddF32.lean` — currently
-`sorry`-stubbed; round 2 closes it. See
-`proofs/Ieee754/equivalence-spike-2026-05-04.md` for the methodology.
+round-1 corpus case has been verified locally.
+
+The Lean equivalence theorem (`add_f32_equivalence`) and the proof
+methodology document live in the parent `zkp-sparql-workspace` repo
+(not this repo) at
+`proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/AddF32.lean` and
+`proofs/Ieee754/equivalence-spike-2026-05-04.md`. The theorem is
+currently `sorry`-stubbed; round 2 closes it.
 
 Round 2+ extensions: f32 sub, f64 add/sub. Out of scope for this spike.
 

@@ -1,24 +1,23 @@
-"""Compare ``noir/lib/reference::add_f32_reference`` against the MPFR oracle.
+"""Smoke-check the MPFR oracle against the binary32 ADD corpus.
 
-Round-1 spike (2026-05-04): we hand-ported the optimised `add_float32_with_rounding`
-into a deliberately literal IEEE 754 reference implementation. This script
-runs the reference through nargo's executor on a corpus of bit patterns and
-checks it agrees with the MPFR oracle byte-for-byte under every rounding mode.
+Round-1 spike (2026-05-04): the MPFR-driven equivalence proof against
+``noir/lib/reference::add_f32_reference`` is gated by a follow-up PR (see
+``noir/lib/reference/README.md`` for the methodology). For now this script
+only confirms that the MPFR oracle (``noir_ieee754_inputs.reference``)
+returns a 32-bit value over the round-1 corpus -- it surfaces an
+oracle-side regression early, before the nargo-driven equivalence loop
+lands.
 
-The corpus is the same one used by ``scripts/test_reference.py`` -- hand-picked
-edge cases plus randomised binary32 add cases. The ``nargo execute`` round-trip
-is too slow for a full 8k-case run, so we drive a smaller corpus here and rely
-on the Noir-side ``#[test]`` smoke set in ``noir/lib/reference_tests`` for the
-fast inner loop.
+The reference-vs-optimised equivalence is exercised today by
+``nargo test --package reference_tests`` (Noir-side ``#[test]`` smoke
+suite); the long-term equivalence gate is the Lean proof tracked in the
+parent ``zkp-sparql-workspace`` repo at
+``proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/AddF32.lean``.
 
 Invocation::
 
     cd circuits/noir_IEEE754
     python3 scripts/test_reference_equivalence.py
-
-This is a tactical script for the round-1 spike, not the long-term equivalence
-gate; the long-term gate is the Lean proof at
-``proofs/Ieee754/Equivalence/AddF32.lean``.
 """
 
 from __future__ import annotations
@@ -26,18 +25,12 @@ from __future__ import annotations
 import os
 import random
 import struct
-import subprocess
 import sys
-import tempfile
-from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from noir_ieee754_inputs.fptest import Operation, RoundingMode  # noqa: E402
 from noir_ieee754_inputs.reference import compute_expected_bits  # noqa: E402
-
-REPO = Path(__file__).resolve().parent.parent
-REFERENCE_PKG = REPO / "noir" / "lib" / "reference"
 
 
 # Corpus matches `test_reference.py` and adds the §6.3 / §7.4 edge cases.
@@ -67,17 +60,6 @@ HAND_CASES: list[tuple[int, int, RoundingMode]] = [
 ]
 
 
-def _executor_program(case_id: int) -> str:
-    """A throwaway Noir binary that runs the reference once and prints the
-    result bits. We splice in the (a_bits, b_bits, mode) at compile time so
-    nargo doesn't need a Prover.toml."""
-    # No-op stub -- in practice we drive the equivalence via nargo's `#[test]`
-    # mechanism (see noir/lib/reference_tests). This script wraps the random
-    # case loop so the equivalence claim is *also* exercised against MPFR for
-    # the specific bit patterns the test corpus covers.
-    raise NotImplementedError(case_id)
-
-
 def main() -> int:
     rng = random.Random(0xADD32EF)
     cases = list(HAND_CASES)
@@ -94,23 +76,13 @@ def main() -> int:
             b = rng.randint(0, 0xFFFFFFFF)
             cases.append((a, b, mode))
 
-    # The actual nargo execution is gated on a parallel PR; for now this
-    # script only confirms that:
-    #   1. the MPFR oracle agrees with the *legacy* float-pack route on every
-    #      RNE case (via the existing test_reference.py harness);
-    #   2. the Noir-side `#[test]` smoke set passes (run separately).
-    # The equivalence-against-reference loop is plumbed via nargo's #[test]
-    # mechanism in `noir/lib/reference_tests/src/main.nr`. This script's
-    # contribution is to surface the *MPFR-against-reference* gap when
-    # someone extends the corpus.
+    # MPFR-only smoke-check: confirm the oracle returns a 32-bit value
+    # over every corpus entry. The reference-vs-optimised equivalence
+    # itself runs via `nargo test --package reference_tests`.
     print(f"corpus size: {len(cases)}")
     failures = 0
     for a_bits, b_bits, mode in cases:
         oracle = compute_expected_bits(Operation.ADD, a_bits, b_bits, mode, 24)
-        # We don't have a fast Python harness for the reference; the Noir
-        # `#[test]` set is the authoritative bit-equivalence gate for now.
-        # This loop just confirms the MPFR oracle terminates over our corpus
-        # without raising and produces a 32-bit value.
         if oracle < 0 or oracle > 0xFFFFFFFF:
             failures += 1
             print(f"oracle out of range for a=0x{a_bits:08X} b=0x{b_bits:08X} mode={mode.name}: {oracle}")
@@ -119,7 +91,8 @@ def main() -> int:
         return 1
     print(f"OK: {len(cases)} cases evaluated against MPFR oracle without errors.")
     print("Reference-vs-optimised equivalence is gated by `nargo test --package reference_tests`")
-    print("  and (long term) by `proofs/Ieee754/Equivalence/AddF32.lean`.")
+    print("  and (long term) by the workspace Lean proof "
+          "`proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/AddF32.lean`.")
     return 0
 
 

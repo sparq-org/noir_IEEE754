@@ -1,6 +1,9 @@
-// Spot tests for the reference IEEE 754 add. Heavy bit-for-bit equivalence
-// is driven from `scripts/test_reference_equivalence.py` against MPFR; these
-// tests are quick smoke checks runnable from `nargo test`.
+// Spot tests for the reference IEEE 754 add. These are the round-1
+// bit-for-bit equivalence smoke checks runnable from `nargo test`. The
+// MPFR-against-reference loop tracked in
+// `scripts/test_reference_equivalence.py` is currently a smoke-check on
+// the MPFR oracle only; the full reference-vs-MPFR sweep is gated by a
+// follow-up PR (see `noir/lib/reference/README.md`).
 
 use ieee754::float32::{add_float32_with_rounding, float32_from_bits, float32_to_bits};
 use ieee754::types::{
