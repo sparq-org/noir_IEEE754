@@ -1,0 +1,8 @@
+[package]
+name = "ieee754_reference"
+type = "lib"
+authors = ["Jesse Wright"]
+description = "Hand-ported, deliberately literal IEEE 754 reference for equivalence proofs against the optimised ieee754 crate."
+
+[dependencies]
+ieee754 = { path = "../../../ieee754" }
