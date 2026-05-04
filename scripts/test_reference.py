@@ -378,9 +378,9 @@ def non_default_rounding_smoke(t: TestRunner) -> None:
 
 
 def mixed_zero_cancellation(t: TestRunner) -> None:
-    """MPFR-oracle pin for IEEE 754-2019 sec 6.3 (signedness of zero results
-    from sums) for the mixed-zero short-circuit short-cited by Copilot's
-    review of PR #50.
+    """MPFR-oracle pin for IEEE 754-2019 sec 6.3 (signedness of zero
+    results from sums). Targets the mixed-zero cancellation fast path
+    surfaced in Copilot's review of PR #50.
 
     Contract:
       * ``+0 + -0`` and ``-0 + +0`` are ``+0`` under RNE / RNA / RNDU /
