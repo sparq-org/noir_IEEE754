@@ -112,16 +112,14 @@ def _populate() -> dict[_OpKey, tuple[SourceCorpus, ...]]:
         for rnd in _ALL_ROUNDINGS:
             table[_OpKey(op, Precision.BINARY64, rnd)] = _TESTFLOAT_ONLY
 
-    # sqrt: f32 default-rounding has FPgen vectors; everything else is
-    # TestFloat-only.
-    table[_OpKey(Operation.SQRT, Precision.BINARY32, RoundingMode.NEAREST_EVEN)] = _BOTH
+    # sqrt: f32 every rounding has FPgen vectors (so BOTH); f64 has none
+    # in FPgen so TestFloat is the sole source.
     for rnd in _ALL_ROUNDINGS:
-        if rnd != RoundingMode.NEAREST_EVEN:
-            table[_OpKey(Operation.SQRT, Precision.BINARY32, rnd)] = _BOTH
+        table[_OpKey(Operation.SQRT, Precision.BINARY32, rnd)] = _BOTH
         table[_OpKey(Operation.SQRT, Precision.BINARY64, rnd)] = _TESTFLOAT_ONLY
 
-    # fma: same shape as sqrt -- both at f32 default, TestFloat-only for
-    # f64 across the board.
+    # fma: f32 every rounding is BOTH (FPgen has FMA vectors at every
+    # rounding mode); f64 is TestFloat-only across the board.
     for rnd in _ALL_ROUNDINGS:
         table[_OpKey(Operation.FMA, Precision.BINARY32, rnd)] = _BOTH
         table[_OpKey(Operation.FMA, Precision.BINARY64, rnd)] = _TESTFLOAT_ONLY

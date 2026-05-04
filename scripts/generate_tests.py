@@ -854,11 +854,26 @@ def generate_ci_matrix(
     
     for source_file, tests in sorted(tests_by_file.items()):
         module_name = _source_to_module_name(source_file)
-        
-        # Count how many test functions will be generated
+
+        # Count how many test functions will be generated. The counting
+        # logic must mirror ``generate_noir_packages`` exactly, otherwise
+        # the matrix can list package names that never get written to disk
+        # (or skip ones that do). In particular, native binary64 tests are
+        # emitted only once even when ``generate_both`` is true (the f32
+        # pass filters them out), so they must be counted only once.
         if generate_both:
-            f32_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=False) is not None)
-            f64_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=True) is not None)
+            f32_count = sum(
+                1 for i, test in enumerate(tests)
+                if test.precision == Precision.BINARY32
+                and generate_noir_test(test, i, force_f64=False) is not None
+            )
+            f64_count = 0
+            for i, test in enumerate(tests):
+                # Mirror ``generate_noir_packages``: native f64 stays f64,
+                # f32 sources are converted to f64.
+                force = test.precision != Precision.BINARY64
+                if generate_noir_test(test, len(tests) + i, force_f64=force) is not None:
+                    f64_count += 1
             test_count = f32_count + f64_count
         else:
             test_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=force_f64) is not None)
@@ -1449,12 +1464,24 @@ Examples:
             print(f"Parsing {os.path.basename(filepath)}...")
             tests = parse_fptest_file(filepath)
             all_tests.extend(tests)
-        
+
+        # The TestFloat corpus loader is only wired into the ``--packages``
+        # branch above (where each (function, rounding) capture becomes its
+        # own source file / Noir package). The single-file path here would
+        # need substantial rework to merge the captures into one output.
+        # Surface a clear warning rather than silently ignoring the flags
+        # so users don't think the corpus is being included.
+        if not args.no_testfloat and args.testfloat_cache:
+            print(
+                "Warning: --testfloat-cache is only honoured with --packages; "
+                "ignoring it for the single-file output path."
+            )
+
         print(f"Parsed {len(all_tests)} total test cases")
-        
+
         all_tests = filter_tests(all_tests)
         print(f"After filtering: {len(all_tests)} tests")
-        
+
         # Generate Noir file
         generate_noir_file(
             all_tests,
