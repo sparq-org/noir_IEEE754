@@ -18,6 +18,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # Default ``pull_request`` types are ``[opened, synchronize, reopened]``;
+    # crucially that excludes ``ready_for_review``. Since ``ieee754-tests``
+    # is gated on ``draft != true``, we MUST run CI when a draft PR is
+    # marked ready (and re-gate when a ready PR is reverted to draft) so
+    # that the full IEEE 754 matrix runs before any merge from a PR that
+    # was opened in draft.
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
 
 jobs:
@@ -129,10 +136,18 @@ jobs:
           nargo test --package ieee754_unit_tests test_float32 || exit 1
           nargo test --package ieee754_unit_tests test_float64 || exit 1
 
-  # Run IEEE 754 test suite only on latest Noir version
+  # Run IEEE 754 test suite only on latest Noir version.
+  #
+  # Skipped while the PR is in draft to keep iteration tight on small
+  # circuit fixes -- the generated-test matrix is the long-pole job. Full
+  # matrix is restored when the PR flips to ready-for-review (the
+  # ``setup``/``lint``/``unit-tests``/``generate-tests`` jobs continue to
+  # run on every push, including drafts, so the unit-test contract for
+  # the new asserts is exercised continuously).
   ieee754-tests:
     runs-on: ubuntu-latest
     needs: [setup, generate-tests]
+    if: github.event.pull_request.draft != true
     strategy:
       fail-fast: false
       matrix:
@@ -208,8 +223,20 @@ jobs:
             echo "Unit tests failed"
             exit 1
           fi
-          if [ "${{ needs.ieee754-tests.result }}" != "success" ]; then
-            echo "IEEE 754 tests failed"
+          # ``ieee754-tests`` is gated on PR-draft state in its job-level
+          # ``if:``. Accept ``skipped`` ONLY when this run is itself a
+          # draft pull_request -- never on push (main) or on a ready
+          # pull_request. Any other ``skipped`` (empty matrix, future
+          # workflow-condition regression) must fail the summary loudly
+          # rather than masquerade as a green main.
+          IEEE754_RESULT="${{ needs.ieee754-tests.result }}"
+          IS_DRAFT_PR="${{ github.event_name == 'pull_request' && github.event.pull_request.draft == true }}"
+          if [ "$IEEE754_RESULT" = "success" ]; then
+            : # ok
+          elif [ "$IEEE754_RESULT" = "skipped" ] && [ "$IS_DRAFT_PR" = "true" ]; then
+            echo "IEEE 754 tests skipped (draft PR; full matrix runs at ready-for-review)"
+          else
+            echo "IEEE 754 tests result=$IEEE754_RESULT, is_draft_pr=$IS_DRAFT_PR"
             exit 1
           fi
           if [ "${{ needs.generate-tests.result }}" != "success" ]; then
