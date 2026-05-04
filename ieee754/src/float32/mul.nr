@@ -9,14 +9,22 @@ use crate::float32::helpers::{
 use crate::types::{
     FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
 };
-use crate::utils::{directed_overflow_saturates_to_inf, shift_right_sticky_u64, should_round_up};
+use crate::utils::{
+    assert_valid_rounding_mode, directed_overflow_saturates_to_inf, shift_right_sticky_u64,
+    should_round_up,
+};
 
-// IEEE 754 compliant multiplication for 32-bit floats with rounding mode
+// IEEE 754 compliant multiplication for 32-bit floats with rounding mode.
+//
+// `rounding_mode` must be one of the `ROUNDING_MODE_*` constants in
+// `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
+// failure -- see `add_float32_with_rounding` for the rationale.
 pub fn mul_float32_with_rounding(
     a: IEEE754Float32,
     b: IEEE754Float32,
     rounding_mode: u8,
 ) -> IEEE754Float32 {
+    assert_valid_rounding_mode(rounding_mode);
     // Determine special cases
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
