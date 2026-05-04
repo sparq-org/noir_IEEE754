@@ -92,7 +92,7 @@ jobs:
         # manifest-check inside the regen script remains as a
         # second-line defence. When inputs are stable, the cache hit
         # saves ~150 s (clone + build + 70 captures).
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: testfloat_cache
         with:
           path: .testfloat_cache
@@ -128,7 +128,7 @@ jobs:
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
 
       - name: Upload generated tests
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ieee754-tests
           path: test_packages/
@@ -222,7 +222,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download generated tests
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ieee754-tests
           path: test_packages/
