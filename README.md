@@ -46,11 +46,13 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 
 ## Installation
 
-Add to your `Nargo.toml`:
+Add to your `Nargo.toml` (replace `v0.4.0` with the
+[latest release](https://github.com/jeswr/noir_IEEE754/releases) at
+the time you pin):
 
 ```toml
 [dependencies]
-ieee754 = { git = "https://github.com/jeswr/noir_IEEE754", tag = "v0.1.0", directory = "ieee754" }
+ieee754 = { git = "https://github.com/jeswr/noir_IEEE754", tag = "v0.4.0", directory = "ieee754" }
 ```
 
 ## Usage
