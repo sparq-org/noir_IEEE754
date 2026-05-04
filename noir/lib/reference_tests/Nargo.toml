@@ -1,0 +1,9 @@
+[package]
+name = "reference_tests"
+type = "bin"
+authors = ["Jesse Wright"]
+description = "Hand-written tests for the reference IEEE 754 implementation -- spot-checks before MPFR-driven equivalence is run from Python."
+
+[dependencies]
+ieee754 = { path = "../../../ieee754" }
+ieee754_reference = { path = "../reference" }

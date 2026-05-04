@@ -1,5 +1,7 @@
 [workspace]
 members = [
     "ieee754",
-    "ieee754_unit_tests"
+    "ieee754_unit_tests",
+    "noir/lib/reference",
+    "noir/lib/reference_tests",
 ]
