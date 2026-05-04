@@ -31,3 +31,7 @@ node_modules/
 
 # OS files
 .DS_Store
+
+# Local Python venvs used for running scripts/test_*.py
+.venv/
+.pytest_cache/
