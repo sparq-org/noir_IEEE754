@@ -8,6 +8,7 @@
     ".github/noir-versions.json": "8bfc115aa4ad34f8e7715a4df76ccca454248a54b662a218795a7ea903348a45",
     ".github/workflows/release.yml": "94ab10aa361839291eafaf2f2e86f425494beabb9683a67e3e236169091c6cf7",
     ".github/workflows/gate-count-pr.yml": "32c11e0969445de00eb0844d199e0401a2715e66b023dbfc73da7ef5dd5f0a6b",
+    ".github/workflows/require-copilot-review.yml": "ff5276beaffdba3996413d1ce1c850a6793095147b7fa80aadcc66580ba97c55",
     ".github/workflows/automerge.yml": "548ba3f7178aed11fb297da363dc2ce775126fd88d7de4e05deff94760fc1b50",
     ".github/workflows/check-noir-version.yml": "db0648fc41095f02590deb6015f1b579bef23d9339ddbf42ac498bd5527c8e3c",
     ".github/workflows/ci.yml": "f062d92f3934f52846be3466810fa35566e586a4d63fd909f31d58b0f4437c49",
