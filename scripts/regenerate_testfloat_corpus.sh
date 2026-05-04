@@ -64,20 +64,43 @@ if [[ -z "${TESTFLOAT_GEN:-}" ]]; then
     SOFTFLOAT_DIR="${SOFTFLOAT_DIR:-$BUILD_DIR/berkeley-softfloat-3}"
     TESTFLOAT_DIR="${TESTFLOAT_DIR:-$BUILD_DIR/berkeley-testfloat-3}"
 
-    # Clone-and-checkout-pin pattern: clone with full history (so the
-    # pinned commit is reachable) then check out the exact revision. We
-    # avoid ``--depth=1`` here because that would only give us the tip of
-    # ``master``; the pin would be unreachable without unshallowing.
-    if [[ ! -d "$SOFTFLOAT_DIR" ]]; then
-        echo "Cloning Berkeley SoftFloat-3 to $SOFTFLOAT_DIR (pin=$SOFTFLOAT_PIN)..."
-        git clone https://github.com/ucb-bar/berkeley-softfloat-3 "$SOFTFLOAT_DIR"
-        (cd "$SOFTFLOAT_DIR" && git checkout --detach "$SOFTFLOAT_PIN")
-    fi
-    if [[ ! -d "$TESTFLOAT_DIR" ]]; then
-        echo "Cloning Berkeley TestFloat-3 to $TESTFLOAT_DIR (pin=$TESTFLOAT_PIN)..."
-        git clone https://github.com/ucb-bar/berkeley-testfloat-3 "$TESTFLOAT_DIR"
-        (cd "$TESTFLOAT_DIR" && git checkout --detach "$TESTFLOAT_PIN")
-    fi
+    # Clone-and-checkout-pin pattern. Two failure modes the original
+    # implementation missed (Roborev #448 medium #2):
+    #
+    # 1. Pre-existing source directories (a prior CI run that re-used
+    #    the workspace, a mounted dev cache, ``SOFTFLOAT_DIR`` /
+    #    ``TESTFLOAT_DIR`` overrides) only got the checkout on initial
+    #    clone. After a ``SOFTFLOAT_PIN`` / ``TESTFLOAT_PIN`` bump
+    #    those directories silently kept the old pin, so re-runs
+    #    built from the *old* upstream source with the *new* pin
+    #    recorded in ``manifest.txt`` -- a soundness hole for the
+    #    corpus the manifest is meant to attest.
+    # 2. ``git clone`` without ``--depth=1`` is wasteful (~80 MB per
+    #    repo) when we only ever check out one commit.
+    #
+    # Remediation: always run ``git fetch <PIN> + git checkout <PIN>``
+    # regardless of whether the directory pre-existed. We use a
+    # filter-blobless clone, then a depth-1 fetch of the pinned SHA
+    # (GitHub allows reachable-SHA fetches via
+    # ``uploadpack.allowReachableSHA1InWant``); the working tree stays
+    # small while we can still check out the exact pin.
+    _ensure_pin () {
+        local dir="$1" url="$2" pin="$3"
+        if [[ ! -d "$dir/.git" ]]; then
+            echo "Cloning $url to $dir..."
+            git clone --filter=blob:none --no-checkout "$url" "$dir"
+        fi
+        (
+            cd "$dir"
+            # Always re-fetch the pinned SHA so a bump between runs
+            # invalidates a stale checkout.
+            echo "Fetching pin $pin in $dir..."
+            git fetch --depth=1 origin "$pin"
+            git checkout --detach --force "$pin"
+        )
+    }
+    _ensure_pin "$SOFTFLOAT_DIR" "https://github.com/ucb-bar/berkeley-softfloat-3" "$SOFTFLOAT_PIN"
+    _ensure_pin "$TESTFLOAT_DIR" "https://github.com/ucb-bar/berkeley-testfloat-3" "$TESTFLOAT_PIN"
 
     # Pick a build template based on host platform. The Linux-x86_64-GCC
     # template is the closest match for both Linux/GCC and macOS/clang;
@@ -172,8 +195,6 @@ fi
 
 PYTHONPATH="$SCRIPT_DIR" python3 - <<EOF
 from pathlib import Path
-import os
-import subprocess
 import sys
 
 sys.path.insert(0, "$SCRIPT_DIR")
@@ -181,7 +202,8 @@ sys.path.insert(0, "$SCRIPT_DIR")
 from noir_ieee754_inputs.sources import OPERATION_SOURCES, SourceCorpus
 from noir_ieee754_inputs.testfloat import (
     SUPPORTED_FUNCTIONS,
-    ROUNDING_FLAGS,
+    TestFloatGenError,
+    run_testfloat_gen,
 )
 
 cache_dir = Path("$CACHE_DIR")
@@ -222,29 +244,29 @@ for fn, rnd in pairs:
     if out.exists() and out.stat().st_size > 0:
         print(f"  cached {out.name}")
         continue
-    args = [
-        binary,
-        "-seed", str(seed),
-        "-level", str(level),
-        ROUNDING_FLAGS[rnd],
-        fn.name,
-    ]
-    if max_per_function is not None:
-        # Truncate at source. ``testfloat_gen`` for ``mulAdd`` at level 1
-        # emits ~6.1M cases per rounding mode; the downstream loader caps
-        # per-function output anyway, so writing the full stream wastes
-        # significant CI minutes and disk I/O.
-        cmd = "{} | head -n {}".format(
-            " ".join(args),
-            int(max_per_function),
-        )
-        print(f"  + {cmd} > {out.name}")
-        with open(out, "w") as fh:
-            subprocess.run(cmd, shell=True, stdout=fh, check=True)
+    cap = max_per_function
+    if cap is not None:
+        # ``testfloat_gen`` for ``mulAdd`` at level 1 emits ~6.1M cases
+        # per rounding mode; the downstream loader caps per-function
+        # output anyway, so writing the full stream wastes CI minutes
+        # and disk. ``run_testfloat_gen`` handles SIGPIPE-on-close
+        # cleanly and raises ``TestFloatGenError`` on any genuine
+        # ``testfloat_gen`` failure (Roborev #448 medium #3).
+        print(f"  + testfloat_gen ... {fn.name} | first {cap} > {out.name}")
     else:
-        print(f"  + {' '.join(args)} > {out.name}")
-        with open(out, "w") as fh:
-            subprocess.run(args, stdout=fh, check=True)
+        print(f"  + testfloat_gen ... {fn.name} > {out.name}")
+    try:
+        run_testfloat_gen(
+            binary,
+            function=fn,
+            rounding=rnd,
+            seed=seed,
+            level=level,
+            max_tests=cap,
+            output_path=out,
+        )
+    except TestFloatGenError as exc:
+        sys.exit(str(exc))
 
 print("Done.")
 EOF
