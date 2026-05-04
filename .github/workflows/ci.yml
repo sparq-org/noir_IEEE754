@@ -46,37 +46,57 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev libmpc-dev
 
       - name: Install Python deps
-        run: pip install -r scripts/requirements.txt
+        run: pip install -r scripts/requirements.txt pytest
 
       - name: Cross-check MPFR vs legacy reference oracle
         run: python3 scripts/test_reference.py
 
+      - name: Unit tests for TestFloat capture pipeline
+        # Roborev #448 medium #3 regression coverage: ensure
+        # ``run_testfloat_gen`` raises on real ``testfloat_gen``
+        # failures rather than silently accepting truncated captures.
+        run: python3 -m pytest scripts/test_run_testfloat_gen.py -v
+
       - name: Read TestFloat pins
         id: tf_pins
-        # The pins are the only inputs (besides --seed / --level /
-        # --max-per-function, all fixed below) that determine the corpus
-        # contents, so they form the natural cache key. We extract them
-        # by sourcing the regen script's pin block in a sub-shell so a
-        # future bump bumps the cache key automatically.
+        # The pins, plus the source-corpus dispatch table
+        # (``scripts/noir_ieee754_inputs/sources.py``), the capture
+        # driver (``scripts/noir_ieee754_inputs/testfloat.py``), and
+        # the regen shell script itself, determine which captures the
+        # corpus needs. We extract the pins from the regen script and
+        # additionally hash those source files into the cache key so a
+        # PR which adds an op / rounding mode (or adjusts the regen
+        # logic) invalidates the cache rather than silently reusing a
+        # stale corpus. Roborev #448 medium #1.
         run: |
           SF=$(grep -E '^SOFTFLOAT_PIN=' scripts/regenerate_testfloat_corpus.sh | sed -E 's/.*:-([0-9a-f]{40}).*/\1/')
           TF=$(grep -E '^TESTFLOAT_PIN=' scripts/regenerate_testfloat_corpus.sh | sed -E 's/.*:-([0-9a-f]{40}).*/\1/')
+          INPUT_FILES_HASH=$(sha256sum \
+            scripts/noir_ieee754_inputs/sources.py \
+            scripts/noir_ieee754_inputs/testfloat.py \
+            scripts/regenerate_testfloat_corpus.sh \
+            | sha256sum | cut -c1-16)
           echo "softfloat=$SF" >> "$GITHUB_OUTPUT"
           echo "testfloat=$TF" >> "$GITHUB_OUTPUT"
-          echo "Extracted pins: softfloat=$SF testfloat=$TF"
+          echo "input_files=$INPUT_FILES_HASH" >> "$GITHUB_OUTPUT"
+          echo "Extracted pins: softfloat=$SF testfloat=$TF input_files=$INPUT_FILES_HASH"
 
       - name: Cache TestFloat corpus
         # Cache the generated ``.testfloat_cache/`` directory keyed on
-        # (softfloat-3 commit, testfloat-3 commit, max-per-function cap,
-        # seed, level). When any input changes, the manifest check inside
-        # ``regenerate_testfloat_corpus.sh`` invalidates the on-disk
-        # cache and the script regenerates from upstream. When inputs are
-        # stable, this saves ~150 s (clone + build + 70 captures).
-        uses: actions/cache@v4
+        # (softfloat-3 commit, testfloat-3 commit, capture-driver hash,
+        # max-per-function cap, seed, level). The ``input_files`` hash
+        # component covers ``noir_ieee754_inputs/sources.py`` +
+        # ``testfloat.py`` + ``regenerate_testfloat_corpus.sh`` so a PR
+        # that adds / removes an operation / rounding mode (or adjusts
+        # the regen logic) gets a fresh cache slot. The
+        # manifest-check inside the regen script remains as a
+        # second-line defence. When inputs are stable, the cache hit
+        # saves ~150 s (clone + build + 70 captures).
+        uses: actions/cache@v5
         id: testfloat_cache
         with:
           path: .testfloat_cache
-          key: testfloat-corpus-sf=${{ steps.tf_pins.outputs.softfloat }}-tf=${{ steps.tf_pins.outputs.testfloat }}-cap=2000-seed=1-level=1
+          key: testfloat-corpus-sf=${{ steps.tf_pins.outputs.softfloat }}-tf=${{ steps.tf_pins.outputs.testfloat }}-inp=${{ steps.tf_pins.outputs.input_files }}-cap=2000-seed=1-level=1
 
       - name: Build Berkeley TestFloat corpus
         # Builds Berkeley SoftFloat-3 + TestFloat-3 from upstream sources
@@ -108,7 +128,7 @@ jobs:
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
 
       - name: Upload generated tests
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ieee754-tests
           path: test_packages/
@@ -202,7 +222,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download generated tests
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ieee754-tests
           path: test_packages/
