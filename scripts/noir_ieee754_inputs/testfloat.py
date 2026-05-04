@@ -343,6 +343,27 @@ def parse_testfloat_file(
 # Driver (used at corpus-generation time, e.g. in CI).
 
 
+class TestFloatGenError(RuntimeError):
+    """Raised when ``testfloat_gen`` itself failed (non-SIGPIPE non-zero exit)."""
+
+    # Tell pytest this is not a test class (the ``Test*`` prefix triggers
+    # collection by default and otherwise fights ``RuntimeError``'s
+    # ``__init__`` signature).
+    __test__ = False
+
+
+# Exit codes that we treat as "testfloat_gen was killed by SIGPIPE
+# because the consumer closed the pipe early". Python's
+# ``Popen.wait()`` returns the negative signal number on POSIX (so
+# ``-13`` for SIGPIPE); some shells / runners surface SIGPIPE as
+# ``128 + 13 = 141``. We deliberately do NOT include ``143`` here:
+# ``143 = 128 + 15`` is the convention for SIGTERM, and a
+# SIGTERM-killed ``testfloat_gen`` is a real failure (typically a
+# wrapper or CI hand-off bug) that we want to surface as an error
+# rather than silently accept (Roborev #448 follow-up).
+_SIGPIPE_RCS: frozenset[int] = frozenset({-13, 141})
+
+
 def run_testfloat_gen(
     binary: str | os.PathLike[str],
     *,
@@ -357,6 +378,15 @@ def run_testfloat_gen(
 
     ``output_path`` defaults to ``<function>_<rounding>.tfgen`` in the
     current directory. Returns the path to the captured file.
+
+    Roborev #448 medium #3 hardening: when ``max_tests`` is set we read
+    N lines and then close the pipe, expecting ``testfloat_gen`` to
+    receive SIGPIPE. We assert that the process exited because of
+    SIGPIPE rather than a genuine error -- the previous implementation
+    did ``cmd | head`` via ``shell=True`` and only saw ``head``'s
+    return code, so a ``testfloat_gen`` segfault would silently produce
+    a truncated capture. On any non-SIGPIPE non-zero exit we delete the
+    partial output file and raise :class:`TestFloatGenError`.
     """
     if output_path is None:
         output_path = Path(f"{function.name}_{rounding.name.lower()}.tfgen")
@@ -375,15 +405,34 @@ def run_testfloat_gen(
             subprocess.run(args, stdout=out_fh, check=True)
         else:
             # ``testfloat_gen`` won't accept ``-n`` below the level-N
-            # minimum, so we let it run to completion and slice afterwards.
-            # For the operations whose level-1 corpus exceeds a reasonable
-            # CI window (mulAdd: 6.1M cases) we want to truncate the file.
-            with subprocess.Popen(args, stdout=subprocess.PIPE, text=True) as proc:
+            # minimum, so we let it stream and read the first ``max_tests``
+            # lines. For the operations whose level-1 corpus exceeds a
+            # reasonable CI window (mulAdd: 6.1M cases) we cap.
+            proc = subprocess.Popen(args, stdout=subprocess.PIPE, text=True)
+            try:
                 assert proc.stdout is not None
                 for line_number, line in enumerate(proc.stdout, 1):
                     out_fh.write(line)
                     if line_number >= max_tests:
-                        proc.terminate()
                         break
+            finally:
+                # Closing our end first lets ``testfloat_gen`` notice
+                # the consumer is gone (SIGPIPE on its next write) and
+                # exit cleanly rather than continuing to fill its
+                # ~6.1M-line buffer.
+                if proc.stdout is not None:
+                    proc.stdout.close()
+                rc = proc.wait()
+            if rc != 0 and rc not in _SIGPIPE_RCS:
+                # Wipe the partial capture so a re-run regenerates it
+                # rather than treating the truncated file as cached.
+                try:
+                    output_path.unlink()
+                except FileNotFoundError:
+                    pass
+                raise TestFloatGenError(
+                    f"testfloat_gen failed (rc={rc}) for "
+                    f"{function.name}/{rounding.name}: args={args}"
+                )
 
     return output_path
