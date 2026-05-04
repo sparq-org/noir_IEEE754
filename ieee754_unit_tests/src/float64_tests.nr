@@ -547,7 +547,10 @@ fn test_float64_abs_nan() {
 
 use ieee754::float::{
     FLOAT64_INFINITY, FLOAT64_NAN, FLOAT64_NEG_INFINITY, FLOAT64_NEG_ONE, FLOAT64_NEG_ZERO,
-    FLOAT64_ONE, FLOAT64_SIGNALING_NAN, FLOAT64_ZERO,
+    FLOAT64_ONE, FLOAT64_SIGNALING_NAN, FLOAT64_ZERO, FLOAT64_MIN_DENORMAL, FLOAT64_MAX_DENORMAL,
+    add_float64_with_rounding, sub_float64_with_rounding, ROUNDING_MODE_NEAREST_EVEN,
+    ROUNDING_MODE_NEAREST_AWAY, ROUNDING_MODE_TOWARD_NEGATIVE, ROUNDING_MODE_TOWARD_POSITIVE,
+    ROUNDING_MODE_TOWARD_ZERO,
 };
 
 #[test]
@@ -608,4 +611,106 @@ fn test_float64_constant_signaling_nan() {
     let snan = float64_from_bits(FLOAT64_SIGNALING_NAN);
     assert(float64_is_nan(snan));
     assert(float64_to_bits(snan) == 0x7FF4000000000000);
+}
+
+// ============================================================================
+// Float64 denormal-result regression tests
+// ============================================================================
+//
+// The "Denormal result" branch in `add_float64_with_rounding` previously
+// applied a stray `result_mant >> 1` whenever it re-encoded an exp 1
+// pre-rounding intermediate as a denormal at exp 0. That halved every
+// denormal-output sum -- e.g. ``MIN_DENORMAL + MIN_DENORMAL`` returned
+// ``0x1`` instead of ``0x2``. Berkeley TestFloat surfaced ~84 f64-add and
+// ~124 f64-sub failures across rounding modes; the cases below pin the
+// fix in the in-tree unit suite so the regression is caught even when the
+// TestFloat corpus is not generated (its build is conditional on the
+// ``.testfloat_cache`` directory).
+
+#[test]
+fn test_float64_min_denormal_plus_min_denormal() {
+    let a = float64_from_bits(FLOAT64_MIN_DENORMAL);
+    let b = float64_from_bits(FLOAT64_MIN_DENORMAL);
+    assert(float64_to_bits(add_float64(a, b)) == 0x0000000000000002);
+}
+
+#[test]
+fn test_float64_min_denormal_plus_max_denormal_minus_one() {
+    // ``MIN_DENORMAL + (MAX_DENORMAL - 1) = MAX_DENORMAL``.
+    let a = float64_from_bits(FLOAT64_MIN_DENORMAL);
+    let b = float64_from_bits(0x000FFFFFFFFFFFFE);
+    assert(float64_to_bits(add_float64(a, b)) == FLOAT64_MAX_DENORMAL);
+}
+
+#[test]
+fn test_float64_min_denormal_plus_neg_max_denormal() {
+    // Cancellation: MIN_DENORMAL + (-MAX_DENORMAL) = -(MAX_DENORMAL - 1).
+    let a = float64_from_bits(FLOAT64_MIN_DENORMAL);
+    let b = float64_from_bits(0x800FFFFFFFFFFFFF);
+    assert(float64_to_bits(add_float64(a, b)) == 0x800FFFFFFFFFFFFE);
+}
+
+#[test]
+fn test_float64_min_denormal_plus_neg_min_normal() {
+    // Borrow from the smallest normal magnitude into a denormal output.
+    let a = float64_from_bits(FLOAT64_MIN_DENORMAL);
+    let b = float64_from_bits(0x8010000000000000);
+    assert(float64_to_bits(add_float64(a, b)) == 0x800FFFFFFFFFFFFF);
+}
+
+#[test]
+fn test_float64_max_denormal_plus_neg_min_denormal() {
+    let a = float64_from_bits(FLOAT64_MAX_DENORMAL);
+    let b = float64_from_bits(0x8000000000000001);
+    assert(float64_to_bits(add_float64(a, b)) == 0x000FFFFFFFFFFFFE);
+}
+
+#[test]
+fn test_float64_max_denormal_minus_max_denormal_minus_one() {
+    // Denormal-denormal subtraction yielding ``MIN_DENORMAL``.
+    let a = float64_from_bits(FLOAT64_MAX_DENORMAL);
+    let b = float64_from_bits(0x000FFFFFFFFFFFFE);
+    assert(float64_to_bits(sub_float64(a, b)) == FLOAT64_MIN_DENORMAL);
+}
+
+#[test]
+fn test_float64_max_denormal_minus_min_normal() {
+    // Cancellation through smallest-normal magnitude into a denormal output.
+    let a = float64_from_bits(FLOAT64_MAX_DENORMAL);
+    let b = float64_from_bits(0x0010000000000000);
+    assert(float64_to_bits(sub_float64(a, b)) == 0x8000000000000001);
+}
+
+#[test]
+fn test_float64_min_denormal_plus_min_denormal_all_modes() {
+    let a = float64_from_bits(FLOAT64_MIN_DENORMAL);
+    let b = float64_from_bits(FLOAT64_MIN_DENORMAL);
+    let r_rne = add_float64_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN);
+    let r_rna = add_float64_with_rounding(a, b, ROUNDING_MODE_NEAREST_AWAY);
+    let r_rndp = add_float64_with_rounding(a, b, ROUNDING_MODE_TOWARD_POSITIVE);
+    let r_rndn = add_float64_with_rounding(a, b, ROUNDING_MODE_TOWARD_NEGATIVE);
+    let r_rndz = add_float64_with_rounding(a, b, ROUNDING_MODE_TOWARD_ZERO);
+    // Exact result; rounding mode must not change the answer.
+    assert(float64_to_bits(r_rne) == 0x0000000000000002);
+    assert(float64_to_bits(r_rna) == 0x0000000000000002);
+    assert(float64_to_bits(r_rndp) == 0x0000000000000002);
+    assert(float64_to_bits(r_rndn) == 0x0000000000000002);
+    assert(float64_to_bits(r_rndz) == 0x0000000000000002);
+}
+
+#[test]
+fn test_float64_max_denormal_minus_min_normal_all_modes() {
+    let a = float64_from_bits(FLOAT64_MAX_DENORMAL);
+    let b = float64_from_bits(0x0010000000000000);
+    // Exact -2^-1074 (= -MIN_DENORMAL); rounding mode must not change it.
+    let expected: u64 = 0x8000000000000001;
+    assert(float64_to_bits(sub_float64_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN)) == expected);
+    assert(float64_to_bits(sub_float64_with_rounding(a, b, ROUNDING_MODE_NEAREST_AWAY)) == expected);
+    assert(
+        float64_to_bits(sub_float64_with_rounding(a, b, ROUNDING_MODE_TOWARD_POSITIVE)) == expected,
+    );
+    assert(
+        float64_to_bits(sub_float64_with_rounding(a, b, ROUNDING_MODE_TOWARD_NEGATIVE)) == expected,
+    );
+    assert(float64_to_bits(sub_float64_with_rounding(a, b, ROUNDING_MODE_TOWARD_ZERO)) == expected);
 }

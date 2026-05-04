@@ -51,8 +51,49 @@ jobs:
       - name: Cross-check MPFR vs legacy reference oracle
         run: python3 scripts/test_reference.py
 
+      - name: Read TestFloat pins
+        id: tf_pins
+        # The pins are the only inputs (besides --seed / --level /
+        # --max-per-function, all fixed below) that determine the corpus
+        # contents, so they form the natural cache key. We extract them
+        # by sourcing the regen script's pin block in a sub-shell so a
+        # future bump bumps the cache key automatically.
+        run: |
+          SF=$(grep -E '^SOFTFLOAT_PIN=' scripts/regenerate_testfloat_corpus.sh | sed -E 's/.*:-([0-9a-f]{40}).*/\1/')
+          TF=$(grep -E '^TESTFLOAT_PIN=' scripts/regenerate_testfloat_corpus.sh | sed -E 's/.*:-([0-9a-f]{40}).*/\1/')
+          echo "softfloat=$SF" >> "$GITHUB_OUTPUT"
+          echo "testfloat=$TF" >> "$GITHUB_OUTPUT"
+          echo "Extracted pins: softfloat=$SF testfloat=$TF"
+
+      - name: Cache TestFloat corpus
+        # Cache the generated ``.testfloat_cache/`` directory keyed on
+        # (softfloat-3 commit, testfloat-3 commit, max-per-function cap,
+        # seed, level). When any input changes, the manifest check inside
+        # ``regenerate_testfloat_corpus.sh`` invalidates the on-disk
+        # cache and the script regenerates from upstream. When inputs are
+        # stable, this saves ~150 s (clone + build + 70 captures).
+        uses: actions/cache@v4
+        id: testfloat_cache
+        with:
+          path: .testfloat_cache
+          key: testfloat-corpus-sf=${{ steps.tf_pins.outputs.softfloat }}-tf=${{ steps.tf_pins.outputs.testfloat }}-cap=2000-seed=1-level=1
+
+      - name: Build Berkeley TestFloat corpus
+        # Builds Berkeley SoftFloat-3 + TestFloat-3 from upstream sources
+        # (pinned to specific commits for reproducibility) and runs
+        # ``testfloat_gen`` once per (function, rounding) tuple the
+        # dispatch table in ``noir_ieee754_inputs.sources`` flags as
+        # TestFloat-sourced. ``--max-per-function 2000`` truncates each
+        # capture at source so we don't write the ~6 M lines that
+        # ``mulAdd`` emits and immediately discard them downstream.
+        # Captures live under ``.testfloat_cache/`` for the next step to
+        # consume. Skipped on a cache hit -- the cache key already pins
+        # softfloat / testfloat / cap / seed / level.
+        if: steps.testfloat_cache.outputs.cache-hit != 'true'
+        run: ./scripts/regenerate_testfloat_corpus.sh --max-per-function 2000
+
       - name: Generate IEEE 754 tests and CI matrix
-        run: python3 scripts/generate_tests.py --all --packages --synthetic-f64 --generate-f64 --output-dir test_packages --ci-matrix .github/test-matrix.json
+        run: python3 scripts/generate_tests.py --all --packages --synthetic-f64 --generate-f64 --output-dir test_packages --ci-matrix .github/test-matrix.json --testfloat-cache .testfloat_cache --testfloat-max-per-function 2000
 
       - name: Read test matrix
         id: matrix

@@ -32,7 +32,7 @@ import sys
 import urllib.request
 import urllib.error
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
 # Make the colocated input-prep package importable when this script is run as
 # a top-level module from any working directory.
@@ -67,6 +67,16 @@ from noir_ieee754_inputs.fptest import (  # noqa: E402
 )
 from noir_ieee754_inputs.reference import (  # noqa: E402
     compute_expected_bits as _mpfr_expected_bits,
+)
+from noir_ieee754_inputs.sources import (  # noqa: E402
+    OPERATION_SOURCES,
+    SourceCorpus,
+    sources_for,
+)
+from noir_ieee754_inputs.testfloat import (  # noqa: E402
+    SUPPORTED_FUNCTIONS,
+    TestFloatFunction,
+    parse_testfloat_file,
 )
 
 
@@ -763,9 +773,18 @@ def _render_noir_header(source_info: str, analysis: dict[str, bool], use_path: s
     imports = sorted(name for name, needed in analysis.items() if needed)
     imports_str = ", ".join(imports)
 
+    # Source attribution: TestFloat-sourced files name the upstream Berkeley
+    # corpus, FPgen-sourced files retain the historical IBM Haifa mirror
+    # link. Synthetic chunks fall through to the FPgen attribution since
+    # the synthetic generators were originally written alongside it.
+    if "testfloat_" in source_info:
+        attribution = "https://github.com/ucb-bar/berkeley-testfloat-3"
+    else:
+        attribution = "https://github.com/sergev/ieee754-test-suite"
+
     return f"""// Auto-generated IEEE 754 test cases
 // Generated from: {source_info}
-// Test suite source: https://github.com/sergev/ieee754-test-suite
+// Test suite source: {attribution}
 
 use {use_path}::{{{imports_str}}};
 
@@ -835,11 +854,26 @@ def generate_ci_matrix(
     
     for source_file, tests in sorted(tests_by_file.items()):
         module_name = _source_to_module_name(source_file)
-        
-        # Count how many test functions will be generated
+
+        # Count how many test functions will be generated. The counting
+        # logic must mirror ``generate_noir_packages`` exactly, otherwise
+        # the matrix can list package names that never get written to disk
+        # (or skip ones that do). In particular, native binary64 tests are
+        # emitted only once even when ``generate_both`` is true (the f32
+        # pass filters them out), so they must be counted only once.
         if generate_both:
-            f32_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=False) is not None)
-            f64_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=True) is not None)
+            f32_count = sum(
+                1 for i, test in enumerate(tests)
+                if test.precision == Precision.BINARY32
+                and generate_noir_test(test, i, force_f64=False) is not None
+            )
+            f64_count = 0
+            for i, test in enumerate(tests):
+                # Mirror ``generate_noir_packages``: native f64 stays f64,
+                # f32 sources are converted to f64.
+                force = test.precision != Precision.BINARY64
+                if generate_noir_test(test, len(tests) + i, force_f64=force) is not None:
+                    f64_count += 1
             test_count = f32_count + f64_count
         else:
             test_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=force_f64) is not None)
@@ -1044,6 +1078,94 @@ def list_available_files():
         print(f"  - {f}")
 
 
+# ---------------------------------------------------------------------------
+# Berkeley TestFloat corpus loading.
+#
+# A "TestFloat capture" is the raw stdout of a single
+# ``testfloat_gen [<rounding>] <function>`` invocation, captured to a file
+# named ``<function>_<rounding>.tfgen``. The capture directory typically
+# lives under ``.testfloat_cache/`` alongside ``.ieee754_test_cache/``.
+#
+# CI runs build TestFloat once (see ``.github/workflows/ci.yml``) and
+# populate the cache directory; local runs can either rebuild TestFloat or
+# pre-populate the directory by hand.
+
+DEFAULT_TESTFLOAT_CACHE_DIR = ".testfloat_cache"
+
+
+def get_testfloat_cache_dir() -> Path:
+    """Resolve the on-disk directory holding TestFloat capture files."""
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    cache_dir = project_root / DEFAULT_TESTFLOAT_CACHE_DIR
+    return cache_dir
+
+
+def _testfloat_capture_path(
+    cache_dir: Path,
+    function: TestFloatFunction,
+    rounding: RoundingMode,
+) -> Path:
+    """Return the canonical capture-file path for a (function, rounding) pair."""
+    return cache_dir / f"{function.name}_{rounding.name.lower()}.tfgen"
+
+
+def load_testfloat_tests(
+    cache_dir: Path,
+    *,
+    max_per_function: Optional[int] = None,
+    rounding_modes: Optional[Iterable[RoundingMode]] = None,
+) -> dict[str, list[TestCase]]:
+    """Walk the TestFloat cache directory and parse every capture file present.
+
+    Returns a dict mapping a synthetic source-file name (``testfloat_<function>_<rounding>``)
+    to the parsed test cases. Source-file names follow the same shape the
+    FPgen path uses, so downstream consumers (CI matrix generation, package
+    naming) work without changes.
+
+    Only ``(function, rounding)`` pairs that the corpus dispatch
+    (:data:`OPERATION_SOURCES`) flags as ``SourceCorpus.TESTFLOAT`` are
+    loaded. Captures present on disk for off-table pairs are ignored
+    (forward compatibility -- a future build of the corpus may include
+    more rounding modes than the current generator emits).
+
+    ``max_per_function`` caps the number of cases per (function, rounding)
+    pair. The mulAdd corpus at level 1 is ~6.1M cases; without a cap, a
+    single CI run would emit >12M tests.
+    """
+    if not cache_dir.exists():
+        return {}
+
+    rounding_modes = tuple(rounding_modes) if rounding_modes else tuple(RoundingMode)
+
+    tests_by_source: dict[str, list[TestCase]] = {}
+
+    for function in SUPPORTED_FUNCTIONS.values():
+        for rounding in rounding_modes:
+            srcs = sources_for(function.operation, function.precision, rounding)
+            if SourceCorpus.TESTFLOAT not in srcs:
+                continue
+
+            capture = _testfloat_capture_path(cache_dir, function, rounding)
+            if not capture.exists():
+                continue
+
+            cases = parse_testfloat_file(
+                capture,
+                function=function,
+                rounding=rounding,
+                max_tests=max_per_function,
+            )
+            if not cases:
+                continue
+
+            source_name = f"testfloat_{function.name}_{rounding.name.lower()}.tfgen"
+            tests_by_source[source_name] = cases
+            print(f"  {capture.name}: {len(cases)} cases (cap {max_per_function})")
+
+    return tests_by_source
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Generate Noir tests from IEEE 754 test suite files',
@@ -1149,6 +1271,32 @@ Examples:
         '--ci-matrix',
         metavar='PATH',
         help='Generate CI matrix JSON file for GitHub Actions (use with --packages)'
+    )
+    parser.add_argument(
+        '--testfloat-cache',
+        metavar='DIR',
+        default=None,
+        help=(
+            'Directory containing Berkeley TestFloat capture files '
+            '(``<function>_<rounding>.tfgen``). When omitted, defaults to '
+            f'``{DEFAULT_TESTFLOAT_CACHE_DIR}/`` at the repo root if it '
+            'exists; otherwise the TestFloat corpus is skipped.'
+        )
+    )
+    parser.add_argument(
+        '--testfloat-max-per-function',
+        type=int,
+        default=2000,
+        help=(
+            'Maximum TestFloat cases to load per (function, rounding) '
+            'pair. Caps the level-1 mulAdd corpus (~6.1M cases) at a '
+            'tractable test-suite size. Default: 2000.'
+        )
+    )
+    parser.add_argument(
+        '--no-testfloat',
+        action='store_true',
+        help='Skip the TestFloat corpus entirely, even if --testfloat-cache is set.',
     )
     
     args = parser.parse_args()
@@ -1263,6 +1411,25 @@ Examples:
             if synthetic_tests:
                 tests_by_file["Synthetic-F64-Corner-Cases.synthetic"] = synthetic_tests
                 total_parsed += len(synthetic_tests)
+
+        # Add Berkeley TestFloat corpus if its cache is present.
+        if not args.no_testfloat:
+            tf_cache = Path(args.testfloat_cache) if args.testfloat_cache else get_testfloat_cache_dir()
+            if tf_cache.exists():
+                print(f"\nLoading Berkeley TestFloat corpus from {tf_cache}...")
+                tf_tests_by_source = load_testfloat_tests(
+                    tf_cache,
+                    max_per_function=args.testfloat_max_per_function,
+                )
+                # Apply the same per-test filter the FPgen path uses.
+                for source_name, tests in tf_tests_by_source.items():
+                    filtered = filter_tests(tests)
+                    if filtered:
+                        tests_by_file[source_name] = filtered
+                        total_parsed += len(tests)
+                        print(f"  {source_name}: {len(tests)} parsed, {len(filtered)} after filtering")
+            elif args.testfloat_cache:
+                print(f"Warning: --testfloat-cache {tf_cache} does not exist; skipping TestFloat corpus.")
         
         print(f"\nParsed {total_parsed} total test cases")
         
@@ -1297,12 +1464,24 @@ Examples:
             print(f"Parsing {os.path.basename(filepath)}...")
             tests = parse_fptest_file(filepath)
             all_tests.extend(tests)
-        
+
+        # The TestFloat corpus loader is only wired into the ``--packages``
+        # branch above (where each (function, rounding) capture becomes its
+        # own source file / Noir package). The single-file path here would
+        # need substantial rework to merge the captures into one output.
+        # Surface a clear warning rather than silently ignoring the flags
+        # so users don't think the corpus is being included.
+        if not args.no_testfloat and args.testfloat_cache:
+            print(
+                "Warning: --testfloat-cache is only honoured with --packages; "
+                "ignoring it for the single-file output path."
+            )
+
         print(f"Parsed {len(all_tests)} total test cases")
-        
+
         all_tests = filter_tests(all_tests)
         print(f"After filtering: {len(all_tests)} tests")
-        
+
         # Generate Noir file
         generate_noir_file(
             all_tests,
