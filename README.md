@@ -362,7 +362,7 @@ This project uses [semantic-release](https://github.com/semantic-release/semanti
 - `fix:` commits trigger a patch version bump (e.g., 0.4.0 → 0.4.1)
 - `feat!:` or commits with `BREAKING CHANGE:` trigger a major version bump (e.g., 0.4.0 → 1.0.0)
 
-The changelog is automatically generated and included in each GitHub release. **Note**: This project releases to GitHub only, not to NPM. For more details, see [SEMANTIC_RELEASE.md](SEMANTIC_RELEASE.md).
+Release notes are generated automatically by `@semantic-release/release-notes-generator` and published as the body of each [GitHub release](https://github.com/jeswr/noir_IEEE754/releases). The repo-tracked `CHANGELOG.md` is intentionally not maintained — the GitHub releases page is the canonical per-release history. **Note**: This project releases to GitHub only, not to NPM. For more details, see [SEMANTIC_RELEASE.md](SEMANTIC_RELEASE.md).
 
 ## License
 
