@@ -275,6 +275,37 @@ pub fn should_round_up_4bit(guard_bits: u64, result_mant: u64, result_sign: u1, 
     }
 }
 
+/// Validate a raw ``u8`` rounding-mode argument at the public API boundary.
+///
+/// The arithmetic operators (``add_floatN_with_rounding`` etc.) accept the
+/// rounding mode as a raw ``u8`` rather than a Noir enum so that the surface
+/// matches the IEEE 754-2019 sec 4.3 numeric attribute encoding used by the
+/// MPFR oracle and the IBM FPgen / Berkeley TestFloat fixture corpora. The
+/// downstream ``should_round_up*`` helpers fall through to round-to-nearest-
+/// even when handed a value outside ``{0, 1, 2, 3, 4}``, so without this
+/// guard a caller passing e.g. ``rounding_mode = 17`` would silently get RNE
+/// semantics back -- a footgun that masks calling-side bugs and produces
+/// wrong-but-plausible bit patterns. The valid values are exactly the five
+/// ``ROUNDING_MODE_*`` constants in :mod:`crate::types`; any other value
+/// fails the arithmetic call.
+///
+/// This is the contract enforced by every ``_with_rounding`` public entry
+/// point. Internal helpers (``should_round_up*``,
+/// ``directed_overflow_saturates_to_inf``) deliberately do not assert -- they
+/// run inside the per-operation hot path where the mode has already been
+/// validated, and re-asserting would multiply gate count for no soundness
+/// gain.
+pub fn assert_valid_rounding_mode(rounding_mode: u8) {
+    assert(
+        (rounding_mode == ROUNDING_MODE_NEAREST_EVEN)
+            | (rounding_mode == ROUNDING_MODE_NEAREST_AWAY)
+            | (rounding_mode == ROUNDING_MODE_TOWARD_POSITIVE)
+            | (rounding_mode == ROUNDING_MODE_TOWARD_NEGATIVE)
+            | (rounding_mode == ROUNDING_MODE_TOWARD_ZERO),
+        "rounding_mode must be one of ROUNDING_MODE_{NEAREST_EVEN, NEAREST_AWAY, TOWARD_POSITIVE, TOWARD_NEGATIVE, TOWARD_ZERO} (0..=4)",
+    );
+}
+
 /// IEEE 754-2019 sec 7.4: under directed rounding, an overflow may either
 /// saturate to ``+/- Inf`` or clamp to ``+/- max-finite`` depending on the
 /// rounding mode and the sign of the would-be result.
