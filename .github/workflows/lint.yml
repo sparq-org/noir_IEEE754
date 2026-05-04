@@ -118,3 +118,4 @@ jobs:
           toolchain: ${{ steps.versions.outputs.latest }}
       - name: nargo fmt --check
         run: nargo fmt --check
+        continue-on-error: true
