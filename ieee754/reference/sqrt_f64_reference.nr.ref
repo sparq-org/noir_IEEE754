@@ -1,0 +1,24 @@
+// IEEE 754 binary64 square root -- literal-spec reference.
+//
+// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
+// 754-2019 sec.5.4.1 (square root). The optimised path uses the
+// **digit-by-digit binary restoring method** with a `U128` remainder
+// (56 iterations, 2 bits per iteration) -- a deterministic algorithm that
+// already converges, so the reference can use the same loop shape.
+//
+// The reference body should:
+//   * Mirror the 56-iteration restoring-method loop verbatim;
+//   * De-fuse normalisation + rounding (kept as separate steps for
+//     traceability against IEEE 754-2019 sec.5.4.1);
+//   * Use the canonical `should_round_up` (4-bit guard) instead of the
+//     optimised inline-RNE shortcut.
+//
+// Closure path (paired with `proofs/sqrt_f64_equivalence.lean`):
+//   1. Hand-port the optimised algorithm with the de-fusions noted above.
+//   2. Hand-mirror both sides into `SqrtModelsF64` (Lean).
+//   3. Factor through `sqrtF64Skeleton` with the divergence parameters
+//      enumerated in the proof file's doc-comment. The 56-iteration U128
+//      loop's invariant proof (`sqrtLoop64_eq_spec`) is the heaviest item;
+//      port from sqrt_f32's loop-invariant once that lands.
+//
+// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
