@@ -25,6 +25,9 @@ pub fn float64_is_denormal(x: IEEE754Float64) -> bool {
 }
 
 // Create Float64 NaN
+//
+// LAMPE-LITERATE preamble: ../../proofs/constructors_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/constructors_f64_equivalence.lean fn=float64_nan name=float64_nan_equivalence
 pub fn float64_nan() -> IEEE754Float64 {
     IEEE754Float64 { sign: 0, exponent: FLOAT64_EXPONENT_MAX, mantissa: 0x8000000000000 }
 }
