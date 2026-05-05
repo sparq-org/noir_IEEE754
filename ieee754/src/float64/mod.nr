@@ -53,6 +53,9 @@ pub fn sub_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
 // IEEE 754 compliant absolute value for 64-bit floats
 // Returns the magnitude of the float (sign bit set to 0)
 // Note: abs(NaN) returns NaN (with sign bit cleared)
+//
+// LAMPE-LITERATE preamble: ../../proofs/abs_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/abs_equivalence.lean fn=abs_float64 name=abs_float64_equivalence
 pub fn abs_float64(a: IEEE754Float64) -> IEEE754Float64 {
     IEEE754Float64 { sign: 0, exponent: a.exponent, mantissa: a.mantissa }
 }
