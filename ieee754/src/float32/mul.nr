@@ -19,6 +19,17 @@ use crate::utils::{
 // `rounding_mode` must be one of the `ROUNDING_MODE_*` constants in
 // `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
 // failure -- see `add_float32_with_rounding` for the rationale.
+//
+// ----------------------------------------------------------------------------
+// Lean equivalence proof (scaffold, sorry-stub). Tier 4 per
+// `proofs/Ieee754/PROOF-GAP-MATRIX.md`. Width-narrowing port of round-9
+// `mul_f64` (see `proofs/Ieee754/.../MulF64.lean` for the worked pattern).
+// Methodology + helper-by-helper recipe live in the linked equivalence file.
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble:  ../../proofs/mul_f32_preamble.lean
+// LAMPE-LITERATE proof:     ../../proofs/mul_f32_equivalence.lean fn=mul_float32_with_rounding name=mul_f32_equivalence
+// LAMPE-LITERATE reference: ../../reference/mul_f32_reference.nr.ref fn=mul_float32_with_rounding name=mul_f32_reference
 pub fn mul_float32_with_rounding(
     a: IEEE754Float32,
     b: IEEE754Float32,

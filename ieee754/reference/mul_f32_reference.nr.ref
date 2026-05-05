@@ -1,0 +1,17 @@
+// IEEE 754 binary32 multiplication -- literal-spec reference.
+//
+// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
+// 754-2019 sec.7.4 (multiplication). The round-9 binary64 reference at
+// `proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/MulModelsF64.lean`
+// (`mulF64Reference`) is the model to width-narrow to f32:
+//   * 24-bit significand (vs 53-bit in f64)
+//   * 48-bit product (vs 106-bit)
+//   * 8-bit biased exponent (vs 11-bit)
+//
+// Closure path (paired with `proofs/mul_f32_equivalence.lean`):
+//   1. Port `mulF64Reference` to f32 widths line-for-line.
+//   2. Hand-mirror into Lean as `MulModelsF32.mulF32Reference`.
+//   3. Factor optimised + reference through `mulF32Skeleton` with two
+//      divergence parameters (sticky-shift, RNE), as round-9 mul_f64.
+//
+// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
