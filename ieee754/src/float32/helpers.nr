@@ -50,6 +50,9 @@ pub fn float32_max_finite(sign: u1) -> IEEE754Float32 {
 }
 
 // Convert from u32 bits to IEEE754Float32
+//
+// LAMPE-LITERATE preamble: ../../proofs/bits_roundtrip_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/bits_roundtrip_f32_equivalence.lean fn=float32_from_bits name=float32_from_bits_equivalence
 pub fn float32_from_bits(bits: u32) -> IEEE754Float32 {
     let sign = ((bits >> 31) & 1) as u1;
     let exponent = ((bits >> 23) & 0xFF) as u8;
