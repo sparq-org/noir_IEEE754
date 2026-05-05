@@ -19,6 +19,17 @@ use crate::utils::{
 // `rounding_mode` must be one of the `ROUNDING_MODE_*` constants in
 // `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
 // failure -- see `add_float64_with_rounding` for the rationale.
+//
+// ----------------------------------------------------------------------------
+// Lean equivalence proof (scaffold, sorry-stub). Tier 4 per
+// `proofs/Ieee754/PROOF-GAP-MATRIX.md`. 128-bit-by-64-bit long division
+// via `div_u128_by_u64`; divergence parameters and per-helper recipe live
+// in the linked equivalence file's doc-comment.
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble:  ../../proofs/div_f64_preamble.lean
+// LAMPE-LITERATE proof:     ../../proofs/div_f64_equivalence.lean fn=div_float64_with_rounding name=div_f64_equivalence
+// LAMPE-LITERATE reference: ../../reference/div_f64_reference.nr.ref fn=div_float64_with_rounding name=div_f64_reference
 pub fn div_float64_with_rounding(
     a: IEEE754Float64,
     b: IEEE754Float64,

@@ -1,0 +1,24 @@
+// IEEE 754 binary64 division -- literal-spec reference.
+//
+// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
+// 754-2019 sec.7.2 (division). The optimised path uses 128-bit-by-64-bit
+// long division via the `div_u128_by_u64` helper after a 53-bit dividend
+// shift. The hardest divergence is the `div_u128_by_u64` helper itself --
+// see the paired `proofs/div_f64_equivalence.lean` for the per-helper
+// recipe.
+//
+// The reference body should:
+//   * Use the **same long-division shape** (the divide step itself converges:
+//     `div_u128_by_u64` is deterministic given a non-zero divisor);
+//   * Deliberately *not* fuse normalisation + rounding (kept as separate
+//     steps for traceability against IEEE 754-2019 sec.7.2);
+//   * Use the canonical `should_round_up` (4-bit guard) instead of the
+//     optimised inline-RNE shortcut.
+//
+// Closure path (paired with `proofs/div_f64_equivalence.lean`):
+//   1. Hand-port the optimised algorithm with the de-fusions noted above.
+//   2. Hand-mirror both sides into `DivModelsF64` (Lean).
+//   3. Factor through `divF64Skeleton` with the divergence parameters
+//      enumerated in the proof file's doc-comment.
+//
+// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
