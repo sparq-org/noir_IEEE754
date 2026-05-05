@@ -39,11 +39,10 @@ iteration count.
    56-iteration loop becomes a `Nat`-recursion or `List.range 56` fold over
    `(remainder : BitVec 128, sqrtResult : BitVec 64)` state.
 3. **Factor through `sqrtF64Skeleton` with the divergence parameters** below:
-   * **`rneDecision`** -- inline-RNE 4-bit shortcut (sqrt_f64 uses 4 guard
-     bits, not 3) vs `Models.shouldRoundUp`. Author
-     `shouldRoundUp_inline_eq_4bit` (4-bit guard); reuse the round-9
-     `shouldRoundUp_inline_eq_3bit` pattern with the threshold updated to
-     8 (= 1 << 3 for 4 guard bits).
+   * **`rneDecision`** -- inline-RNE 3-bit shortcut (`guard_bits = result_mant
+     & 0x7`, threshold 4 with LSB tie-break) vs `Models.shouldRoundUp`.
+     Reuse the round-9 `SubtermsMulF64.shouldRoundUp_inline_eq_3bit` lemma
+     directly -- it is width-agnostic on the guard / mantissa lanes.
    * **`sqrtLoop64`** -- the optimised 56-iteration restoring loop on
      `U128` state vs a reference `sqrtLoop64Spec`. Author
      `sqrtLoop64_eq_spec` -- the loop-invariant proof. The invariant is the
