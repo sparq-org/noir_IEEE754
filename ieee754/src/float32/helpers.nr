@@ -28,6 +28,9 @@ pub fn float32_is_denormal(x: IEEE754Float32) -> bool {
 }
 
 // Create Float32 NaN
+//
+// LAMPE-LITERATE preamble: ../../proofs/constructors_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/constructors_f32_equivalence.lean fn=float32_nan name=float32_nan_equivalence
 pub fn float32_nan() -> IEEE754Float32 {
     IEEE754Float32 { sign: 0, exponent: FLOAT32_EXPONENT_MAX, mantissa: 0x400000 }
 }
