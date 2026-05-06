@@ -20,6 +20,22 @@ use crate::utils::{
 // `rounding_mode` must be one of the `ROUNDING_MODE_*` constants in
 // `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
 // failure -- see `add_float64_with_rounding` for the rationale.
+//
+// ----------------------------------------------------------------------------
+// Lean equivalence proof (round 9, weak reference strength). See
+// `circuits/lampe-literate` for the build tool that resolves the
+// directives below, splices the referenced proof file into a generated
+// Lean module, and runs `lake build` against the workspace's
+// shared `MulModelsF64.lean` / `SubtermsMulF64.lean` / `ModelsF64.lean`.
+// Generated `.lean` files land in a gitignored scratch dir; only this Noir
+// source plus the standalone `.lean` proof files are version-controlled.
+// Strength caveat: `clzDenormalMantissa64` and `leadingBitPos128` are still
+// shared between the optimised and reference paths; strengthening them is
+// queued as round 10/11 work in `todos/round9-mul-reference-strength.md`.
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble: ../../proofs/mul_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/mul_f64_equivalence.lean fn=mul_float64_with_rounding name=mul_f64_equivalence
 pub fn mul_float64_with_rounding(
     a: IEEE754Float64,
     b: IEEE754Float64,
