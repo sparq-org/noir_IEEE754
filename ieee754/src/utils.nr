@@ -9,6 +9,9 @@ use crate::types::{
 use std::ops::WrappingAdd;
 
 // Helper to shift right with sticky bit preservation for u64
+//
+// LAMPE-LITERATE preamble: ../proofs/shift_right_sticky_preamble.lean
+// LAMPE-LITERATE proof:    ../proofs/shift_right_sticky_equivalence.lean fn=shift_right_sticky_u64 name=shift_right_sticky_u64_equivalence
 pub fn shift_right_sticky_u64(value: u64, shift: u64) -> u64 {
     if shift == 0 {
         value
@@ -88,6 +91,8 @@ pub fn mul_u64_to_u128(a: u64, b: u64) -> U128 {
 }
 
 // Shift right a 128-bit value with sticky bit preservation
+//
+// LAMPE-LITERATE proof: ../proofs/shift_right_sticky_equivalence.lean fn=shift_right_sticky_u128 name=shift_right_sticky_u128_equivalence
 pub fn shift_right_sticky_u128(val: U128, shift: u64) -> u64 {
     if shift == 0 {
         val.low
