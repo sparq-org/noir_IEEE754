@@ -20,6 +20,6 @@
   },
   "homepage": "https://github.com/jeswr/noir_IEEE754#readme",
   "devDependencies": {
-    "semantic-release": "^25.0.2"
+    "semantic-release": "^25.0.3"
   }
 }
