@@ -188,6 +188,9 @@ pub fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
 ///
 /// # Returns
 /// * `true` if the mantissa should be incremented, `false` otherwise
+///
+// LAMPE-LITERATE preamble: ../proofs/should_round_up_preamble.lean
+// LAMPE-LITERATE proof:    ../proofs/should_round_up_equivalence.lean fn=should_round_up name=should_round_up_equivalence
 pub fn should_round_up(guard_bits: u64, result_mant: u64, result_sign: u1, mode: u8) -> bool {
     // Guard bit position varies by operation, but for standard 3-bit guard:
     // Bits 2-0: Guard(2), Round(1), Sticky(0)
@@ -238,6 +241,8 @@ pub fn should_round_up(guard_bits: u64, result_mant: u64, result_sign: u1, mode:
 ///
 /// # Returns
 /// * `true` if the mantissa should be incremented, `false` otherwise
+///
+// LAMPE-LITERATE proof: ../proofs/should_round_up_equivalence.lean fn=should_round_up_4bit name=should_round_up_4bit_equivalence
 pub fn should_round_up_4bit(guard_bits: u64, result_mant: u64, result_sign: u1, mode: u8) -> bool {
     // For 4-bit guard: Bits 3-0: G(3), R(2), S(1), S(0)
     // guard_bits = GRSS (value 0-15)
@@ -351,6 +356,8 @@ pub fn directed_overflow_saturates_to_inf(rounding_mode: u8, result_sign: u1) ->
 ///
 /// # Returns
 /// * `true` if the mantissa should be incremented, `false` otherwise
+///
+// LAMPE-LITERATE proof: ../proofs/should_round_up_equivalence.lean fn=should_round_up_8bit name=should_round_up_8bit_equivalence
 pub fn should_round_up_8bit(guard_bits: u64, result_mant: u64, result_sign: u1, mode: u8) -> bool {
     // For 8-bit guard: midpoint is at 0x80 = 128
 
