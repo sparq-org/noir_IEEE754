@@ -37,6 +37,9 @@ pub struct U128 {
 }
 
 // Multiply two u64 values and return 128-bit result
+//
+// LAMPE-LITERATE preamble: ../proofs/mul_u64_to_u128_preamble.lean
+// LAMPE-LITERATE proof:    ../proofs/mul_u64_to_u128_equivalence.lean fn=mul_u64_to_u128 name=mul_u64_to_u128_equivalence
 pub fn mul_u64_to_u128(a: u64, b: u64) -> U128 {
     // Split into 32-bit parts
     let a_lo = a & 0xFFFFFFFF;
@@ -325,6 +328,9 @@ pub fn assert_valid_rounding_mode(rounding_mode: u8) {
 ///
 /// Per the standard the "max-finite" target is the destination format's
 /// largest finite magnitude with the sign of the intermediate result.
+//
+// LAMPE-LITERATE preamble: ../proofs/directed_overflow_saturates_to_inf_preamble.lean
+// LAMPE-LITERATE proof:    ../proofs/directed_overflow_saturates_to_inf_equivalence.lean fn=directed_overflow_saturates_to_inf name=directed_overflow_saturates_to_inf_equivalence
 pub fn directed_overflow_saturates_to_inf(rounding_mode: u8, result_sign: u1) -> bool {
     if rounding_mode == ROUNDING_MODE_TOWARD_ZERO {
         false
