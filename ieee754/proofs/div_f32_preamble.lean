@@ -1,18 +1,21 @@
--- Imports for the eventual `div_f32_equivalence` closure.
+-- Imports for the `div_f32_equivalence` proof.
 --
--- The skeleton-and-divergence pattern (round 9 mul_f64) is the template;
--- the per-op `DivModelsF32` / `SubtermsDivF32` modules will be authored
--- by the Lean specialist closing this proof.
+-- Mirrors the `mul_f32_equivalence` preamble: shared Spec / Subterms /
+-- Models modules + the per-op DivModels and SubtermsDivF64 modules
+-- (the latter is reused for its width-agnostic
+-- `shouldRoundUp4Bit_inline_eq` lemma -- the lemma operates on
+-- `BitVec 64` guard / mantissa lanes regardless of float width).
 import ZkpSparql.Ieee754.Equivalence.Spec
 import ZkpSparql.Ieee754.Equivalence.Subterms
 import ZkpSparql.Ieee754.Equivalence.Models
--- Per-op modules (to be authored):
--- import ZkpSparql.Ieee754.Equivalence.DivModelsF32
--- import ZkpSparql.Ieee754.Equivalence.SubtermsDivF32
+import ZkpSparql.Ieee754.Equivalence.DivModelsF64
+import ZkpSparql.Ieee754.Equivalence.DivModelsF32
+import ZkpSparql.Ieee754.Equivalence.SubtermsDivF64
 
 namespace ZkpSparql.Ieee754.Equivalence
 
 open ZkpSparql.Ieee754.Equivalence.Models
 open ZkpSparql.Ieee754.Equivalence.Subterms
--- open ZkpSparql.Ieee754.Equivalence.DivModelsF32
--- open ZkpSparql.Ieee754.Equivalence.SubtermsDivF32
+open ZkpSparql.Ieee754.Equivalence.DivModelsF64
+open ZkpSparql.Ieee754.Equivalence.DivModelsF32
+open ZkpSparql.Ieee754.Equivalence.SubtermsDivF64
