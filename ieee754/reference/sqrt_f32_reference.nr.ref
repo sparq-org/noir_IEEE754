@@ -1,24 +1,214 @@
 // IEEE 754 binary32 square root -- literal-spec reference.
 //
-// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
-// 754-2019 sec.5.4.1 (square root). The optimised path uses the
-// **digit-by-digit binary restoring method** (27 iterations, 2 bits per
-// iteration) -- a deterministic algorithm that already converges, so the
-// reference can use the same loop shape.
+// This reference is the literal-IEEE-754-2019 form for the binary32 square
+// root, paired with the optimised circuit at `src/float32/sqrt.nr` and the
+// equivalence proof at `proofs/sqrt_f32_equivalence.lean`.
 //
-// The reference body should:
-//   * Mirror the 27-iteration restoring-method loop verbatim (the algorithm
-//     is deterministic; no Newton-Raphson refinement to verify).
-//   * Deliberately *de-fuse* normalisation + rounding (kept as separate
-//     steps for traceability against IEEE 754-2019 sec.5.4.1).
-//   * Use the canonical `should_round_up` (3-bit guard) instead of the
-//     optimised inline-RNE shortcut.
+// ## Method
 //
-// Closure path (paired with `proofs/sqrt_f32_equivalence.lean`):
-//   1. Hand-port the optimised algorithm with the de-fusions noted above.
-//   2. Hand-mirror both sides into `SqrtModelsF32` (Lean).
-//   3. Factor through `sqrtF32Skeleton` with the divergence parameters
-//      enumerated in the proof file's doc-comment. The 27-iteration
-//      loop's invariant proof (`sqrtLoop_eq_spec`) is the heaviest item.
+// We use the same digit-by-digit binary restoring algorithm as the optimised
+// path -- 27 iterations, 2 bits per iteration. The algorithm is
+// deterministic and converges in a fixed iteration count to the *correctly
+// rounded* sqrt result for every input (IEEE 754-2019 sec.5.4.1 demands the
+// correctly rounded result, not a particular algorithm). The reference and
+// optimised paths therefore agree on every line *except* the inlined RNE
+// round decision: the reference dispatches through `should_round_up` for
+// every rounding mode, while the optimised path inlines the `mode == 0`
+// (round-to-nearest-ties-to-even) case as
+// `(guard > 4) | ((guard == 4) & (mant & 1))`, bypassing the dispatch.
 //
-// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
+// ## De-fusions
+//
+//   * The 27-iteration restoring loop is kept as a clean `for` loop with
+//     state `(remainder, sqrt_result)`; no carry-tricks or strength-reduction.
+//   * The denormal-mantissa CLZ uses the same 5-stage binary search as the
+//     optimised path -- IEEE 754-2019 sec.7.4 does not prescribe how to
+//     compute it.
+//   * Rounding goes through `should_round_up` for every rounding mode, with
+//     no inline-RNE shortcut. (This is the single divergence parameter.)
+//
+// The Lean equivalence proof
+// (`circuits/noir_IEEE754/ieee754/proofs/sqrt_f32_equivalence.lean`) closes
+// the theorem
+//
+//   forall a : Float32Bits, forall mode : BitVec 8,
+//     sqrtF32Optimised a mode = sqrtF32Reference a mode
+//
+// at single-divergence strength. The Lean models in
+// `proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/SqrtModelsF32.lean` are the
+// authoritative specification; this `.nr.ref` is the Noir mirror.
+
+use crate::float32::helpers::{
+    float32_infinity, float32_is_denormal, float32_is_infinity, float32_is_nan, float32_is_zero,
+    float32_nan, float32_zero,
+};
+use crate::types::{
+    FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::{assert_valid_rounding_mode, shift_right_sticky_u64, should_round_up};
+
+// IEEE 754 compliant square root for 32-bit floats with rounding mode --
+// literal-spec reference. Matches `sqrt_float32_with_rounding` modulo the
+// inline-RNE shortcut.
+pub fn sqrt_float32_with_rounding(a: IEEE754Float32, rounding_mode: u8) -> IEEE754Float32 {
+    assert_valid_rounding_mode(rounding_mode);
+
+    // Classification (sec.6.2 / sec.5.4.1).
+    let a_is_nan = float32_is_nan(a);
+    let a_is_inf = float32_is_infinity(a);
+    let a_is_zero = float32_is_zero(a);
+    let a_is_denormal = float32_is_denormal(a);
+    let a_is_negative = a.sign == 1;
+
+    // Normalise denormal mantissa via the same 5-stage binary search as
+    // the optimised path (an internal helper, not prescribed by sec.7.4).
+    let a_mant_raw: u64 = a.mantissa as u64;
+    let mut a_lz: i64 = 0;
+    if a_is_denormal & (a_mant_raw != 0) {
+        let mut v = a_mant_raw;
+        if (v & 0x7FF800) == 0 {
+            a_lz = a_lz + 12;
+            v = v << 12;
+        }
+        if (v & 0x7E0000) == 0 {
+            a_lz = a_lz + 6;
+            v = v << 6;
+        }
+        if (v & 0x700000) == 0 {
+            a_lz = a_lz + 3;
+            v = v << 3;
+        }
+        if (v & 0x600000) == 0 {
+            a_lz = a_lz + 2;
+            v = v << 2;
+        }
+        if (v & 0x400000) == 0 {
+            a_lz = a_lz + 1;
+        }
+        a_lz = a_lz + 1;
+    }
+
+    // Mantissa with implicit bit (24 bits, implicit at position 23).
+    let mant_a: u64 = if a_is_denormal {
+        a_mant_raw << (a_lz as u64)
+    } else {
+        (a.mantissa | FLOAT32_IMPLICIT_BIT) as u64
+    };
+
+    // Effective exponent (unbiased).
+    let exp_a_eff: i64 = if a_is_denormal {
+        1 - 127 - a_lz
+    } else {
+        (a.exponent as i64) - 127
+    };
+
+    // sqrt(m * 2^e) = sqrt(m) * 2^(e/2) for even e;
+    // sqrt(m * 2^e) = sqrt(2*m) * 2^((e-1)/2) for odd e.
+    let exp_is_odd = (exp_a_eff & 1) != 0;
+    let mut result_exp: i64 = if exp_is_odd {
+        (exp_a_eff - 1) / 2 + 127
+    } else {
+        exp_a_eff / 2 + 127
+    };
+
+    // Adjust mantissa for odd exponent (multiply by 2, i.e., shift left by 1).
+    let adjusted_mant: u64 = if exp_is_odd { mant_a << 1 } else { mant_a };
+
+    // For both even and odd exponents the radicand shift amount is 29.
+    let radicand: u64 = adjusted_mant << 29;
+
+    // Digit-by-digit restoring sqrt: 27 iterations, 2 bits per iteration.
+    let mut sqrt_result: u64 = 0;
+    let mut remainder: u64 = 0;
+    for i in 0..27 {
+        let shift_pos = 52 - 2 * i;
+        let two_bits = if shift_pos >= 0 {
+            (radicand >> (shift_pos as u64)) & 3
+        } else {
+            0
+        };
+        remainder = (remainder << 2) | two_bits;
+
+        let cand = (sqrt_result << 2) | 1;
+        if remainder >= cand {
+            remainder = remainder - cand;
+            sqrt_result = (sqrt_result << 1) | 1;
+        } else {
+            sqrt_result = sqrt_result << 1;
+        }
+    }
+
+    // Sticky bit if remainder is non-zero.
+    if remainder != 0 {
+        sqrt_result = sqrt_result | 1;
+    }
+
+    // Underflow to denormal.
+    let mut is_denormal_result = false;
+    let mut result_mant = sqrt_result;
+    if result_exp <= 0 {
+        let denorm_shift = 1 - result_exp;
+        if denorm_shift < 27 {
+            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+        } else {
+            result_mant = 0;
+        }
+        result_exp = 0;
+        is_denormal_result = true;
+    }
+
+    // Strip the 3 guard bits.
+    let guard_bits = result_mant & 0x7;
+    result_mant = result_mant >> 3;
+
+    // Round via the canonical `should_round_up` for every mode (literal-spec
+    // reference: no inline-RNE shortcut). sqrt result is always positive.
+    let should_round = should_round_up(guard_bits, result_mant, 0, rounding_mode);
+    if should_round {
+        result_mant = result_mant + 1;
+        if !is_denormal_result & (result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1)) {
+            result_mant = result_mant >> 1;
+            result_exp = result_exp + 1;
+        }
+        if is_denormal_result & (result_mant >= (FLOAT32_IMPLICIT_BIT as u64)) {
+            result_exp = 1;
+            is_denormal_result = false;
+        }
+    }
+
+    let overflows_to_inf = result_exp >= (FLOAT32_EXPONENT_MAX as i64);
+
+    let final_mantissa = if is_denormal_result {
+        (result_mant & 0x7FFFFF) as u32
+    } else {
+        (result_mant & ((FLOAT32_IMPLICIT_BIT - 1) as u64)) as u32
+    };
+
+    let normal_result =
+        IEEE754Float32 { sign: 0, exponent: result_exp as u8, mantissa: final_mantissa };
+
+    let mut result = normal_result;
+
+    if overflows_to_inf {
+        result = float32_infinity(0);
+    }
+    if a_is_zero {
+        result = float32_zero(a.sign);
+    }
+    if a_is_inf & !a_is_negative {
+        result = float32_infinity(0);
+    }
+    if a_is_negative & !a_is_zero {
+        result = float32_nan();
+    }
+    if a_is_nan {
+        result = float32_nan();
+    }
+
+    result
+}
+
+// IEEE 754 compliant square root for 32-bit floats (default rounding mode)
+pub fn sqrt_float32(a: IEEE754Float32) -> IEEE754Float32 {
+    sqrt_float32_with_rounding(a, ROUNDING_MODE_NEAREST_EVEN)
+}
