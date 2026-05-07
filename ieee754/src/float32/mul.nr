@@ -21,10 +21,13 @@ use crate::utils::{
 // failure -- see `add_float32_with_rounding` for the rationale.
 //
 // ----------------------------------------------------------------------------
-// Lean equivalence proof (scaffold, sorry-stub). Tier 4 per
-// `proofs/Ieee754/PROOF-GAP-MATRIX.md`. Width-narrowing port of round-9
-// `mul_f64` (see `proofs/Ieee754/.../MulF64.lean` for the worked pattern).
-// Methodology + helper-by-helper recipe live in the linked equivalence file.
+// Lean equivalence proof (Tier 4, round 9 width-narrow). The optimised
+// circuit and the literal-spec reference factor through a single
+// `mulF32Skeleton` parameterised on the round-decision predicate; they
+// diverge at the single inline-RNE 3-bit guard site, which is closed by
+// the round-9 width-agnostic `shouldRoundUp_inline_eq_3bit` lemma. See
+// `proofs/Ieee754/.../MulModelsF32.lean` for the Lean models and the
+// linked equivalence file for the proof.
 // ----------------------------------------------------------------------------
 //
 // LAMPE-LITERATE preamble:  ../../proofs/mul_f32_preamble.lean

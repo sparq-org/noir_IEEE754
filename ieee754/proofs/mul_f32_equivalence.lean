@@ -1,78 +1,66 @@
 /-!
-# Equivalence: optimised f32 mul = reference f32 mul (Tier 4 scaffold)
+# Equivalence: optimised f32 mul = reference f32 mul (Tier 4, round 9 width-narrow)
 
-Status: **sorry-stub**. Methodology documented; proof body to be filled by the
-next Lean specialist agent.
+The optimised `mul_float32_with_rounding` is bit-identical to the
+literal-IEEE-754 reference at single-precision widths. **Width-narrowing
+port of round 9 mul_f64.**
 
-## Methodology (skeleton-and-divergence, Tier 4)
+## Methodology (skeleton-and-divergence)
 
-This is a **width-narrowing port of round 9 `mul_f64`**. The optimised binary32
-multiplication at `circuits/noir_IEEE754/ieee754/src/float32/mul.nr` follows
-the same algorithmic shape as the round-9 closed binary64 path -- only the
-mantissa width (24-bit vs 53-bit) and product width (48-bit vs 106-bit) differ.
-Reuse round-9 patterns wherever possible; specialise widths only.
+Both the optimised and reference f32 mul models in
+`ZkpSparql.Ieee754.Equivalence.MulModelsF32` factor through a single
+`mulF32Skeleton` that is parameterised on the round-decision predicate
+`rneDecision`. They diverge at exactly **one** syntactic point:
 
-**Reference for round 9:**
-- `proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/MulF64.lean` (main theorem)
-- `proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/MulModelsF64.lean` (skeleton +
-  optimised + reference models)
-- `proofs/Ieee754/ZkpSparql/Ieee754/Equivalence/SubtermsMulF64.lean` (divergence
-  helpers)
+* The optimised path inlines the `rounding_mode == 0` (RNE) special
+  case as `(guardBits > 4) | ((guardBits == 4) & (resultMant & 1))`,
+  bypassing the dispatch through `Models.shouldRoundUp`.
 
-## Steps
+The wrapper proof is structurally identical to the round-9 mul_f64
+`rne_param_eq` and reuses the round-9 width-agnostic lemma
+`SubtermsMulF64.shouldRoundUp_inline_eq_3bit` directly (the lemma
+operates on `BitVec 64` guard / mantissa lanes regardless of float
+width).
 
-1. **Author a literal-spec reference** in
-   `circuits/noir_IEEE754/ieee754/reference/mul_f32_reference.nr.ref`
-   matching the IEEE 754-2019 sec.7.4 multiplication algorithm: significand
-   product, biased-exponent sum, normalisation, sticky-aware right shift,
-   `should_round_up`-driven rounding, sign XOR. Mirror the round-9 reference
-   shape but with f32 widths.
-2. **Hand-mirror both sides into Lean models** in `MulModelsF32.lean`. The
-   optimised model transcribes `mul_float32_with_rounding` line for line; the
-   reference model transcribes the new `.nr.ref`.
-3. **Factor through `mulF32Skeleton` with two divergence parameters** -- the
-   same shape as round-9 mul_f64:
-   * `shiftRightSticky` parameter -- the optimised path's inline 64-bit
-     sticky-right-shift vs the reference's `Nat`-level spec form. Author
-     `shiftRightStickyU64_eq_spec` analogously to round-9
-     `shiftRightStickyU128_eq_spec` (cases: `shift = 0`, `shift >= 64`,
-     `32 <= shift < 64`, `0 < shift < 32` -- narrower bitwidth, otherwise
-     identical structure to the 128-bit version).
-   * `rneDecision` parameter -- the inline-RNE 3-bit shortcut vs
-     `Models.shouldRoundUp`. The round-9
-     `SubtermsMulF64.shouldRoundUp_inline_eq_3bit` lemma is **already
-     width-agnostic** (operates on `BitVec 64` guard / mantissa lanes
-     regardless of float width); reuse it directly. The wrapper proof is
-     structurally identical to round-9 `rne_param_eq`.
-4. **Per-helper lemma audit.** Helpers shared between optimised and
-   reference (no divergence parameter needed) -- strengthen-or-share decision
-   per helper:
-   * `clzDenormalMantissa32` -- narrower analogue of round-9
-     `clzDenormalMantissa64`. Round 9 left this with `sorry`-strength
-     (`todos/round9-mul-reference-strength.md` task ii); the f32 analogue
-     can stay `sorry`-shared, or strengthen via `bv_decide` over the smaller
-     24-bit search space.
-   * `leadingBitPos48` -- narrower analogue of round-9 `leadingBitPos128`
-     (48-bit product width vs 106-bit). Same call: stay `sorry`-shared
-     (matching round 9) or close with `bv_decide`.
-5. **Tie together** with
-   `theorem mul_f32_equivalence : mulF32Optimised = mulF32Reference`
-   following the round-9 one-liner: `unfold + rw [shr_sticky_param_eq,
-   rne_param_eq]`.
+The denormal-mantissa CLZ (`clzDenormalMantissa32`) and the 64-bit
+leading-bit search are still shared between the two paths, matching
+the round-9 baseline strength on the f64 side. Strengthening them to
+literal-loop references is queued analogously to round-9 task ii /
+task iv (see `todos/round9-mul-reference-strength.md` for the f64
+template).
 
-See `proofs/Ieee754/equivalence-spike-2026-05-04.md` round-9 entries for the
-worked methodology.
+## Diverging-parameter equality
 -/
 
-/-- The optimised f32 mul is bit-identical to the literal-IEEE-754 reference
-f32 mul, for every input and every rounding mode. **Sorry-stub** -- proof body
-to be filled per the methodology comment above. -/
-theorem mul_f32_equivalence : True := by
-  -- TODO: replace with
-  --   theorem mul_f32_equivalence (a b : Float32Bits) (mode : BitVec 8) :
-  --       mulF32Optimised a b mode = mulF32Reference a b mode := by ...
-  -- once `mulF32Optimised` and `mulF32Reference` exist in
-  -- `ZkpSparql.Ieee754.Equivalence.MulModelsF32`.
-  sorry
+/-- The optimised `rneDecision` parameter (inline-RNE 3-bit wrapper)
+equals the reference's (`Models.shouldRoundUp`). For `mode = 0` both
+sides reduce to the same boolean expression by
+`shouldRoundUp_inline_eq_3bit`; for `mode ≠ 0` the wrapper falls
+through to `Models.shouldRoundUp` directly. -/
+private theorem rne_param_eq :
+    (fun (gb : BitVec 64) (rm : BitVec 64) (rs : BitVec 1) (m : BitVec 8) =>
+      if m = 0 then
+        decide (gb.toNat > 4) ||
+          (decide (gb = 4) && decide (rm &&& 1 = 1))
+      else
+        Models.shouldRoundUp gb rm rs m) = Models.shouldRoundUp := by
+  funext gb rm rs m
+  by_cases hmode : m = 0
+  · subst hmode
+    rw [if_pos rfl]
+    exact (shouldRoundUp_inline_eq_3bit gb rm rs).symm
+  · rw [if_neg hmode]
+
+/-! ## Main theorem -/
+
+/-- The optimised f32 mul is bit-identical to the literal-IEEE-754
+reference f32 mul, for every input and every rounding mode. The proof
+rewrites the single diverging-subterm parameter of the shared skeleton
+and lets `rfl` finish. -/
+theorem mul_f32_equivalence
+    (a b : Float32Bits) (mode : BitVec 8) :
+    mulF32Optimised a b mode = mulF32Reference a b mode := by
+  unfold mulF32Optimised mulF32Reference
+  rw [rne_param_eq]
 
 end ZkpSparql.Ieee754.Equivalence
