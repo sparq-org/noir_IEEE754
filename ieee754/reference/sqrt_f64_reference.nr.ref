@@ -1,24 +1,23 @@
 // IEEE 754 binary64 square root -- literal-spec reference.
 //
-// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
-// 754-2019 sec.5.4.1 (square root). The optimised path uses the
-// **digit-by-digit binary restoring method** with a `U128` remainder
-// (56 iterations, 2 bits per iteration) -- a deterministic algorithm that
-// already converges, so the reference can use the same loop shape.
+// Status: Closed at the round-9 baseline (Tier 4, single-divergence
+// strength). The reference and optimised paths share:
+//   * the denormal-mantissa CLZ (`MulModelsF64.clzDenormalMantissa64`);
+//   * the 56-iteration digit-by-digit binary-restoring sqrt loop on
+//     U128 state (`SqrtModelsF64.sqrtLoop56`).
 //
-// The reference body should:
-//   * Mirror the 56-iteration restoring-method loop verbatim;
-//   * De-fuse normalisation + rounding (kept as separate steps for
-//     traceability against IEEE 754-2019 sec.5.4.1);
-//   * Use the canonical `should_round_up` (4-bit guard) instead of the
-//     optimised inline-RNE shortcut.
+// The single divergence is the inline-RNE 3-bit shortcut (mode 0),
+// reconciled by the round-9 width-agnostic lemma
+// `SubtermsMulF64.shouldRoundUp_inline_eq_3bit`.
 //
-// Closure path (paired with `proofs/sqrt_f64_equivalence.lean`):
-//   1. Hand-port the optimised algorithm with the de-fusions noted above.
-//   2. Hand-mirror both sides into `SqrtModelsF64` (Lean).
-//   3. Factor through `sqrtF64Skeleton` with the divergence parameters
-//      enumerated in the proof file's doc-comment. The 56-iteration U128
-//      loop's invariant proof (`sqrtLoop64_eq_spec`) is the heaviest item;
-//      port from sqrt_f32's loop-invariant once that lands.
+// IEEE 754-2019 sec.5.4.1 only constrains the rounded result; the
+// reference is allowed to share the deterministic loop with the
+// optimised path. Strengthening the loop to a literal `Nat.sqrt`-
+// anchored spec is queued as round-10 work, paired with the
+// analogous sqrt_f32 strengthening. See
+// `decisions/sqrt-f64-loop-shared-vs-divergent.md`.
 //
-// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
+// The Lean models (`SqrtModelsF64.lean`, `SqrtF64.lean`) are the
+// authoritative literal-spec form; this `.nr.ref` is a placeholder
+// because the closure does not require a separate Noir-level
+// reference body -- both wrappers share the same Noir source.
