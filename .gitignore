@@ -29,6 +29,10 @@ noir/lib/*/lampe/
 # module and the cached lake build. Regenerated from the literate Noir
 # directive lines each time `lampe-literate build` runs; never edited
 # by hand.
+# lampe-literate scratch dir (per-source). Contains the Lampe-extracted
+# Lean, the spliced proof module, and the cached lake build. Regenerated
+# from the literate Noir comment blocks each time `lampe-literate build`
+# runs; never edited by hand.
 **/.lampe-literate/
 
 # Node.js / semantic-release
