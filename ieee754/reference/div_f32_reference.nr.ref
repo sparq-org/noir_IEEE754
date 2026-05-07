@@ -1,0 +1,24 @@
+// IEEE 754 binary32 division -- literal-spec reference.
+//
+// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
+// 754-2019 sec.7.2 (division). The optimised path uses long division via
+// Noir's builtin `u64 / u64` after `<< 27`-shift of the dividend (24-bit
+// significand + 3 guard bits, plus a 4th guard via the 4-bit RNE shortcut).
+//
+// The reference body should:
+//   * Mirror the long-division shape (the divide step itself converges:
+//     Noir builtin `/` is deterministic, no Newton-Raphson iteration to
+//     verify).
+//   * Deliberately *not* fuse normalisation + rounding (kept as separate
+//     steps for traceability against IEEE 754-2019 sec.7.2).
+//   * Use the canonical `should_round_up` (4-bit guard) instead of the
+//     optimised inline-RNE shortcut, exposing the inline-RNE divergence
+//     parameter cleanly.
+//
+// Closure path (paired with `proofs/div_f32_equivalence.lean`):
+//   1. Hand-port the optimised algorithm with the de-fusions noted above.
+//   2. Hand-mirror both sides into `DivModelsF32` (Lean).
+//   3. Factor through `divF32Skeleton` with the divergence parameters
+//      enumerated in the proof file's doc-comment.
+//
+// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
