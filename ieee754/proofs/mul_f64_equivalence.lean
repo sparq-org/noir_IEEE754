@@ -1,10 +1,26 @@
 /-! ## Diverging-parameter equalities
 
-Round 9 closes the f64 mul equivalence at "weak" reference strength
-(see `todos/round9-mul-reference-strength.md` in the workspace).
-Two diverging-subterm sites: the inline-RNE 3-bit wrapper and the
-128-bit sticky right shift. Both are witnessed by a pointwise
-equality lemma in `SubtermsMulF64.lean`. -/
+Round 9 closes the f64 mul equivalence with three diverging
+subterms (see `todos/round9-mul-reference-strength.md` in the
+workspace):
+
+* the inline-RNE 3-bit wrapper (round-9 baseline),
+* the 128-bit sticky right shift (round-9 task iii — closed),
+* the denormal-mantissa CLZ (round-9 task iv — partial).
+
+Each is witnessed by a pointwise equality lemma in
+`SubtermsMulF64.lean`. -/
+
+/-- The optimised `clzDenormal` parameter
+(`clzDenormalMantissa64`, the 6-stage binary search) equals the
+reference's (`clzDenormalMantissa64Spec`, the literal-loop scan)
+pointwise. Witnessed by the round-9 task-iv closure
+`SubtermsMulF64.clzDenormalMantissa64_eq_spec` (partial — see
+that lemma's doc-string for the residual). -/
+private theorem clz_denormal_param_eq :
+    clzDenormalMantissa64 = clzDenormalMantissa64Spec := by
+  funext mantRaw
+  exact clzDenormalMantissa64_eq_spec mantRaw
 
 /-- The optimised `shiftRightSticky` parameter
 (`shiftRightStickyU128`, the 4-case BitVec dispatch) equals the
@@ -39,12 +55,12 @@ private theorem rne_param_eq :
 
 /-- The optimised f64 mul is bit-identical to the round-9 IEEE
 754 reference f64 mul, for every input and every rounding mode.
-The proof rewrites the two diverging-subterm parameters of the
+The proof rewrites the three diverging-subterm parameters of the
 shared skeleton and lets `rfl` finish. -/
 theorem mul_f64_equivalence
     (a b : Float64Bits) (mode : BitVec 8) :
     mulF64Optimised a b mode = mulF64Reference a b mode := by
   unfold mulF64Optimised mulF64Reference
-  rw [shr_sticky_param_eq, rne_param_eq]
+  rw [clz_denormal_param_eq, shr_sticky_param_eq, rne_param_eq]
 
 end ZkpSparql.Ieee754.Equivalence
