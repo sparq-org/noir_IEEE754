@@ -5,6 +5,9 @@
 use crate::types::{FLOAT32_EXPONENT_MAX, IEEE754Float32};
 
 // Check if Float32 is NaN (exponent = 255, mantissa != 0)
+//
+// LAMPE-LITERATE preamble: ../../proofs/helpers_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/helpers_f32_equivalence.lean fn=float32_is_nan name=float32_is_nan_equivalence
 pub fn float32_is_nan(x: IEEE754Float32) -> bool {
     (x.exponent == FLOAT32_EXPONENT_MAX) & (x.mantissa != 0)
 }

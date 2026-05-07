@@ -25,6 +25,12 @@ noir/lib/reference_tests/Prover.toml
 # Never edited by hand. Re-run `lampe` after touching the underlying .nr.
 noir/lib/*/lampe/
 
+# lampe-literate scratch dir (per-source). Contains the spliced proof
+# module and the cached lake build. Regenerated from the literate Noir
+# directive lines each time `lampe-literate build` runs; never edited
+# by hand.
+**/.lampe-literate/
+
 # Node.js / semantic-release
 node_modules/
 # package-lock.json
