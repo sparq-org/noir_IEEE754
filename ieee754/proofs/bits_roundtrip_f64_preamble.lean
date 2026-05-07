@@ -63,7 +63,12 @@ def float64ToBitsSpec (f : Float64Bits) : BitVec 64 :=
 /-! ## Validity predicate for round-trip
 
 A `Float64Bits` is *canonical* when its `mantissa` field uses only
-the low 52 bits — the IEEE 754 binary64 mantissa width. -/
+the low 52 bits and its `exponent` field uses only the low 11 bits
+— the IEEE 754 binary64 mantissa / biased-exponent widths. The
+Lean record is wider than IEEE 754 specifies (`mantissa : BitVec
+64`, `exponent : BitVec 16`); without these bounds the
+hypothetical high bits would survive `from_bits ∘ to_bits` only if
+the `to_bits` shifts truncated them, which they do not. -/
 
 def Float64Bits.IsCanonical (f : Float64Bits) : Prop :=
-  f.mantissa.toNat < 0x10000000000000
+  f.mantissa.toNat < 0x10000000000000 ∧ f.exponent.toNat < 0x800
