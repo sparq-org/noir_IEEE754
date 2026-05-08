@@ -59,7 +59,7 @@ jobs:
           for n in $numbers; do
             echo "::group::PR #$n"
             if ! gh pr update-branch "$n" --repo "$REPO"; then
-              echo "warn: update-branch failed on #$n (will retry next cycle)"
+              echo "::warning::update-branch failed on #$n (will retry next cycle)"
             fi
             echo "::endgroup::"
             sleep 2
