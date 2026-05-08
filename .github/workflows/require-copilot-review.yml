@@ -140,14 +140,17 @@ jobs:
         run: |
           set -euo pipefail
           # Query review threads via GraphQL — REST has no per-thread
-          # `isResolved` field. Connection page size is capped at 100;
-          # PRs with >100 threads are extremely rare and would warrant
-          # manual triage. If we ever hit that ceiling we can paginate
-          # via `pageInfo.endCursor`.
+          # `isResolved` field. Connection page size is capped at 100,
+          # so we MUST fail closed if the PR has more than 100 review
+          # threads — letting the gate silently truncate would let an
+          # unresolved Copilot thread on the >100 tail slip through.
+          # PRs with >100 threads are exotic; if this ever fires in
+          # anger we paginate via `pageInfo.endCursor`.
           QUERY='query($owner: String!, $name: String!, $number: Int!) {
             repository(owner: $owner, name: $name) {
               pullRequest(number: $number) {
                 reviewThreads(first: 100) {
+                  pageInfo { hasNextPage endCursor }
                   nodes {
                     isResolved
                     isOutdated
@@ -164,10 +167,23 @@ jobs:
             -F owner="$REPO_OWNER" \
             -F name="$REPO_NAME" \
             -F number="$PR_NUMBER")
-          # Filter to threads whose first comment is by Copilot. Both
-          # `Copilot` (line-comment surface) and
-          # `copilot-pull-request-reviewer` (review-summary surface) are
-          # accepted to be defensive across the bot's two identities.
+          # Fail closed if the connection was truncated.
+          has_next=$(echo "$response" | jq -r \
+            '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+          if [[ "$has_next" == "true" ]]; then
+            echo "::error::PR #$PR_NUMBER has more than 100 review threads;"
+            echo "this gate does not paginate yet so it fails closed rather"
+            echo "than risk silently passing on an unresolved Copilot thread"
+            echo "on the tail. File an issue to add cursor pagination."
+            exit 1
+          fi
+          # Filter to threads whose first comment is by Copilot. The bot
+          # has multiple login surfaces in practice:
+          #   - GraphQL `author.login` for the review-summary identity
+          #     usually returns `copilot-pull-request-reviewer` (no
+          #     `[bot]` suffix); REST returns the same name with `[bot]`.
+          #   - GraphQL line-comment author returns `Copilot`.
+          # We accept all three to be defensive across surface drift.
           # Outdated threads — those targeting a line the author later
           # replaced — are exempted, since GitHub does not let anyone
           # resolve them via UI in the usual way.
@@ -176,6 +192,7 @@ jobs:
             | select(
                 (.comments.nodes[0].author.login == "Copilot")
                 or (.comments.nodes[0].author.login == "copilot-pull-request-reviewer")
+                or (.comments.nodes[0].author.login == "copilot-pull-request-reviewer[bot]")
               )
             | select(.isResolved == false)
             | select(.isOutdated == false)
