@@ -1,0 +1,198 @@
+name: Address Copilot review comments
+
+# Triggered every time a review is submitted on a PR. If the reviewer is
+# Copilot, walks every unresolved-and-not-outdated review thread on that
+# PR whose first comment is by Copilot, and resolves each — by either
+# (a) addressing the comment with a code change, (b) replying with
+# rationale + resolving the thread, or (c) leaving the thread unresolved
+# and posting a triage comment on the PR pointing at a Jesse-taste
+# decision needed.
+#
+# This is the per-repo, event-driven companion to:
+#   - `automerge.yml` — arms auto-merge on dependabot PRs.
+#   - `auto-update-pr-branches.yml` — keeps auto-merge PRs rebased on main.
+#   - `require-copilot-review.yml` — blocks merge until Copilot reviews
+#     are posted AND all Copilot threads are resolved (the gate this
+#     workflow is designed to drive towards green).
+#
+# This file is managed by `scripts/sync-standards.sh` (workspace).
+# Edit the canonical at:
+#   templates/sub-repo/noir/.github/workflows/claude-address-review-comments.yml
+
+on:
+  pull_request_review:
+    types: [submitted, edited]
+
+permissions:
+  contents: write        # commit fixes to the PR head branch
+  pull-requests: write   # post replies, resolve review threads
+  id-token: write        # required by anthropics/claude-code-action
+  actions: read
+
+# Serialise per-PR. If two reviews land in close succession on the same
+# PR, the second waits its turn rather than racing with the first.
+concurrency:
+  group: claude-address-review-comments-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  address-review:
+    # Run only when:
+    #  - Copilot is the reviewer (either bot identity).
+    #  - The PR is not draft (Copilot does not review drafts).
+    #  - The author is not dependabot or Copilot itself.
+    if: |
+      (github.event.review.user.login == 'copilot-pull-request-reviewer[bot]' ||
+       github.event.review.user.login == 'Copilot') &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.event.pull_request.user.login != 'Copilot' &&
+      github.event.pull_request.user.login != 'copilot-swe-agent[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v6
+        with:
+          # Full history so commits can rebase / push cleanly.
+          fetch-depth: 0
+          # Check out the PR's head branch directly so commits land on it.
+          ref: ${{ github.event.pull_request.head.ref }}
+          # PR's head repo, in case it ever lands from a fork (current
+          # convention is same-repo branches but the field is harmless).
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - name: Address Copilot review comments via Claude Code
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: |
+            --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+          prompt: |
+            You are the per-repo "address Copilot review comments" routine
+            for `${{ github.repository }}`. Copilot just submitted a
+            review (event id `${{ github.event.review.id }}`) on PR
+            `#${{ github.event.pull_request.number }}` titled
+            "${{ github.event.pull_request.title }}". The PR's head branch
+            is checked out at the working directory.
+
+            ## Your task
+
+            For every review thread on this PR whose first comment is by
+            `Copilot` or `copilot-pull-request-reviewer`, AND that is
+            currently `isResolved == false` AND `isOutdated == false`,
+            decide exactly one of:
+
+            **(a) Code fix** — when the comment names a real defect, typo,
+            clear improvement, or convention violation that does not
+            require Jesse-taste.
+
+              - Make the minimal edit on the checked-out PR head branch.
+              - Commit with a Conventional Commits message
+                (`fix(scope): ...` / `chore(scope): ...` / etc.).
+                **NEVER use `--no-verify`.**
+              - Push to the PR's head branch (the workflow has
+                `contents: write`).
+              - Post a one-line reply to the thread pointing at the new
+                commit SHA, then resolve the thread via the GraphQL
+                `resolveReviewThread` mutation:
+                ```sh
+                gh api graphql -f query='
+                  mutation($id: ID!) {
+                    resolveReviewThread(input: {threadId: $id}) {
+                      thread { isResolved }
+                    }
+                  }' -F id="$THREAD_ID"
+                ```
+
+            **(b) Reply + resolve** — when the comment is invalid,
+            already-handled, or you have a justified reason not to
+            change.
+
+              - Post a polite British-English reply (1-3 sentences) with
+                the rationale.
+              - Resolve the thread via the same `resolveReviewThread`
+                mutation as above.
+
+              Use this when the comment misreads the code, is a
+              stylistic preference contradicted by repo conventions
+              (`CLAUDE.md`, `CONTRIBUTING.md`), references a non-existent
+              issue, or would regress something documented in
+              `proofs/Ieee754/PROOF-GAP-MATRIX.md` / `decisions/` (if
+              those paths exist in this repo).
+
+            **(c) Triage-only** — when the comment is Jesse-taste OR the
+            fix is non-trivial (touches > ~20 LoC, alters semantics,
+            requires methodology choice).
+
+              - **Do NOT resolve the thread.** Leave it open for Jesse.
+              - Post a single PR-level comment via `gh pr comment` (not
+                a reply on the thread) titled
+                "Copilot triage — Jesse-taste decision needed", listing
+                the thread link, quoting the comment, and explaining why
+                you punted.
+              - One PR-level triage comment per workflow run, even if
+                multiple threads escalate (collect them).
+
+            ## How to enumerate the threads
+
+            Use the GraphQL API — REST has no `isResolved`:
+            ```sh
+            gh api graphql -f query='
+              query($owner: String!, $name: String!, $number: Int!) {
+                repository(owner: $owner, name: $name) {
+                  pullRequest(number: $number) {
+                    reviewThreads(first: 100) {
+                      nodes {
+                        id
+                        isResolved
+                        isOutdated
+                        comments(first: 10) {
+                          nodes {
+                            id
+                            databaseId
+                            author { login }
+                            body
+                            path
+                            line
+                            originalLine
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }' -F owner='${{ github.repository_owner }}' \
+                 -F name='${{ github.event.repository.name }}' \
+                 -F number=${{ github.event.pull_request.number }}
+            ```
+
+            ## Workflow non-negotiables
+
+            - `gh` is pre-authenticated via `GH_TOKEN`.
+            - **No `--no-verify` on commits.**
+            - **British English** in all prose (replies, commit messages,
+              triage comments).
+            - **Conventional Commits** on every commit.
+            - **Never bypass review machinery** — never disable
+              auto-merge, never force-merge, never `gh pr ready --undo`.
+            - Push commits frequently. Do not accumulate.
+
+            ## Idempotence
+
+            If the sweep finds zero unresolved-and-not-outdated Copilot
+            threads on this PR, log "no work" and exit cleanly. The
+            workflow will re-fire on the next review event.
+
+            ## Reporting
+
+            At the end of the run, post a single one-line summary
+            comment on the PR:
+            ```
+            claude-address-review @ <commit-sha>: <N> code-fixed,
+            <M> reply+resolved, <K> triage-only, <S> outdated/skipped
+            ```
+
+            (Skip the summary if N=M=K=S=0 — i.e. no threads found.)
