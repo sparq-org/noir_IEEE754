@@ -1,24 +1,298 @@
 // IEEE 754 binary64 division -- literal-spec reference.
 //
-// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
-// 754-2019 sec.7.2 (division). The optimised path uses 128-bit-by-64-bit
-// long division via the `div_u128_by_u64` helper after a 53-bit dividend
-// shift. The hardest divergence is the `div_u128_by_u64` helper itself --
-// see the paired `proofs/div_f64_equivalence.lean` for the per-helper
-// recipe.
+// This is the round-9-strength reference for `div_float64_with_rounding`.
+// It mirrors the optimised algorithm bit-for-bit modulo two deliberate
+// de-fusions enumerated in the paired `proofs/div_f64_equivalence.lean`:
 //
-// The reference body should:
-//   * Use the **same long-division shape** (the divide step itself converges:
-//     `div_u128_by_u64` is deterministic given a non-zero divisor);
-//   * Deliberately *not* fuse normalisation + rounding (kept as separate
-//     steps for traceability against IEEE 754-2019 sec.7.2);
-//   * Use the canonical `should_round_up` (4-bit guard) instead of the
-//     optimised inline-RNE shortcut.
+//   1. The optimised inline-RNE 4-bit shortcut for `mode == 0` is replaced
+//      by an unconditional dispatch through `should_round_up_4bit`. This
+//      lifts the inline-RNE divergence parameter cleanly into the proof.
+//   2. The optimised path's two-`if` quotient-normalisation cascade
+//      (`bit_57_set` then `bit_56_clear`) is rewritten as a single 3-way
+//      trichotomy (`>= 2^57`, `< 2^56 & != 0`, otherwise) so each case
+//      assigns `(result_mant, result_exp_delta)` once. Both forms agree
+//      because the `bit_57_set` branch already forces `bit_56_clear` to
+//      `false`, but the trichotomy form reads directly off the
+//      bit-57/bit-56 leading-bit position of `quotient`.
 //
-// Closure path (paired with `proofs/div_f64_equivalence.lean`):
-//   1. Hand-port the optimised algorithm with the de-fusions noted above.
-//   2. Hand-mirror both sides into `DivModelsF64` (Lean).
-//   3. Factor through `divF64Skeleton` with the divergence parameters
-//      enumerated in the proof file's doc-comment.
+// Other Noir helpers (`shift_right_sticky_u64`, `div_u128_by_u64`) are
+// shared between both sides verbatim, so they remain non-divergent.
 //
-// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
+// Algorithm map (IEEE 754-2019 sec.7.2):
+//
+//   * Step 1 (sec.6.2): classify both operands.
+//   * Step 2 (sec.6.2.3): NaN propagation. Inf / inf and 0 / 0 -> NaN.
+//   * Step 3: extract effective mantissas and exponents (denormals
+//     normalised via `clz_denormal_mantissa64` -- shared with mul_f64).
+//   * Step 4: long-division step. Shift `mant_a` left by 56 bits to
+//     produce a 109-bit dividend; divide by `mant_b`; remainder is the
+//     sticky residual.
+//   * Step 5: normalise quotient (3-way trichotomy on bit 57 / bit 56).
+//     Sticky-OR the remainder.
+//   * Step 6: handle underflow to denormal.
+//   * Step 7: extract guard bits and round (canonical
+//     `should_round_up_4bit`).
+//   * Step 8: post-round overflow / denormal-overflow.
+//   * Step 9: special-case fixups (zero / inf / NaN priority order).
+//
+// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked
+// pattern. The reference deliberately uses the same `U128` /
+// `div_u128_by_u64` shape as the optimised path; the heaviest
+// equivalence is `divU128ByU64_eq_spec` -- the long-division loop's
+// `Nat`-level closure, comparable in scale to round-9
+// `shiftRightStickyU128_eq_spec`.
+
+use crate::float64::helpers::{
+    float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
+    float64_max_finite, float64_nan, float64_zero,
+};
+use crate::types::{
+    FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::{
+    assert_valid_rounding_mode, directed_overflow_saturates_to_inf, div_u128_by_u64,
+    shift_right_sticky_u64, should_round_up_4bit, U128,
+};
+
+pub fn div_float64_reference(
+    a: IEEE754Float64,
+    b: IEEE754Float64,
+    rounding_mode: u8,
+) -> IEEE754Float64 {
+    assert_valid_rounding_mode(rounding_mode);
+    // Determine special cases (sec.6.2).
+    let a_is_nan = float64_is_nan(a);
+    let b_is_nan = float64_is_nan(b);
+    let a_is_inf = float64_is_infinity(a);
+    let b_is_inf = float64_is_infinity(b);
+    let a_is_zero = float64_is_zero(a);
+    let b_is_zero = float64_is_zero(b);
+    let a_is_denormal = float64_is_denormal(a);
+    let b_is_denormal = float64_is_denormal(b);
+
+    // Result sign is XOR of input signs.
+    let result_sign: u1 = a.sign ^ b.sign;
+
+    // Denormal normalisation -- shared 6-stage CLZ binary search. Mirrors
+    // the optimised body verbatim (no divergence).
+    let a_mant_raw: u64 = a.mantissa;
+    let mut a_lz: i64 = 0;
+    if a_is_denormal & (a_mant_raw != 0) {
+        let mut v = a_mant_raw;
+        if (v & 0xFFFFFFF000000) == 0 {
+            a_lz = a_lz + 28;
+            v = v << 28;
+        }
+        if (v & 0xFFFC000000000) == 0 {
+            a_lz = a_lz + 14;
+            v = v << 14;
+        }
+        if (v & 0xFE00000000000) == 0 {
+            a_lz = a_lz + 7;
+            v = v << 7;
+        }
+        if (v & 0xF000000000000) == 0 {
+            a_lz = a_lz + 4;
+            v = v << 4;
+        }
+        if (v & 0xC000000000000) == 0 {
+            a_lz = a_lz + 2;
+            v = v << 2;
+        }
+        if (v & 0x8000000000000) == 0 {
+            a_lz = a_lz + 1;
+        }
+        a_lz = a_lz + 1;
+    }
+
+    let b_mant_raw: u64 = b.mantissa;
+    let mut b_lz: i64 = 0;
+    if b_is_denormal & (b_mant_raw != 0) {
+        let mut v = b_mant_raw;
+        if (v & 0xFFFFFFF000000) == 0 {
+            b_lz = b_lz + 28;
+            v = v << 28;
+        }
+        if (v & 0xFFFC000000000) == 0 {
+            b_lz = b_lz + 14;
+            v = v << 14;
+        }
+        if (v & 0xFE00000000000) == 0 {
+            b_lz = b_lz + 7;
+            v = v << 7;
+        }
+        if (v & 0xF000000000000) == 0 {
+            b_lz = b_lz + 4;
+            v = v << 4;
+        }
+        if (v & 0xC000000000000) == 0 {
+            b_lz = b_lz + 2;
+            v = v << 2;
+        }
+        if (v & 0x8000000000000) == 0 {
+            b_lz = b_lz + 1;
+        }
+        b_lz = b_lz + 1;
+    }
+
+    let mant_a: u64 = if a_is_denormal {
+        a_mant_raw << (a_lz as u64)
+    } else if a_is_zero {
+        0
+    } else {
+        a.mantissa | FLOAT64_IMPLICIT_BIT
+    };
+
+    let mant_b: u64 = if b_is_denormal {
+        b_mant_raw << (b_lz as u64)
+    } else if b_is_zero {
+        0
+    } else {
+        b.mantissa | FLOAT64_IMPLICIT_BIT
+    };
+
+    let exp_a_eff: i64 = if a_is_denormal {
+        1 - 1023 - a_lz
+    } else if a_is_zero {
+        0
+    } else {
+        (a.exponent as i64) - 1023
+    };
+
+    let exp_b_eff: i64 = if b_is_denormal {
+        1 - 1023 - b_lz
+    } else if b_is_zero {
+        0
+    } else {
+        (b.exponent as i64) - 1023
+    };
+
+    // Long-division step -- shared with the optimised path. The
+    // 56-bit pre-shift creates a 109-bit dividend; quotient width is
+    // 57 bits (53 significand + 4 guard, plus 1 for the `>= 2.0`
+    // overflow path).
+    let shift_amount: u64 = 56;
+    let shifted_dividend =
+        U128 { high: mant_a >> (64 - shift_amount), low: mant_a << shift_amount };
+
+    let (quotient, remainder) = if mant_b != 0 {
+        div_u128_by_u64(shifted_dividend, mant_b)
+    } else {
+        (0, 0)
+    };
+
+    let mut result_exp: i64 = exp_a_eff - exp_b_eff + 1023;
+
+    // Quotient normalisation -- 3-way trichotomy on the leading bit of
+    // `quotient`. This is the de-fused form of the optimised path's
+    // two-`if` cascade.
+    //
+    //   * `quotient >= 2^57`: leading bit at position >= 57; one shift-
+    //     right-sticky and an exponent bump.
+    //   * `quotient >= 2^56`: leading bit at position 56 -- the
+    //     canonical implicit-bit position. No shift.
+    //   * `quotient != 0`: leading bit at position 55 (since the divide
+    //     step's quotient fits in [2^55, 2^58) for non-zero inputs);
+    //     one shift-left and an exponent decrement.
+    //   * `quotient == 0`: result_mant := 0, result_exp unchanged
+    //     (caught by the post-round zero-fixup).
+    let mut result_mant: u64 = quotient;
+    let bit_57_set = (quotient >> 57) & 1 == 1;
+    let bit_56_set = (quotient >> 56) & 1 == 1;
+    if bit_57_set {
+        result_mant = shift_right_sticky_u64(quotient, 1);
+        result_exp = result_exp + 1;
+    } else if bit_56_set {
+        // Already at the implicit-bit position; no normalisation.
+    } else if quotient != 0 {
+        result_mant = quotient << 1;
+        result_exp = result_exp - 1;
+    }
+
+    if remainder != 0 {
+        result_mant = result_mant | 1;
+    }
+
+    // Underflow to denormal (sec.7.5).
+    let mut is_denormal_result = false;
+    if result_exp <= 0 {
+        let denorm_shift = 1 - result_exp;
+        result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+        result_exp = 0;
+        is_denormal_result = true;
+    }
+
+    // Extract guard bits (4 -- division-specific guard width) and round.
+    let guard_bits = result_mant & 0xF;
+    result_mant = result_mant >> 4;
+
+    // Reference: always dispatch through the canonical 4-bit rounding
+    // helper. The optimised path inlines the `mode == 0` (RNE) shortcut;
+    // the divergence is captured by `shouldRoundUp_inline_eq_4bit`.
+    let should_round =
+        should_round_up_4bit(guard_bits, result_mant, result_sign, rounding_mode);
+
+    if should_round {
+        result_mant = result_mant + 1;
+        if !is_denormal_result & (result_mant >= (FLOAT64_IMPLICIT_BIT << 1)) {
+            result_mant = result_mant >> 1;
+            result_exp = result_exp + 1;
+        }
+        if is_denormal_result & (result_mant >= FLOAT64_IMPLICIT_BIT) {
+            result_exp = 1;
+            is_denormal_result = false;
+        }
+    }
+
+    let overflows_to_inf = result_exp >= (FLOAT64_EXPONENT_MAX as i64);
+
+    let final_mantissa = if is_denormal_result {
+        result_mant & 0xFFFFFFFFFFFFF
+    } else {
+        result_mant & (FLOAT64_IMPLICIT_BIT - 1)
+    };
+
+    let normal_result =
+        IEEE754Float64 { sign: result_sign, exponent: result_exp as u16, mantissa: final_mantissa };
+
+    let mut result = normal_result;
+
+    // Special-case fixups in priority order (mirrors optimised path).
+    if a_is_zero {
+        if b_is_zero | b_is_nan {
+            result = float64_nan();
+        } else {
+            result = float64_zero(result_sign);
+        }
+    }
+
+    if b_is_zero & !a_is_zero & !a_is_nan {
+        result = float64_infinity(result_sign);
+    }
+
+    if overflows_to_inf & !a_is_zero & !b_is_inf {
+        if directed_overflow_saturates_to_inf(rounding_mode, result_sign) {
+            result = float64_infinity(result_sign);
+        } else {
+            result = float64_max_finite(result_sign);
+        }
+    }
+
+    if a_is_inf & !b_is_nan {
+        if b_is_inf {
+            result = float64_nan();
+        } else {
+            result = float64_infinity(result_sign);
+        }
+    }
+
+    if b_is_inf & !a_is_inf & !a_is_nan {
+        result = float64_zero(result_sign);
+    }
+
+    if a_is_nan | b_is_nan {
+        result = float64_nan();
+    }
+
+    result
+}
