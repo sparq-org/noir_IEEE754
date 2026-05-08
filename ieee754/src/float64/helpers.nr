@@ -47,6 +47,9 @@ pub fn float64_max_finite(sign: u1) -> IEEE754Float64 {
 }
 
 // Convert from u64 bits to IEEE754Float64
+//
+// LAMPE-LITERATE preamble: ../../proofs/bits_roundtrip_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/bits_roundtrip_f64_equivalence.lean fn=float64_from_bits name=float64_from_bits_equivalence
 pub fn float64_from_bits(bits: u64) -> IEEE754Float64 {
     let sign = ((bits >> 63) & 1) as u1;
     let exponent = ((bits >> 52) & 0x7FF) as u16;
