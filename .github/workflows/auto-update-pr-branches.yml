@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           numbers=$(
-            gh pr list --repo "$REPO" --state open \
+            gh pr list --repo "$REPO" --state open --limit 1000 \
               --json number,autoMergeRequest,mergeStateStatus \
               --jq '.[] | select(.autoMergeRequest != null and .mergeStateStatus == "BEHIND") | .number'
           )
