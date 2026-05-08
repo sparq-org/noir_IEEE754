@@ -5,16 +5,17 @@ name: Auto-update auto-merge PR branches
 # it so its CI re-runs and the auto-merge gate can clear.
 #
 # Closes the gap where GitHub's `allow_update_branch=true` setting only
-# *suggests* the "Update branch" UI button rather than performing the
-# rebase automatically: with auto-merge armed, the merge gate keeps
-# blocking on the head being out-of-date, but nothing nudges the rebase
-# unless someone polls externally. The previous workflow for this lived
-# as ad-hoc `gh pr update-branch` loops in lead-agent sessions; this
-# moves it inside CI so the cascade keeps draining without manual nudges.
+# *suggests* the "Update branch" UI button rather than merging the base
+# into the branch automatically: with auto-merge armed, the merge gate
+# keeps blocking on the head being out-of-date, but nothing triggers the
+# branch update unless someone polls externally. The previous workflow
+# for this lived as ad-hoc `gh pr update-branch` loops in lead-agent
+# sessions; this moves it inside CI so the cascade keeps draining
+# without manual nudges.
 #
 # Only `BEHIND` PRs are touched. `BLOCKED`, `UNSTABLE`, etc. are left
 # alone — those are waiting on review or check completion, not on a
-# rebase.
+# branch update (merge base into branch).
 
 on:
   push:
@@ -38,7 +39,7 @@ jobs:
     steps:
       - name: Update branches via gh CLI
         env:
-          # Must be a PAT (not the default GITHUB_TOKEN) so the rebase
+          # Must be a PAT (not the default GITHUB_TOKEN) so the update-branch
           # commits trigger downstream CI workflows. Same rationale as
           # `automerge.yml` in this repo.
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
