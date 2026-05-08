@@ -52,7 +52,10 @@ on:
     types: [resolved, unresolved]
 
 permissions:
-  pull-requests: read
+  # `write` so this workflow can apply / remove the
+  # `address-review-comments` label that drives the remote Claude
+  # routine (see `claude-on-label.yml`).
+  pull-requests: write
   contents: read
 
 jobs:
@@ -199,6 +202,13 @@ jobs:
           ] | length')
           if [[ "$unresolved" -eq 0 ]]; then
             echo "::notice::All Copilot review threads on PR #$PR_NUMBER are resolved."
+            # Cleanup: if a previous run applied the
+            # `address-review-comments` label and the routine has now
+            # cleared all the threads, remove the label so the PR no
+            # longer shows up in the labelled set.
+            gh pr edit "$PR_NUMBER" --repo "$REPO_OWNER/$REPO_NAME" \
+              --remove-label "address-review-comments" 2>/dev/null \
+              || true
             exit 0
           fi
           echo "::error::PR #$PR_NUMBER has $unresolved unresolved Copilot review thread(s)."
@@ -207,4 +217,13 @@ jobs:
           echo "clicking 'Resolve conversation'. The check re-runs on every"
           echo "pull_request_review_thread event so it will turn green the moment"
           echo "the last thread is resolved."
+          # Apply the `address-review-comments` label so the
+          # `claude-on-label.yml` workflow can dispatch the remote
+          # Claude routine to address the threads autonomously. The
+          # label is idempotent — re-applying when already present is
+          # a no-op. The companion workflow removes it once the
+          # routine has cleared the threads.
+          gh pr edit "$PR_NUMBER" --repo "$REPO_OWNER/$REPO_NAME" \
+            --add-label "address-review-comments" 2>/dev/null \
+            || echo "::warning::Could not apply address-review-comments label (label may not exist in this repo yet)."
           exit 1
