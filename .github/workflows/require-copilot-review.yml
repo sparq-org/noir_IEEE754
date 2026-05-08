@@ -45,11 +45,15 @@ on:
       - converted_to_draft
   pull_request_review:
     types: [submitted, edited, dismissed]
-  # Re-run when reviewers (or PR authors) resolve / unresolve threads,
-  # so the gate flips green the moment the last Copilot thread is
-  # resolved — and red again if any thread is unresolved.
-  pull_request_review_thread:
-    types: [resolved, unresolved]
+  # Note: there is *no* `pull_request_review_thread` Actions trigger
+  # (it exists as a webhook event but does not fire workflows). When a
+  # reviewer / author resolves a thread, this gate does NOT auto-rerun —
+  # the gate re-evaluates on the next `pull_request.synchronize` (push to
+  # the PR head). The remote routine that resolves threads pushes its
+  # commits to the PR head, which fires `synchronize` and refreshes the
+  # gate; manual thread resolution requires a separate push or a
+  # workflow_dispatch run.
+  workflow_dispatch:
 
 permissions:
   # `write` so this workflow can apply / remove the
@@ -214,9 +218,12 @@ jobs:
           echo "::error::PR #$PR_NUMBER has $unresolved unresolved Copilot review thread(s)."
           echo "Each thread must be resolved before merge — either by addressing the"
           echo "comment with a code change, or by replying with the rationale and"
-          echo "clicking 'Resolve conversation'. The check re-runs on every"
-          echo "pull_request_review_thread event so it will turn green the moment"
-          echo "the last thread is resolved."
+          echo "clicking 'Resolve conversation'."
+          echo
+          echo "Note: GitHub does not fire workflow events on thread resolution"
+          echo "alone, so this gate will NOT auto-re-run when you click 'Resolve"
+          echo "conversation'. It re-evaluates on the next push to the PR head"
+          echo "(synchronize), or run the workflow manually via the Actions tab."
           # Apply the `address-review-comments` label so the
           # `claude-on-label.yml` workflow can dispatch the remote
           # Claude routine to address the threads autonomously. The
