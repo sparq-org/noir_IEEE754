@@ -1,16 +1,26 @@
 name: Require Copilot review
 
-# Gate: merge to `main` is blocked until `copilot-pull-request-reviewer[bot]`
-# has posted at least one review on the PR. This workflow exposes a required
-# status check (`copilot-review-posted`) consumed by the repo ruleset on
-# `~DEFAULT_BRANCH`.
+# Gate: merge to `main` is blocked until BOTH conditions hold:
+#   1. `copilot-pull-request-reviewer[bot]` has posted at least one
+#      non-DISMISSED review on the PR.
+#   2. Every review thread authored by Copilot is resolved (either by
+#      addressing the comment in code, or by replying with rationale
+#      and clicking "Resolve conversation").
 #
-# Rationale: per `notes/research/pr-review-audit-2026-05-03.md`, 15 of 56
-# merged-with-review PRs across the three sub-repos were merged BEFORE
-# Copilot's first review timestamp. This workflow closes that gap. It does
-# *not* enforce thread resolution — only that a review has been posted.
+# This workflow exposes a required status check (`copilot-review-posted`)
+# consumed by the repo ruleset on `~DEFAULT_BRANCH`.
 #
-# Exemptions (the check passes without a review):
+# Rationale (review-posted half): per
+# `notes/research/pr-review-audit-2026-05-03.md`, 15 of 56 merged-with-
+# review PRs across the three sub-repos were merged BEFORE Copilot's
+# first review timestamp.
+#
+# Rationale (threads-resolved half): per Wave 15 audit (workspace 2026-
+# 05-08), Copilot review *findings* were routinely left unaddressed —
+# review-posted alone passed the gate without anyone having engaged
+# with the comments. Requiring thread resolution closes that gap.
+#
+# Exemptions (the check passes without any review or resolution):
 #   - Author is `dependabot[bot]` — Copilot does not review dep bumps.
 #   - Author is `Copilot` (the coding agent) — Copilot does not review its
 #     own PRs.
@@ -35,6 +45,11 @@ on:
       - converted_to_draft
   pull_request_review:
     types: [submitted, edited, dismissed]
+  # Re-run when reviewers (or PR authors) resolve / unresolve threads,
+  # so the gate flips green the moment the last Copilot thread is
+  # resolved — and red again if any thread is unresolved.
+  pull_request_review_thread:
+    types: [resolved, unresolved]
 
 permissions:
   pull-requests: read
@@ -43,9 +58,9 @@ permissions:
 jobs:
   copilot-review-posted:
     name: copilot-review-posted
-    # Skip pull_request_review events targeting non-default branches; the
-    # `pull_request_review` trigger does not honour the `branches:` filter
-    # above, so we gate it explicitly here.
+    # Skip review/thread events targeting non-default branches; those
+    # triggers do not honour the `branches:` filter above, so we gate
+    # them explicitly here.
     if: >-
       github.event_name == 'pull_request' ||
       github.event.pull_request.base.ref == 'main'
@@ -107,10 +122,72 @@ jobs:
             | awk '{s+=$1} END {print s+0}')
           if [[ "$reviewers" -ge 1 ]]; then
             echo "::notice::Copilot has posted $reviewers review(s) on PR #$PR_NUMBER."
+          else
+            echo "::error::No review from copilot-pull-request-reviewer[bot] yet on PR #$PR_NUMBER."
+            echo "If Copilot review has not been requested, request one. The check"
+            echo "re-runs on each pull_request_review event, so it will turn green"
+            echo "once Copilot posts."
+            exit 1
+          fi
+
+      - name: Check that all Copilot review threads are resolved
+        if: steps.exempt.outputs.exempt != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+          # Query review threads via GraphQL — REST has no per-thread
+          # `isResolved` field. Connection page size is capped at 100;
+          # PRs with >100 threads are extremely rare and would warrant
+          # manual triage. If we ever hit that ceiling we can paginate
+          # via `pageInfo.endCursor`.
+          QUERY='query($owner: String!, $name: String!, $number: Int!) {
+            repository(owner: $owner, name: $name) {
+              pullRequest(number: $number) {
+                reviewThreads(first: 100) {
+                  nodes {
+                    isResolved
+                    isOutdated
+                    comments(first: 1) {
+                      nodes { author { login } }
+                    }
+                  }
+                }
+              }
+            }
+          }'
+          response=$(gh api graphql \
+            -f query="$QUERY" \
+            -F owner="$REPO_OWNER" \
+            -F name="$REPO_NAME" \
+            -F number="$PR_NUMBER")
+          # Filter to threads whose first comment is by Copilot. Both
+          # `Copilot` (line-comment surface) and
+          # `copilot-pull-request-reviewer` (review-summary surface) are
+          # accepted to be defensive across the bot's two identities.
+          # Outdated threads — those targeting a line the author later
+          # replaced — are exempted, since GitHub does not let anyone
+          # resolve them via UI in the usual way.
+          unresolved=$(echo "$response" | jq '[
+            .data.repository.pullRequest.reviewThreads.nodes[]
+            | select(
+                (.comments.nodes[0].author.login == "Copilot")
+                or (.comments.nodes[0].author.login == "copilot-pull-request-reviewer")
+              )
+            | select(.isResolved == false)
+            | select(.isOutdated == false)
+          ] | length')
+          if [[ "$unresolved" -eq 0 ]]; then
+            echo "::notice::All Copilot review threads on PR #$PR_NUMBER are resolved."
             exit 0
           fi
-          echo "::error::No review from copilot-pull-request-reviewer[bot] yet on PR #$PR_NUMBER."
-          echo "If Copilot review has not been requested, request one. The check"
-          echo "re-runs on each pull_request_review event, so it will turn green"
-          echo "once Copilot posts."
+          echo "::error::PR #$PR_NUMBER has $unresolved unresolved Copilot review thread(s)."
+          echo "Each thread must be resolved before merge — either by addressing the"
+          echo "comment with a code change, or by replying with the rationale and"
+          echo "clicking 'Resolve conversation'. The check re-runs on every"
+          echo "pull_request_review_thread event so it will turn green the moment"
+          echo "the last thread is resolved."
           exit 1
