@@ -53,14 +53,37 @@ jobs:
             echo "Set via:  gh secret set CLAUDE_CODE_TOKEN --repo ${{ github.repository }}"
             exit 1
           fi
+          # Strip CR / LF and surrounding whitespace from the secret.
+          # `claude setup-token` outputs the token with a trailing
+          # newline; GitHub stores secrets verbatim (no trim), and curl
+          # rejects header values containing CR / LF with
+          # `CURLE_BAD_FUNCTION_ARGUMENT` (exit 43) before the network
+          # call. Bearer tokens never legitimately contain whitespace,
+          # so trimming is safe and idempotent for cleanly-pasted ones.
+          TOKEN=$(printf '%s' "$CLAUDE_CODE_TOKEN" | tr -d '[:space:]')
+          if [[ "${#TOKEN}" -lt 16 ]]; then
+            echo "::error::CLAUDE_CODE_TOKEN looks too short (${#TOKEN} chars after trim) — re-run \`claude setup-token\` and re-set the secret."
+            exit 1
+          fi
           # POST to the run-now endpoint. The routine is configured to
           # discover the labelled PR by querying the repo's open PRs
           # for the `address-review-comments` label, so the body is
           # empty — no per-PR parameters.
-          response=$(curl -fsSL -X POST \
-            -H "Authorization: Bearer ${CLAUDE_CODE_TOKEN}" \
+          # `-w '%{http_code}'` separates response body from status so
+          # we can fail loudly with a useful message on auth errors
+          # (401 / 403) without `curl -f` swallowing the body.
+          http_status=$(curl -sS -X POST \
+            -o /tmp/dispatch-response.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${TOKEN}" \
             -H "Content-Type: application/json" \
             "https://claude.ai/api/v1/code/triggers/${TRIGGER_ID}/run" \
             -d '{}')
-          echo "::notice::Dispatched Claude routine ${TRIGGER_ID} for PR #${PR_NUMBER} (${PR_URL})."
-          echo "$response" | jq -c . || echo "$response"
+          echo "::notice::Dispatch HTTP ${http_status} for PR #${PR_NUMBER} (${PR_URL})."
+          if [[ "$http_status" -ge 200 && "$http_status" -lt 300 ]]; then
+            jq -c . /tmp/dispatch-response.json 2>/dev/null \
+              || cat /tmp/dispatch-response.json
+            exit 0
+          fi
+          echo "::error::Dispatch failed with HTTP ${http_status}. Response body:"
+          cat /tmp/dispatch-response.json
+          exit 1
