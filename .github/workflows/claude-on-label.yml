@@ -1,0 +1,66 @@
+name: Dispatch Claude routine on address-review-comments label
+
+# When a PR is labelled `address-review-comments` (typically by the
+# `require-copilot-review.yml` gate when it detects unresolved Copilot
+# threads, but a maintainer can also apply it manually), fire the
+# pre-configured remote Claude Code routine that addresses the threads.
+#
+# The routine itself runs in Anthropic's cloud — this workflow does not
+# run Claude inside the PR's Actions context. It only makes a single
+# `POST .../triggers/{id}/run` API call to dispatch the routine. The
+# routine then walks the PR, addresses each thread, removes the label
+# when done, and reports back via PR comments.
+#
+# Required repo secret:
+#   CLAUDE_CODE_TOKEN — a claude.ai/code OAuth token authorised to
+#   trigger the routine. Set via:
+#     gh secret set CLAUDE_CODE_TOKEN --repo jeswr/noir_IEEE754
+#   (paste a short-lived token from claude.ai/code, or a long-lived
+#   token if your account supports them).
+#
+# The trigger ID below is the workspace-managed routine
+# `trig_01Ww6Q1N6VKRUta4a649Ujm7` ("Address noir_IEEE754 PRs labelled
+# address-review-comments"). If the routine is recreated, update
+# `TRIGGER_ID` in the env block below.
+#
+# This file is managed by `scripts/sync-standards.sh` (workspace).
+# Edit the canonical at:
+#   templates/sub-repo/noir/.github/workflows/claude-on-label.yml
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    if: github.event.label.name == 'address-review-comments'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fire claude.ai/code routine
+        env:
+          CLAUDE_CODE_TOKEN: ${{ secrets.CLAUDE_CODE_TOKEN }}
+          TRIGGER_ID: trig_01Ww6Q1N6VKRUta4a649Ujm7
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLAUDE_CODE_TOKEN:-}" ]]; then
+            echo "::error::CLAUDE_CODE_TOKEN secret is not set."
+            echo "Set via:  gh secret set CLAUDE_CODE_TOKEN --repo ${{ github.repository }}"
+            exit 1
+          fi
+          # POST to the run-now endpoint. The routine is configured to
+          # discover the labelled PR by querying the repo's open PRs
+          # for the `address-review-comments` label, so the body is
+          # empty — no per-PR parameters.
+          response=$(curl -fsSL -X POST \
+            -H "Authorization: Bearer ${CLAUDE_CODE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://claude.ai/api/v1/code/triggers/${TRIGGER_ID}/run" \
+            -d '{}')
+          echo "::notice::Dispatched Claude routine ${TRIGGER_ID} for PR #${PR_NUMBER} (${PR_URL})."
+          echo "$response" | jq -c . || echo "$response"
