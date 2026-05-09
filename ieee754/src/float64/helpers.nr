@@ -5,6 +5,9 @@
 use crate::types::{FLOAT64_EXPONENT_MAX, IEEE754Float64};
 
 // Check if Float64 is NaN (exponent = 2047, mantissa != 0)
+//
+// LAMPE-LITERATE preamble: ../../proofs/helpers_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/helpers_f64_equivalence.lean fn=float64_is_nan name=float64_is_nan_equivalence
 pub fn float64_is_nan(x: IEEE754Float64) -> bool {
     (x.exponent == FLOAT64_EXPONENT_MAX) & (x.mantissa != 0)
 }
