@@ -140,19 +140,16 @@ jobs:
       - name: Check that all Copilot review threads are resolved
         if: steps.exempt.outputs.exempt != 'true'
         env:
-          # Must be a PAT (`secrets.GH_TOKEN`), NOT the default
-          # `GITHUB_TOKEN`, because this step applies / removes the
-          # `address-review-comments` label and we need the resulting
-          # `pull_request.labeled` event to trigger the downstream
-          # `claude-on-label.yml` workflow. GitHub Actions deliberately
-          # does NOT fire workflows on events caused by the default
-          # `GITHUB_TOKEN` (anti-recursion), so labelling under
-          # `GITHUB_TOKEN` was silently a no-op for the dispatcher.
-          # Same rationale as `automerge.yml` in this repo.
-          # The graphql query in this step is read-only and works
-          # equivalently under either token, so a single env var
-          # covers both the query and the mutating label calls.
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Prefer the PAT (`secrets.GH_TOKEN`) so apply/remove-label
+          # operations can emit downstream workflow-triggering events on
+          # same-repo PRs. Fall back to the default token on fork PRs,
+          # where secrets are not passed, so the read-only GraphQL query
+          # still authenticates instead of failing with an empty token.
+          # GitHub Actions deliberately does NOT fire workflows on events
+          # caused by the default `GITHUB_TOKEN` (anti-recursion), so the
+          # fallback preserves required-check reliability but not the
+          # downstream label-trigger behavior for forks.
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           REPO_OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
