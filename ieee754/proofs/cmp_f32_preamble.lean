@@ -73,11 +73,27 @@ def ieee754Ge32 (a b : Float32Bits) : Bool := ieee754Le32 b a
 def ieee754Unordered32 (a b : Float32Bits) : Bool :=
   Models.isNaN a || Models.isNaN b
 
-/-- IEEE 754-2019 §5.10 totalOrder, as a signed `Int` in `{-1, 0,
-1}`: `-NaN < -Inf < … < -0 < +0 < … < +Inf < +NaN`. NaNs are
-ordered by sign first, then by mantissa payload (with negative
-NaNs ordered "larger payload = more negative"). For non-NaN
-operands the result delegates to the standard `<` / `>` ops. -/
+/-- Three-way comparison mirroring the Noir `float32_compare`
+implementation, as a signed `Int` in `{-1, 0, 1}`. This is a
+near-totalOrder rather than literal IEEE 754-2019 §5.10
+totalOrder — it deviates from §5.10 in two ways that match the
+Noir source:
+
+* For non-NaN operands the result delegates to `ieee754Lt32` /
+  `ieee754Gt32`, which treat `+0` and `-0` as equal. §5.10
+  totalOrder requires `-0 < +0`; here `ieee754TotalOrder32 (-0)
+  (+0) = 0`.
+* For NaN-vs-NaN with equal sign the comparison is over the full
+  mantissa field (including the quiet/signalling bit), so two
+  NaNs that share a payload but differ in `is_quiet` order
+  differently. §5.10 only specifies a payload-based ordering.
+
+Both deviations are intentional: the spec is the Lean witness
+that the equivalence theorem
+`Cmp32.float32Compare = Spec32.ieee754TotalOrder32` holds for
+the Noir implementation as written. Downstream consumers that
+need literal §5.10 totalOrder should derive it from this spec
+plus an explicit signed-zero / quiet-bit case split. -/
 def ieee754TotalOrder32 (a b : Float32Bits) : Int :=
   let aNaN := Models.isNaN a
   let bNaN := Models.isNaN b
@@ -113,7 +129,7 @@ theorems below close by `rfl`). -/
 
 namespace Cmp32
 
-/-- Lean model of `float32_eq` (cmp.nr lines 19-40). The Noir
+/-- Lean model of `float32_eq` (cmp.nr lines 33-54). The Noir
 `mut` cascade `result := false; if !aNaN && !bNaN then if zero
 then true else fields-eq` is the same value as the direct
 `if`-expression here. -/
@@ -124,10 +140,10 @@ def float32Eq (a b : Models.Float32Bits) : Bool :=
       && decide (a.exponent = b.exponent)
       && decide (a.mantissa = b.mantissa)
 
-/-- Lean model of `float32_ne` (cmp.nr lines 44-46). -/
+/-- Lean model of `float32_ne` (cmp.nr lines 60-62). -/
 def float32Ne (a b : Models.Float32Bits) : Bool := !float32Eq a b
 
-/-- Lean model of `float32_lt` (cmp.nr lines 51-87). -/
+/-- Lean model of `float32_lt` (cmp.nr lines 69-105). -/
 def float32Lt (a b : Models.Float32Bits) : Bool :=
   if Models.isNaN a || Models.isNaN b then false
   else if Models.isZero a && Models.isZero b then false
@@ -139,22 +155,22 @@ def float32Lt (a b : Models.Float32Bits) : Bool :=
     if a.exponent ≠ b.exponent then decide (a.exponent.toNat > b.exponent.toNat)
     else decide (a.mantissa.toNat > b.mantissa.toNat)
 
-/-- Lean model of `float32_le` (cmp.nr lines 92-104). -/
+/-- Lean model of `float32_le` (cmp.nr lines 112-124). -/
 def float32Le (a b : Models.Float32Bits) : Bool :=
   if Models.isNaN a || Models.isNaN b then false
   else float32Lt a b || float32Eq a b
 
-/-- Lean model of `float32_gt` (cmp.nr lines 109-112). -/
+/-- Lean model of `float32_gt` (cmp.nr lines 131-134). -/
 def float32Gt (a b : Models.Float32Bits) : Bool := float32Lt b a
 
-/-- Lean model of `float32_ge` (cmp.nr lines 117-120). -/
+/-- Lean model of `float32_ge` (cmp.nr lines 141-144). -/
 def float32Ge (a b : Models.Float32Bits) : Bool := float32Le b a
 
-/-- Lean model of `float32_unordered` (cmp.nr lines 124-126). -/
+/-- Lean model of `float32_unordered` (cmp.nr lines 150-152). -/
 def float32Unordered (a b : Models.Float32Bits) : Bool :=
   Models.isNaN a || Models.isNaN b
 
-/-- Lean model of `float32_compare` (cmp.nr lines 132-169).
+/-- Lean model of `float32_compare` (cmp.nr lines 160-197).
 Returns `Int` (the natural Lean representative of Noir `i8` values
 `-1`, `0`, `1`). -/
 def float32Compare (a b : Models.Float32Bits) : Int :=
