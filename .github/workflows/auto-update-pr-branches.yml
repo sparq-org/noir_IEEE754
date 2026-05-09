@@ -1,0 +1,67 @@
+name: Auto-update auto-merge PR branches
+
+# When `main` moves or every 15 minutes, find every open PR that has
+# auto-merge armed and is in `BEHIND` state, then `gh pr update-branch`
+# it so its CI re-runs and the auto-merge gate can clear.
+#
+# Closes the gap where GitHub's `allow_update_branch=true` setting only
+# *suggests* the "Update branch" UI button rather than merging the base
+# into the branch automatically: with auto-merge armed, the merge gate
+# keeps blocking on the head being out-of-date, but nothing triggers the
+# branch update unless someone polls externally. The previous workflow
+# for this lived as ad-hoc `gh pr update-branch` loops in lead-agent
+# sessions; this moves it inside CI so the cascade keeps draining
+# without manual nudges.
+#
+# Only `BEHIND` PRs are touched. `BLOCKED`, `UNSTABLE`, etc. are left
+# alone — those are waiting on review or check completion, not on a
+# branch update (merge base into branch).
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: auto-update-pr-branches
+  cancel-in-progress: false
+
+jobs:
+  update-branches:
+    name: Refresh BEHIND PRs that have auto-merge enabled
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update branches via gh CLI
+        env:
+          # Must be a PAT (not the default GITHUB_TOKEN) so the update-branch
+          # commits trigger downstream CI workflows. Same rationale as
+          # `automerge.yml` in this repo.
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          numbers=$(
+            gh pr list --repo "$REPO" --state open --limit 1000 \
+              --json number,autoMergeRequest,mergeStateStatus \
+              --jq '.[] | select(.autoMergeRequest != null and .mergeStateStatus == "BEHIND") | .number'
+          )
+          if [ -z "$numbers" ]; then
+            echo "No BEHIND auto-merge PRs to update."
+            exit 0
+          fi
+          echo "BEHIND auto-merge PRs to refresh:"
+          echo "$numbers"
+          for n in $numbers; do
+            echo "::group::PR #$n"
+            if ! gh pr update-branch "$n" --repo "$REPO"; then
+              echo "::warning::update-branch failed on #$n (will retry next cycle)"
+            fi
+            echo "::endgroup::"
+            sleep 2
+          done
