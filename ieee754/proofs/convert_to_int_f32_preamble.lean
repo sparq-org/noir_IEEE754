@@ -32,9 +32,18 @@ namespace ConvertF32
 /-- Literal hand-port of `float32_to_u32` from
 `ieee754/src/float32/convert.nr`. The four guarded special-case
 branches (NaN, infinity, negative, zero/denormal) are translated
-verbatim; the normal-path computes `unbiased_exp` as a 16-bit
-signed quantity and shifts the implicit-bit-OR'd mantissa
-left or right. -/
+verbatim; the normal-path computes `unbiased_exp` and shifts the
+implicit-bit-OR'd mantissa left or right.
+
+The Noir source casts `f.exponent` (a `u8`) to `i16` before
+subtracting the bias of 127. We model this with `Int`, which is
+a strict superset of `i16` for the value range that reaches this
+branch: NaN / Inf / zero / denormal are already filtered out, so
+`f.exponent` is in `1..=254` and `(f.exponent : Int) - 127` is in
+`-126..=127`. The value therefore never exceeds the `i16` range
+(±32 767), so the wider Lean `Int` agrees with the Noir `i16` on
+every reachable input — matching the Noir semantics without
+needing a bit-precise `i16` model in Lean. -/
 def float32ToU32 (f : Models.Float32Bits) : BitVec 32 :=
   if Models.isNaN f then
     0
@@ -45,16 +54,23 @@ def float32ToU32 (f : Models.Float32Bits) : BitVec 32 :=
   else if f.exponent = 0 then
     0
   else
-    -- unbiased_exp = exponent - 127, treated as i16; for f.exponent
-    -- in 1..=254 (NaN/Inf/zero already filtered) this is always in
-    -- -126..=127 and never overflows.
+    -- unbiased_exp = (exponent : i16) - 127; modelled with `Int`.
+    -- See the docstring above for the reachable-range argument
+    -- justifying the `Int` model.
     let unbiasedExp : Int := (f.exponent.toNat : Int) - 127
     if unbiasedExp < 0 then
       0
     else if unbiasedExp >= 32 then
       0xFFFFFFFF
     else
-      let fullMantissa : BitVec 32 := f.mantissa ||| Models.implicitBit
+      -- Mirror the u64 form: explicitly `zeroExtend` both operands
+      -- to the target width before combining. `Models.Float32Bits.mantissa`
+      -- and `Models.implicitBit` are already `BitVec 32` (so the
+      -- extension is the identity), but writing it this way keeps
+      -- the two definitions structurally consistent and robust to
+      -- future changes in the field widths of `Models.Float32Bits`.
+      let fullMantissa : BitVec 32 :=
+        (f.mantissa.zeroExtend 32) ||| (Models.implicitBit.zeroExtend 32)
       let exp : Nat := unbiasedExp.toNat
       if exp >= 23 then
         fullMantissa <<< (exp - 23)
@@ -64,7 +80,9 @@ def float32ToU32 (f : Models.Float32Bits) : BitVec 32 :=
 /-- Literal hand-port of `float32_to_u64`. Same case-structure as
 `float32_to_u32` widened to 64 bits; the saturation cap is
 `0xFFFFFFFFFFFFFFFF` and the overflow threshold is `unbiased_exp >=
-64`. -/
+64`. The `unbiased_exp` modelling argument from `float32ToU32`
+(Noir `i16` ↦ Lean `Int`, exact on every reachable input) carries
+over verbatim. -/
 def float32ToU64 (f : Models.Float32Bits) : BitVec 64 :=
   if Models.isNaN f then
     0
@@ -75,6 +93,7 @@ def float32ToU64 (f : Models.Float32Bits) : BitVec 64 :=
   else if f.exponent = 0 then
     0
   else
+    -- unbiased_exp = (exponent : i16) - 127; see `float32ToU32`.
     let unbiasedExp : Int := (f.exponent.toNat : Int) - 127
     if unbiasedExp < 0 then
       0
