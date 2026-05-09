@@ -41,9 +41,12 @@ def float64ToU32 (f : ModelsF64.Float64Bits) : BitVec 32 :=
   else if f.exponent = 0 then
     0
   else
-    -- unbiased_exp = exponent - 1023, treated as i16; for f.exponent
-    -- in 1..=2046 (NaN/Inf/zero already filtered) this is in
-    -- -1022..=1023 and never overflows.
+    -- The Noir source casts `f.exponent : u16` to `i16` before
+    -- subtracting 1023, mirrored here as a subtraction in the
+    -- unbounded `Int`. For f.exponent in 1..=2046 (NaN/Inf/zero
+    -- already filtered) the result lies in -1022..=1023, well
+    -- inside i16 range, so the Noir cast cannot overflow and the
+    -- two models agree.
     let unbiasedExp : Int := (f.exponent.toNat : Int) - 1023
     if unbiasedExp < 0 then
       0
