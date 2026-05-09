@@ -1,3 +1,9 @@
+-- This file is not standalone-compilable: it is spliced after
+-- `add_f64_preamble.lean` by lampe-literate (see the
+-- `LAMPE-LITERATE` directives in `ieee754/src/float64/add.nr`). The
+-- preamble opens the `ZkpSparql.Ieee754.Equivalence` namespace; the
+-- closing `end` below pairs with that opening across the splice.
+
 /-! ## Diverging-parameter equalities -/
 
 /-- The optimised `clz` parameter equals the reference's (i.e. the
