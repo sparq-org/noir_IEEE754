@@ -22,7 +22,7 @@ use crate::utils::{assert_valid_rounding_mode, directed_overflow_saturates_to_in
 // ----------------------------------------------------------------------------
 // Lean equivalence proof. See `circuits/lampe-literate` for the build tool
 // that resolves the LAMPE-LITERATE directives below, splices the referenced
-// proof file into a generated Lean module, and runs `lake build` against the
+// preamble + proof files into a generated Lean module, and runs `lake build` against the
 // workspace's shared `Models.lean` / `Subterms.lean` / `Spec.lean`. Generated
 // `.lean` files land in a gitignored scratch dir; only this Noir source plus
 // the standalone `.lean` proof files are version-controlled. Method:
