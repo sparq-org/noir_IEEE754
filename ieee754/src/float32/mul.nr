@@ -19,6 +19,20 @@ use crate::utils::{
 // `rounding_mode` must be one of the `ROUNDING_MODE_*` constants in
 // `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
 // failure -- see `add_float32_with_rounding` for the rationale.
+//
+// ----------------------------------------------------------------------------
+// Lean equivalence proof (Tier 4, round 9 width-narrow). The optimised
+// circuit and the literal-spec reference factor through a single
+// `mulF32Skeleton` parameterised on the round-decision predicate; they
+// diverge at the single inline-RNE 3-bit guard site, which is closed by
+// the round-9 width-agnostic `shouldRoundUp_inline_eq_3bit` lemma. See
+// `proofs/Ieee754/.../MulModelsF32.lean` for the Lean models and the
+// linked equivalence file for the proof.
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble:  ../../proofs/mul_f32_preamble.lean
+// LAMPE-LITERATE proof:     ../../proofs/mul_f32_equivalence.lean fn=mul_float32_with_rounding name=mul_f32_equivalence
+// LAMPE-LITERATE reference: ../../reference/mul_f32_reference.nr.ref fn=mul_float32_with_rounding name=mul_f32_reference
 pub fn mul_float32_with_rounding(
     a: IEEE754Float32,
     b: IEEE754Float32,
