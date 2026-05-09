@@ -33,11 +33,15 @@ pub fn float64_nan() -> IEEE754Float64 {
 }
 
 // Create Float64 Infinity
+//
+// LAMPE-LITERATE proof: ../../proofs/constructors_f64_equivalence.lean fn=float64_infinity name=float64_infinity_equivalence
 pub fn float64_infinity(sign: u1) -> IEEE754Float64 {
     IEEE754Float64 { sign, exponent: FLOAT64_EXPONENT_MAX, mantissa: 0 }
 }
 
 // Create Float64 Zero
+//
+// LAMPE-LITERATE proof: ../../proofs/constructors_f64_equivalence.lean fn=float64_zero name=float64_zero_equivalence
 pub fn float64_zero(sign: u1) -> IEEE754Float64 {
     IEEE754Float64 { sign, exponent: 0, mantissa: 0 }
 }
@@ -45,6 +49,8 @@ pub fn float64_zero(sign: u1) -> IEEE754Float64 {
 // Create signed maximum-magnitude finite Float64
 // (the IEEE 754-2019 sec 7.4 directed-rounding overflow saturation target).
 // Encodes ``(2 - 2^-52) * 2^1023`` with the requested sign (FLOAT64_MAX_NORMAL).
+//
+// LAMPE-LITERATE proof: ../../proofs/constructors_f64_equivalence.lean fn=float64_max_finite name=float64_max_finite_equivalence
 pub fn float64_max_finite(sign: u1) -> IEEE754Float64 {
     IEEE754Float64 { sign, exponent: FLOAT64_EXPONENT_MAX - 1, mantissa: 0xFFFFFFFFFFFFF }
 }
