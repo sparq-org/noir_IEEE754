@@ -1,3 +1,17 @@
+/-! # Lampe-literate splice fragment — sub_f32 equivalence
+
+This file is **not** a standalone Lean module. It is a literate
+splice fragment consumed by `circuits/lampe-literate`: the build
+tool concatenates `sub_f32_preamble.lean` (which opens the
+`ZkpSparql.Ieee754.Equivalence` namespace) with this body into a
+generated module under the gitignored `.lampe-literate/` scratch
+tree, matching the `LAMPE-LITERATE` directives in
+`../src/float32/mod.nr`. The terminating `end
+ZkpSparql.Ieee754.Equivalence` below balances the namespace
+**after** splicing, not in this fragment in isolation. Editor /
+linter errors from opening this file directly are expected; build
+it via `lampe-literate build`. -/
+
 /-! ## Round-6 dependency: `add_f32_equivalence`
 
 The round-7 `sub_f32_equivalence` reduces mechanically to round-6's
@@ -87,7 +101,14 @@ private theorem align_eq (a b : Float32Bits) :
                shr_sticky_eq _ _ hshift_ne]
     rfl
 
-theorem add_f32_equivalence
+/-- Inlined round-6 add equivalence — kept `private` to this
+splice module so it does not become part of the published API
+surface alongside the round-7a `sub_f32_equivalence` theorem this
+file is named for. The canonical public-facing
+`add_f32_equivalence` lives in the round-6 splice tree
+(`add.nr` -> `add_f32_equivalence.lean`); this copy exists solely
+because the splice trees are disjoint. -/
+private theorem add_f32_equivalence
     (a b : Float32Bits) (mode : BitVec 8) :
     addF32Optimised a b mode = addF32Reference a b mode := by
   unfold addF32Optimised addF32Reference

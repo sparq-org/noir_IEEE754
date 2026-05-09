@@ -38,13 +38,17 @@ use crate::types::{IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN};
 // ----------------------------------------------------------------------------
 // Lean equivalence proof (round 7a). See `circuits/lampe-literate` for the
 // build tool that resolves the LAMPE-LITERATE directives below, splices the
-// referenced proof file into a generated Lean module, and runs `lake build`
-// against the workspace's shared `Models.lean` / `Subterms.lean`. Generated
-// `.lean` files land in a gitignored scratch dir; only this Noir source plus
-// the standalone `.lean` proof files are version-controlled. The proof file
-// inlines round-6 `add_f32_equivalence` because IEEE 754-2019 sec 6.3
-// reduces sub to add(a, negate(b)); the splice tree for this `.nr` is
-// disjoint from `add.nr`'s, so the duplication never collides.
+// referenced proof fragments into a generated Lean module, and runs `lake
+// build` against the workspace's shared `Models.lean` / `Subterms.lean`.
+// Generated `.lean` files land in a gitignored scratch dir; only this Noir
+// source plus the literate splice-fragment `.lean` files are version-
+// controlled. Note: the `.lean` files referenced below are splice fragments,
+// not standalone Lean modules -- the namespace opens in the preamble fragment
+// and closes in the equivalence fragment, so each file is invalid in
+// isolation but balances after the build tool concatenates them. The proof
+// fragment inlines round-6 `add_f32_equivalence` (as `private`) because IEEE
+// 754-2019 sec 6.3 reduces sub to add(a, negate(b)); the splice tree for
+// this `.nr` is disjoint from `add.nr`'s, so the duplication never collides.
 // ----------------------------------------------------------------------------
 //
 // LAMPE-LITERATE preamble: ../../proofs/sub_f32_preamble.lean
