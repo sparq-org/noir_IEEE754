@@ -83,6 +83,10 @@ def float64FromU64 (value : BitVec 64) : ModelsF64.Float64Bits :=
     let leadingZeros : Nat := fromU64Clz value
     let msbPos : Nat := 63 - leadingZeros
     let exponent : Nat := 1023 + msbPos
+    -- NOTE: for `u64` inputs `msbPos <= 63`, so `exponent <= 1086 <= 2046`
+    -- and the saturation branch below is unreachable. The branch is kept
+    -- as a literal hand-port of the Noir source (and is the path that
+    -- *would* fire if this body were generalised to wider integers).
     if exponent > 2046 then
       ModelsF64.float64Inf 0
     else if msbPos >= 52 then
@@ -118,7 +122,15 @@ def float64FromField (valueU64 : BitVec 64) : ModelsF64.Float64Bits :=
 /-! ### `float64_to_field` (Tier 5a wrapper). -/
 
 /-- Literal hand-port of `float64_to_field`: delegate to the
-`float64_to_u64` body inlined here for self-containment. -/
+`float64_to_u64` body inlined here for self-containment.
+
+The Noir source returns `Field`, but the body is `value_u64 as Field`,
+i.e. a zero-extending re-interpretation of the `u64` integer payload.
+This codebase has no native `Field` model; we therefore return the
+raw `BitVec 64` payload (the bit pattern that an `as Field` cast
+preserves). The name keeps the `ToField` suffix to track the Noir
+function it ports — `float64_to_field` — rather than the integer
+helper it inlines. -/
 def float64ToField (f : ModelsF64.Float64Bits) : BitVec 64 :=
   if ModelsF64.isNaN64 f then
     0
