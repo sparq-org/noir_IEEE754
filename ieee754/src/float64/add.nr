@@ -20,6 +20,21 @@ use crate::utils::{
 // `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
 // failure -- silently treating an unknown mode as round-to-nearest-even is
 // a footgun that masks calling-side bugs.
+//
+// ----------------------------------------------------------------------------
+// Lean equivalence proof (round 7b). See `circuits/lampe-literate` for the
+// build tool that resolves the LAMPE-LITERATE directives below, splices the
+// referenced proof file into a generated Lean module, and runs `lake build`
+// against the workspace's shared `ModelsF64.lean` / `SubtermsF64.lean`.
+// Generated `.lean` files land in a gitignored scratch dir; only this Noir
+// source plus the standalone `.lean` proof files are version-controlled.
+// Method: skeleton-and-specialisations -- the f64 path uses *explicit*
+// sticky flags, so there is no `shr_sticky` divergence to reconcile and
+// only two diverging-subterm parameters (`clz`, `rneDecision`) appear.
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble: ../../proofs/add_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/add_f64_equivalence.lean fn=add_float64_with_rounding name=add_f64_equivalence
 pub fn add_float64_with_rounding(
     a: IEEE754Float64,
     b: IEEE754Float64,

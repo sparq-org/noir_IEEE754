@@ -12,10 +12,24 @@
 use crate::float32::helpers::{float32_is_nan, float32_is_zero};
 use crate::types::IEEE754Float32;
 
+// ----------------------------------------------------------------------------
+// Lean equivalence proofs. See `circuits/lampe-literate` for the build tool
+// that resolves the LAMPE-LITERATE directives below, splices the referenced
+// proof file into a generated Lean module, and runs `lake build` against the
+// workspace's shared `Models.lean` / `Subterms.lean` / `Spec.lean`. Generated
+// `.lean` files land in a gitignored scratch dir; only this Noir source plus
+// the standalone `.lean` proof files are version-controlled. Tier 3 of the
+// proof-gap matrix (comparison primitives).
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble: ../../proofs/cmp_f32_preamble.lean
+
 // IEEE 754 equality comparison
 // Returns true if a == b
 // NaN != NaN (and NaN != anything)
 // +0 == -0
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_eq_equivalence.lean fn=float32_eq name=float32_eq_equivalence
 pub fn float32_eq(a: IEEE754Float32, b: IEEE754Float32) -> bool {
     // NaN is not equal to anything, including itself
     let a_is_nan = float32_is_nan(a);
@@ -41,6 +55,8 @@ pub fn float32_eq(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 
 // IEEE 754 not-equal comparison
 // Returns true if a != b
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_ne_equivalence.lean fn=float32_ne name=float32_ne_equivalence
 pub fn float32_ne(a: IEEE754Float32, b: IEEE754Float32) -> bool {
     !float32_eq(a, b)
 }
@@ -48,6 +64,8 @@ pub fn float32_ne(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // IEEE 754 less-than comparison
 // Returns true if a < b
 // If either operand is NaN, returns false (unordered)
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_lt_equivalence.lean fn=float32_lt name=float32_lt_equivalence
 pub fn float32_lt(a: IEEE754Float32, b: IEEE754Float32) -> bool {
     // NaN comparisons are always false
     let a_is_nan = float32_is_nan(a);
@@ -89,6 +107,8 @@ pub fn float32_lt(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // IEEE 754 less-than-or-equal comparison
 // Returns true if a <= b
 // If either operand is NaN, returns false (unordered)
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_le_equivalence.lean fn=float32_le name=float32_le_equivalence
 pub fn float32_le(a: IEEE754Float32, b: IEEE754Float32) -> bool {
     // NaN comparisons are always false
     let a_is_nan = float32_is_nan(a);
@@ -106,6 +126,8 @@ pub fn float32_le(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // IEEE 754 greater-than comparison
 // Returns true if a > b
 // If either operand is NaN, returns false (unordered)
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_gt_equivalence.lean fn=float32_gt name=float32_gt_equivalence
 pub fn float32_gt(a: IEEE754Float32, b: IEEE754Float32) -> bool {
     // a > b is equivalent to b < a
     float32_lt(b, a)
@@ -114,6 +136,8 @@ pub fn float32_gt(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // IEEE 754 greater-than-or-equal comparison
 // Returns true if a >= b
 // If either operand is NaN, returns false (unordered)
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_ge_equivalence.lean fn=float32_ge name=float32_ge_equivalence
 pub fn float32_ge(a: IEEE754Float32, b: IEEE754Float32) -> bool {
     // a >= b is equivalent to b <= a
     float32_le(b, a)
@@ -121,6 +145,8 @@ pub fn float32_ge(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 
 // IEEE 754 unordered comparison
 // Returns true if either operand is NaN
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_unordered_equivalence.lean fn=float32_unordered name=float32_unordered_equivalence
 pub fn float32_unordered(a: IEEE754Float32, b: IEEE754Float32) -> bool {
     float32_is_nan(a) | float32_is_nan(b)
 }
@@ -129,6 +155,8 @@ pub fn float32_unordered(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // Returns -1 if a < b, 0 if a == b, 1 if a > b
 // For NaN, this follows IEEE 754-2008 totalOrder: -NaN < -Inf < ... < -0 < +0 < ... < +Inf < +NaN
 // Note: This function provides a total ordering even for NaN values
+//
+// LAMPE-LITERATE proof: ../../proofs/cmp_f32_compare_equivalence.lean fn=float32_compare name=float32_compare_equivalence
 pub fn float32_compare(a: IEEE754Float32, b: IEEE754Float32) -> i8 {
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);

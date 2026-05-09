@@ -14,6 +14,9 @@ use crate::types::{FLOAT64_IMPLICIT_BIT, IEEE754Float64};
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+//
+// LAMPE-LITERATE preamble: ../../proofs/convert_from_int_field_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/convert_f64_from_u32_equivalence.lean fn=float64_from_u32 name=float64_from_u32_equivalence
 pub fn float64_from_u32(value: u32) -> IEEE754Float64 {
     let mut result = float64_zero(0);
 
@@ -59,6 +62,8 @@ pub fn float64_from_u32(value: u32) -> IEEE754Float64 {
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+//
+// LAMPE-LITERATE proof:    ../../proofs/convert_f64_from_u64_equivalence.lean fn=float64_from_u64 name=float64_from_u64_equivalence
 pub fn float64_from_u64(value: u64) -> IEEE754Float64 {
     let mut result = float64_zero(0);
 
@@ -136,6 +141,8 @@ pub fn float64_from_u64(value: u64) -> IEEE754Float64 {
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+// LAMPE-LITERATE preamble: ../../proofs/convert_to_int_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/convert_f64_to_u32_equivalence.lean fn=float64_to_u32 name=float64_to_u32_equivalence
 pub fn float64_to_u32(f: IEEE754Float64) -> u32 {
     let mut result = 0;
 
@@ -188,6 +195,7 @@ pub fn float64_to_u32(f: IEEE754Float64) -> u32 {
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+// LAMPE-LITERATE proof:    ../../proofs/convert_f64_to_u64_equivalence.lean fn=float64_to_u64 name=float64_to_u64_equivalence
 pub fn float64_to_u64(f: IEEE754Float64) -> u64 {
     let mut result: u64 = 0;
 
@@ -252,6 +260,8 @@ pub fn float64_to_u64(f: IEEE754Float64) -> u64 {
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+//
+// LAMPE-LITERATE proof:    ../../proofs/convert_f64_from_field_equivalence.lean fn=float64_from_field name=float64_from_field_equivalence
 pub fn float64_from_field(value: Field) -> IEEE754Float64 {
     // Convert Field to u64 first (this may truncate for large field elements)
     // Field is internally a large integer, we take modulo 2^64 for conversion
@@ -265,6 +275,8 @@ pub fn float64_from_field(value: Field) -> IEEE754Float64 {
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+//
+// LAMPE-LITERATE proof:    ../../proofs/convert_f64_to_field_equivalence.lean fn=float64_to_field name=float64_to_field_equivalence
 pub fn float64_to_field(f: IEEE754Float64) -> Field {
     let value_u64 = float64_to_u64(f);
     value_u64 as Field
