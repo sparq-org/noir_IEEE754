@@ -159,6 +159,9 @@ pub fn float32_from_u64(value: u64) -> IEEE754Float32 {
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+//
+// LAMPE-LITERATE preamble: ../../proofs/convert_to_int_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/convert_f32_to_u32_equivalence.lean fn=float32_to_u32 name=float32_to_u32_equivalence
 pub fn float32_to_u32(f: IEEE754Float32) -> u32 {
     let mut result = 0;
 
@@ -218,6 +221,9 @@ pub fn float32_to_u32(f: IEEE754Float32) -> u32 {
 ///
 /// # Warning
 /// This function has not been extensively tested or reviewed. Use with caution.
+//
+// LAMPE-LITERATE preamble: ../../proofs/convert_to_int_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/convert_f32_to_u64_equivalence.lean fn=float32_to_u64 name=float32_to_u64_equivalence
 pub fn float32_to_u64(f: IEEE754Float32) -> u64 {
     let mut result: u64 = 0;
 
