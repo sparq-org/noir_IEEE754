@@ -13,12 +13,15 @@ use crate::float64::helpers::{float64_is_nan, float64_is_zero};
 use crate::types::IEEE754Float64;
 
 // ----------------------------------------------------------------------------
-// Lean equivalence proofs. See `circuits/lampe-literate` for the build tool
-// that resolves the LAMPE-LITERATE directives below, splices the referenced
-// proof file into a generated Lean module, and runs `lake build` against the
-// workspace's shared `ModelsF64.lean` / `SubtermsF64.lean` / `SpecF64.lean`.
-// Generated `.lean` files land in a gitignored scratch dir; only this Noir
-// source plus the standalone `.lean` proof files are version-controlled.
+// Lean equivalence proofs. The LAMPE-LITERATE directives below are resolved
+// by the `lampe-literate` build tool, which lives in the parent
+// `zkp-sparql-workspace` repository (sibling sub-repo `lampe-literate`, see
+// `https://github.com/jeswr/lampe-literate`). The tool splices the
+// referenced proof file into a generated Lean module and runs `lake build`
+// against the workspace's shared `ModelsF64.lean` / `SubtermsF64.lean` /
+// `SpecF64.lean`. Generated `.lean` files land in a gitignored scratch
+// dir; only this Noir source plus the standalone `.lean` proof files are
+// version-controlled.
 // Tier 3 of the proof-gap matrix (comparison primitives).
 // ----------------------------------------------------------------------------
 //
