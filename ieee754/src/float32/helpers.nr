@@ -28,16 +28,25 @@ pub fn float32_is_denormal(x: IEEE754Float32) -> bool {
 }
 
 // Create Float32 NaN
+//
+// LAMPE-LITERATE preamble: ../../proofs/constructors_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/constructors_f32_equivalence.lean fn=float32_nan name=float32_nan_equivalence
 pub fn float32_nan() -> IEEE754Float32 {
     IEEE754Float32 { sign: 0, exponent: FLOAT32_EXPONENT_MAX, mantissa: 0x400000 }
 }
 
 // Create Float32 Infinity
+//
+// LAMPE-LITERATE preamble: ../../proofs/constructors_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/constructors_f32_equivalence.lean fn=float32_infinity name=float32_infinity_equivalence
 pub fn float32_infinity(sign: u1) -> IEEE754Float32 {
     IEEE754Float32 { sign, exponent: FLOAT32_EXPONENT_MAX, mantissa: 0 }
 }
 
 // Create Float32 Zero
+//
+// LAMPE-LITERATE preamble: ../../proofs/constructors_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/constructors_f32_equivalence.lean fn=float32_zero name=float32_zero_equivalence
 pub fn float32_zero(sign: u1) -> IEEE754Float32 {
     IEEE754Float32 { sign, exponent: 0, mantissa: 0 }
 }
@@ -45,6 +54,9 @@ pub fn float32_zero(sign: u1) -> IEEE754Float32 {
 // Create signed maximum-magnitude finite Float32
 // (the IEEE 754-2019 sec 7.4 directed-rounding overflow saturation target).
 // Encodes ``(2 - 2^-23) * 2^127`` with the requested sign (FLOAT32_MAX_NORMAL).
+//
+// LAMPE-LITERATE preamble: ../../proofs/constructors_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/constructors_f32_equivalence.lean fn=float32_max_finite name=float32_max_finite_equivalence
 pub fn float32_max_finite(sign: u1) -> IEEE754Float32 {
     IEEE754Float32 { sign, exponent: FLOAT32_EXPONENT_MAX - 1, mantissa: 0x7FFFFF }
 }
