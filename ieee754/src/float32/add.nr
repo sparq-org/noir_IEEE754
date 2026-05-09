@@ -18,6 +18,20 @@ use crate::utils::{assert_valid_rounding_mode, directed_overflow_saturates_to_in
 // `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
 // failure -- silently treating an unknown mode as round-to-nearest-even is
 // a footgun that masks calling-side bugs.
+//
+// ----------------------------------------------------------------------------
+// Lean equivalence proof. See `circuits/lampe-literate` for the build tool
+// that resolves the LAMPE-LITERATE directives below, splices the referenced
+// preamble + proof files into a generated Lean module, and runs `lake build` against the
+// workspace's shared `Models.lean` / `Subterms.lean` / `Spec.lean`. Generated
+// `.lean` files land in a gitignored scratch dir; only this Noir source plus
+// the standalone `.lean` proof files are version-controlled. Method:
+// skeleton-and-specialisations (round 7;
+// `proofs/Ieee754/equivalence-spike-2026-05-04.md`).
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble: ../../proofs/add_f32_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/add_f32_equivalence.lean fn=add_float32_with_rounding name=add_f32_equivalence
 pub fn add_float32_with_rounding(
     a: IEEE754Float32,
     b: IEEE754Float32,
