@@ -24,6 +24,19 @@ use crate::utils::{assert_valid_rounding_mode, shift_right_sticky_u64, should_ro
 // `rounding_mode` must be one of the `ROUNDING_MODE_*` constants in
 // `crate::types` (i.e. `0..=4`). Any other value triggers an assertion
 // failure -- see `add_float64_with_rounding` for the rationale.
+//
+// ----------------------------------------------------------------------------
+// Lean equivalence proof (scaffold, sorry-stub). Tier 4 per
+// `proofs/Ieee754/PROOF-GAP-MATRIX.md`. Digit-by-digit binary restoring
+// method with `U128` remainder (56 iterations, 2 bits per iteration);
+// divergence parameters and per-helper recipe live in the linked
+// equivalence file's doc-comment. Land sqrt_f32 first -- the loop-invariant
+// proof structure ports directly.
+// ----------------------------------------------------------------------------
+//
+// LAMPE-LITERATE preamble:  ../../proofs/sqrt_f64_preamble.lean
+// LAMPE-LITERATE proof:     ../../proofs/sqrt_f64_equivalence.lean fn=sqrt_float64_with_rounding name=sqrt_f64_equivalence
+// LAMPE-LITERATE reference: ../../reference/sqrt_f64_reference.nr.ref fn=sqrt_float64_with_rounding name=sqrt_f64_reference
 pub fn sqrt_float64_with_rounding(a: IEEE754Float64, rounding_mode: u8) -> IEEE754Float64 {
     assert_valid_rounding_mode(rounding_mode);
     // Handle special cases
