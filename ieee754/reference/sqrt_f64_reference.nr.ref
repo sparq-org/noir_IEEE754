@@ -1,0 +1,23 @@
+// IEEE 754 binary64 square root -- literal-spec reference.
+//
+// Status: Closed at the round-9 baseline (Tier 4, single-divergence
+// strength). The reference and optimised paths share:
+//   * the denormal-mantissa CLZ (`MulModelsF64.clzDenormalMantissa64`);
+//   * the 56-iteration digit-by-digit binary-restoring sqrt loop on
+//     U128 state (`SqrtModelsF64.sqrtLoop56`).
+//
+// The single divergence is the inline-RNE 3-bit shortcut (mode 0),
+// reconciled by the round-9 width-agnostic lemma
+// `SubtermsMulF64.shouldRoundUp_inline_eq_3bit`.
+//
+// IEEE 754-2019 sec.5.4.1 only constrains the rounded result; the
+// reference is allowed to share the deterministic loop with the
+// optimised path. Strengthening the loop to a literal `Nat.sqrt`-
+// anchored spec is queued as round-10 work, paired with the
+// analogous sqrt_f32 strengthening. See
+// `decisions/sqrt-f64-loop-shared-vs-divergent.md`.
+//
+// The Lean models (`SqrtModelsF64.lean`, `SqrtF64.lean`) are the
+// authoritative literal-spec form; this `.nr.ref` is a placeholder
+// because the closure does not require a separate Noir-level
+// reference body -- both wrappers share the same Noir source.
