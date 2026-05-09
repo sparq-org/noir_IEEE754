@@ -1,16 +1,26 @@
 name: Require Copilot review
 
-# Gate: merge to `main` is blocked until `copilot-pull-request-reviewer[bot]`
-# has posted at least one review on the PR. This workflow exposes a required
-# status check (`copilot-review-posted`) consumed by the repo ruleset on
-# `~DEFAULT_BRANCH`.
+# Gate: merge to `main` is blocked until BOTH conditions hold:
+#   1. `copilot-pull-request-reviewer[bot]` has posted at least one
+#      non-DISMISSED review on the PR.
+#   2. Every review thread authored by Copilot is resolved (either by
+#      addressing the comment in code, or by replying with rationale
+#      and clicking "Resolve conversation").
 #
-# Rationale: per `notes/research/pr-review-audit-2026-05-03.md`, 15 of 56
-# merged-with-review PRs across the three sub-repos were merged BEFORE
-# Copilot's first review timestamp. This workflow closes that gap. It does
-# *not* enforce thread resolution — only that a review has been posted.
+# This workflow exposes a required status check (`copilot-review-posted`)
+# consumed by the repo ruleset on `~DEFAULT_BRANCH`.
 #
-# Exemptions (the check passes without a review):
+# Rationale (review-posted half): per
+# `notes/research/pr-review-audit-2026-05-03.md`, 15 of 56 merged-with-
+# review PRs across the three sub-repos were merged BEFORE Copilot's
+# first review timestamp.
+#
+# Rationale (threads-resolved half): per Wave 15 audit (workspace 2026-
+# 05-08), Copilot review *findings* were routinely left unaddressed —
+# review-posted alone passed the gate without anyone having engaged
+# with the comments. Requiring thread resolution closes that gap.
+#
+# Exemptions (the check passes without any review or resolution):
 #   - Author is `dependabot[bot]` — Copilot does not review dep bumps.
 #   - Author is `Copilot` (the coding agent) — Copilot does not review its
 #     own PRs.
@@ -35,17 +45,29 @@ on:
       - converted_to_draft
   pull_request_review:
     types: [submitted, edited, dismissed]
+  # Note: there is *no* `pull_request_review_thread` Actions trigger
+  # (it exists as a webhook event but does not fire workflows). When a
+  # reviewer / author resolves a thread, this gate does NOT auto-rerun —
+  # the gate re-evaluates on the next `pull_request.synchronize` (push to
+  # the PR head). The remote routine that resolves threads pushes its
+  # commits to the PR head, which fires `synchronize` and refreshes the
+  # gate; manual thread resolution requires a separate push or a
+  # workflow_dispatch run.
+  workflow_dispatch:
 
 permissions:
-  pull-requests: read
+  # `write` so this workflow can apply / remove the
+  # `address-review-comments` label that drives the remote Claude
+  # routine (see `claude-on-label.yml`).
+  pull-requests: write
   contents: read
 
 jobs:
   copilot-review-posted:
     name: copilot-review-posted
-    # Skip pull_request_review events targeting non-default branches; the
-    # `pull_request_review` trigger does not honour the `branches:` filter
-    # above, so we gate it explicitly here.
+    # Skip review/thread events targeting non-default branches; those
+    # triggers do not honour the `branches:` filter above, so we gate
+    # them explicitly here.
     if: >-
       github.event_name == 'pull_request' ||
       github.event.pull_request.base.ref == 'main'
@@ -107,10 +129,108 @@ jobs:
             | awk '{s+=$1} END {print s+0}')
           if [[ "$reviewers" -ge 1 ]]; then
             echo "::notice::Copilot has posted $reviewers review(s) on PR #$PR_NUMBER."
+          else
+            echo "::error::No review from copilot-pull-request-reviewer[bot] yet on PR #$PR_NUMBER."
+            echo "If Copilot review has not been requested, request one. The check"
+            echo "re-runs on each pull_request_review event, so it will turn green"
+            echo "once Copilot posts."
+            exit 1
+          fi
+
+      - name: Check that all Copilot review threads are resolved
+        if: steps.exempt.outputs.exempt != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+          # Query review threads via GraphQL — REST has no per-thread
+          # `isResolved` field. Connection page size is capped at 100,
+          # so we MUST fail closed if the PR has more than 100 review
+          # threads — letting the gate silently truncate would let an
+          # unresolved Copilot thread on the >100 tail slip through.
+          # PRs with >100 threads are exotic; if this ever fires in
+          # anger we paginate via `pageInfo.endCursor`.
+          QUERY='query($owner: String!, $name: String!, $number: Int!) {
+            repository(owner: $owner, name: $name) {
+              pullRequest(number: $number) {
+                reviewThreads(first: 100) {
+                  pageInfo { hasNextPage endCursor }
+                  nodes {
+                    isResolved
+                    isOutdated
+                    comments(first: 1) {
+                      nodes { author { login } }
+                    }
+                  }
+                }
+              }
+            }
+          }'
+          response=$(gh api graphql \
+            -f query="$QUERY" \
+            -F owner="$REPO_OWNER" \
+            -F name="$REPO_NAME" \
+            -F number="$PR_NUMBER")
+          # Fail closed if the connection was truncated.
+          has_next=$(echo "$response" | jq -r \
+            '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+          if [[ "$has_next" == "true" ]]; then
+            echo "::error::PR #$PR_NUMBER has more than 100 review threads;"
+            echo "this gate does not paginate yet so it fails closed rather"
+            echo "than risk silently passing on an unresolved Copilot thread"
+            echo "on the tail. File an issue to add cursor pagination."
+            exit 1
+          fi
+          # Filter to threads whose first comment is by Copilot. The bot
+          # has multiple login surfaces in practice:
+          #   - GraphQL `author.login` for the review-summary identity
+          #     usually returns `copilot-pull-request-reviewer` (no
+          #     `[bot]` suffix); REST returns the same name with `[bot]`.
+          #   - GraphQL line-comment author returns `Copilot`.
+          # We accept all three to be defensive across surface drift.
+          # Outdated threads — those targeting a line the author later
+          # replaced — are exempted, since GitHub does not let anyone
+          # resolve them via UI in the usual way.
+          unresolved=$(echo "$response" | jq '[
+            .data.repository.pullRequest.reviewThreads.nodes[]
+            | select(
+                (.comments.nodes[0].author.login == "Copilot")
+                or (.comments.nodes[0].author.login == "copilot-pull-request-reviewer")
+                or (.comments.nodes[0].author.login == "copilot-pull-request-reviewer[bot]")
+              )
+            | select(.isResolved == false)
+            | select(.isOutdated == false)
+          ] | length')
+          if [[ "$unresolved" -eq 0 ]]; then
+            echo "::notice::All Copilot review threads on PR #$PR_NUMBER are resolved."
+            # Cleanup: if a previous run applied the
+            # `address-review-comments` label and the routine has now
+            # cleared all the threads, remove the label so the PR no
+            # longer shows up in the labelled set.
+            gh pr edit "$PR_NUMBER" --repo "$REPO_OWNER/$REPO_NAME" \
+              --remove-label "address-review-comments" 2>/dev/null \
+              || true
             exit 0
           fi
-          echo "::error::No review from copilot-pull-request-reviewer[bot] yet on PR #$PR_NUMBER."
-          echo "If Copilot review has not been requested, request one. The check"
-          echo "re-runs on each pull_request_review event, so it will turn green"
-          echo "once Copilot posts."
+          echo "::error::PR #$PR_NUMBER has $unresolved unresolved Copilot review thread(s)."
+          echo "Each thread must be resolved before merge — either by addressing the"
+          echo "comment with a code change, or by replying with the rationale and"
+          echo "clicking 'Resolve conversation'."
+          echo
+          echo "Note: GitHub does not fire workflow events on thread resolution"
+          echo "alone, so this gate will NOT auto-re-run when you click 'Resolve"
+          echo "conversation'. It re-evaluates on the next push to the PR head"
+          echo "(synchronize), or run the workflow manually via the Actions tab."
+          # Apply the `address-review-comments` label so the
+          # `claude-on-label.yml` workflow can dispatch the remote
+          # Claude routine to address the threads autonomously. The
+          # label is idempotent — re-applying when already present is
+          # a no-op. The companion workflow removes it once the
+          # routine has cleared the threads.
+          gh pr edit "$PR_NUMBER" --repo "$REPO_OWNER/$REPO_NAME" \
+            --add-label "address-review-comments" 2>/dev/null \
+            || echo "::warning::Could not apply address-review-comments label (label may not exist in this repo yet)."
           exit 1
