@@ -1,4 +1,27 @@
-/-! ## Diverging-parameter equalities
+/-! # `mul_f64_equivalence` — lampe-literate splice fragment
+
+**This file is an include-only fragment.** It is not a stand-alone
+Lean module: it has no `import` block and no `namespace` opener,
+and it deliberately closes a namespace (`end ZkpSparql.Ieee754.Equivalence`)
+that it does not open in this file. Loading it directly in an editor
+or via `lake build` will *not* typecheck.
+
+The fragment is consumed by `lampe-literate build`, which splices
+`mul_f64_preamble.lean` (carrying the `import` / `namespace` /
+`open` lines) at the top, then this file's body, then writes the
+combined module into the scratch tree before invoking `lake build`.
+The splice directives live alongside `mul_float64_with_rounding`
+in `ieee754/src/float64/mul.nr`:
+
+```
+// LAMPE-LITERATE preamble: ../../proofs/mul_f64_preamble.lean
+// LAMPE-LITERATE proof:    ../../proofs/mul_f64_equivalence.lean fn=mul_float64_with_rounding name=mul_f64_equivalence
+```
+
+See `circuits/lampe-literate/README.md` (workspace) for the
+directive grammar.
+
+## Diverging-parameter equalities
 
 Round 9 closes the f64 mul equivalence with three diverging
 subterms (see `todos/round9-mul-reference-strength.md` in the
