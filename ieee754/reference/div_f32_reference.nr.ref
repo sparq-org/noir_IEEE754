@@ -1,24 +1,269 @@
 // IEEE 754 binary32 division -- literal-spec reference.
 //
-// Status: **TODO** -- placeholder for a hand-ported reference matching IEEE
-// 754-2019 sec.7.2 (division). The optimised path uses long division via
-// Noir's builtin `u64 / u64` after `<< 27`-shift of the dividend (24-bit
-// significand + 3 guard bits, plus a 4th guard via the 4-bit RNE shortcut).
+// Hand-port of `div_float32_with_rounding` from `ieee754::float32::div`
+// matching IEEE 754-2019 sec.6.2 (special values), sec.7.2 (default
+// exception handling for divide), sec.4.3 (rounding-mode attributes),
+// sec.5.4.1 (correctly-rounded results).
 //
-// The reference body should:
-//   * Mirror the long-division shape (the divide step itself converges:
-//     Noir builtin `/` is deterministic, no Newton-Raphson iteration to
-//     verify).
-//   * Deliberately *not* fuse normalisation + rounding (kept as separate
-//     steps for traceability against IEEE 754-2019 sec.7.2).
-//   * Use the canonical `should_round_up` (4-bit guard) instead of the
-//     optimised inline-RNE shortcut, exposing the inline-RNE divergence
-//     parameter cleanly.
+// The optimised path uses long division via Noir's builtin `u64 / u64`
+// after `<< 27`-shift of the dividend (24-bit significand + 3 guard
+// bits, plus a 4th guard via the post-shift RNE). This reference
+// mirrors the optimised long-division shape (the divide step itself
+// converges: Noir's builtin `/` is deterministic, no Newton-Raphson
+// iteration to verify), but **deliberately uses the canonical
+// `should_round_up_4bit` for every rounding mode** -- including
+// `ROUNDING_MODE_NEAREST_EVEN` -- exposing the inline-RNE divergence
+// parameter cleanly.
 //
-// Closure path (paired with `proofs/div_f32_equivalence.lean`):
-//   1. Hand-port the optimised algorithm with the de-fusions noted above.
-//   2. Hand-mirror both sides into `DivModelsF32` (Lean).
-//   3. Factor through `divF32Skeleton` with the divergence parameters
-//      enumerated in the proof file's doc-comment.
+// The denormal-mantissa CLZ helper, the quotient-normalisation
+// cascade, and the sticky-from-remainder OR-in are intentionally
+// **shared** with the optimised path -- IEEE 754-2019 does not
+// prescribe how those internal helpers are computed, and any
+// algorithm that returns the same correctly-rounded quotient for
+// every input is a valid implementation of sec.5.4.1.
 //
-// See PROOF-GAP-MATRIX.md (Tier 4) and round-9 mul_f64 for the worked pattern.
+// See `proofs/div_f32_equivalence.lean` for the equivalence theorem
+// and `PROOF-GAP-MATRIX.md` Tier 4 for the methodology.
+
+use crate::float32::helpers::{
+    float32_infinity, float32_is_denormal, float32_is_infinity, float32_is_nan, float32_is_zero,
+    float32_max_finite, float32_nan, float32_zero,
+};
+use crate::types::{
+    FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::{
+    assert_valid_rounding_mode, directed_overflow_saturates_to_inf, shift_right_sticky_u64,
+    should_round_up_4bit,
+};
+
+pub fn div_float32_with_rounding(
+    a: IEEE754Float32,
+    b: IEEE754Float32,
+    rounding_mode: u8,
+) -> IEEE754Float32 {
+    assert_valid_rounding_mode(rounding_mode);
+
+    // Special-case classification.
+    let a_is_nan = float32_is_nan(a);
+    let b_is_nan = float32_is_nan(b);
+    let a_is_inf = float32_is_infinity(a);
+    let b_is_inf = float32_is_infinity(b);
+    let a_is_zero = float32_is_zero(a);
+    let b_is_zero = float32_is_zero(b);
+    let a_is_denormal = float32_is_denormal(a);
+    let b_is_denormal = float32_is_denormal(b);
+
+    // Result sign: XOR of operand signs (IEEE 754-2019 sec.6.3).
+    let result_sign: u1 = a.sign ^ b.sign;
+
+    // Denormal normalisation via 5-stage binary search above bit 22.
+    let a_mant_raw: u64 = a.mantissa as u64;
+    let mut a_lz: i64 = 0;
+    if a_is_denormal & (a_mant_raw != 0) {
+        let mut v = a_mant_raw;
+        if (v & 0x7FF800) == 0 {
+            a_lz = a_lz + 12;
+            v = v << 12;
+        }
+        if (v & 0x7E0000) == 0 {
+            a_lz = a_lz + 6;
+            v = v << 6;
+        }
+        if (v & 0x700000) == 0 {
+            a_lz = a_lz + 3;
+            v = v << 3;
+        }
+        if (v & 0x600000) == 0 {
+            a_lz = a_lz + 2;
+            v = v << 2;
+        }
+        if (v & 0x400000) == 0 {
+            a_lz = a_lz + 1;
+        }
+        a_lz = a_lz + 1;
+    }
+
+    let b_mant_raw: u64 = b.mantissa as u64;
+    let mut b_lz: i64 = 0;
+    if b_is_denormal & (b_mant_raw != 0) {
+        let mut v = b_mant_raw;
+        if (v & 0x7FF800) == 0 {
+            b_lz = b_lz + 12;
+            v = v << 12;
+        }
+        if (v & 0x7E0000) == 0 {
+            b_lz = b_lz + 6;
+            v = v << 6;
+        }
+        if (v & 0x700000) == 0 {
+            b_lz = b_lz + 3;
+            v = v << 3;
+        }
+        if (v & 0x600000) == 0 {
+            b_lz = b_lz + 2;
+            v = v << 2;
+        }
+        if (v & 0x400000) == 0 {
+            b_lz = b_lz + 1;
+        }
+        b_lz = b_lz + 1;
+    }
+
+    // Effective 24-bit significands (implicit bit at position 23).
+    let mant_a: u64 = if a_is_denormal {
+        a_mant_raw << (a_lz as u64)
+    } else if a_is_zero {
+        0
+    } else {
+        (a.mantissa | FLOAT32_IMPLICIT_BIT) as u64
+    };
+
+    let mant_b: u64 = if b_is_denormal {
+        b_mant_raw << (b_lz as u64)
+    } else if b_is_zero {
+        0
+    } else {
+        (b.mantissa | FLOAT32_IMPLICIT_BIT) as u64
+    };
+
+    // Effective unbiased exponents.
+    let exp_a_eff: i64 = if a_is_denormal {
+        1 - 127 - a_lz
+    } else if a_is_zero {
+        0
+    } else {
+        (a.exponent as i64) - 127
+    };
+
+    let exp_b_eff: i64 = if b_is_denormal {
+        1 - 127 - b_lz
+    } else if b_is_zero {
+        0
+    } else {
+        (b.exponent as i64) - 127
+    };
+
+    // Long division: shift dividend left by 27 to expose 27 quotient
+    // bits (24 significand + 3 guard bits; the 4th guard bit comes
+    // from the sticky-from-remainder path below).
+    let shifted_dividend: u64 = mant_a << 27;
+    let quotient: u64 = if mant_b != 0 { shifted_dividend / mant_b } else { 0 };
+    let remainder: u64 = if mant_b != 0 { shifted_dividend % mant_b } else { 0 };
+
+    let mut result_exp: i64 = exp_a_eff - exp_b_eff + 127;
+    let mut result_mant: u64 = quotient;
+
+    // Quotient normalisation: shift right by 1 if bit 28 set; shift
+    // left by 1 if bit 27 clear (and bit 28 was clear, and the
+    // quotient is non-zero). The two cases are mutually exclusive
+    // for non-zero quotients.
+    let bit_28_set = (quotient >> 28) & 1 == 1;
+    if bit_28_set {
+        result_mant = shift_right_sticky_u64(quotient, 1);
+        result_exp = result_exp + 1;
+    }
+
+    let bit_27_clear = (quotient >> 27) & 1 == 0;
+    if bit_27_clear & !bit_28_set & (quotient != 0) {
+        result_mant = quotient << 1;
+        result_exp = result_exp - 1;
+    }
+
+    // Sticky-from-remainder: any non-zero remainder forces the LSB
+    // high so directed rounding sees a non-tie under round-toward-
+    // positive / round-toward-negative.
+    if remainder != 0 {
+        result_mant = result_mant | 1;
+    }
+
+    // Underflow to denormal: shift right with sticky propagation.
+    let mut is_denormal_result = false;
+    if result_exp <= 0 {
+        let denorm_shift = 1 - result_exp;
+        result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+        result_exp = 0;
+        is_denormal_result = true;
+    }
+
+    // Strip the 4-bit guard / round / sticky packed in bits 3-0.
+    let guard_bits = result_mant & 0xF;
+    result_mant = result_mant >> 4;
+
+    // *** REFERENCE-DIVERGENCE SITE ***
+    //
+    // The optimised path inlines `mode == 0` as
+    //     (guard_bits > 8) | ((guard_bits == 8) & ((result_mant & 1) == 1))
+    // The reference dispatches every mode through `should_round_up_4bit`
+    // -- including ROUNDING_MODE_NEAREST_EVEN -- so the inline-RNE
+    // shortcut surfaces as a divergence parameter at the Lean
+    // skeleton.
+    let should_round = should_round_up_4bit(guard_bits, result_mant, result_sign, rounding_mode);
+    if should_round {
+        result_mant = result_mant + 1;
+        if !is_denormal_result & (result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1)) {
+            result_mant = result_mant >> 1;
+            result_exp = result_exp + 1;
+        }
+        if is_denormal_result & (result_mant >= (FLOAT32_IMPLICIT_BIT as u64)) {
+            result_exp = 1;
+            is_denormal_result = false;
+        }
+    }
+
+    let overflows_to_inf = result_exp >= (FLOAT32_EXPONENT_MAX as i64);
+
+    let final_mantissa = if is_denormal_result {
+        (result_mant & 0x7FFFFF) as u32
+    } else {
+        (result_mant & ((FLOAT32_IMPLICIT_BIT - 1) as u64)) as u32
+    };
+
+    let normal_result =
+        IEEE754Float32 { sign: result_sign, exponent: result_exp as u8, mantissa: final_mantissa };
+
+    let mut result = normal_result;
+
+    // Special-case overlay (mirror the optimised cascade).
+    if a_is_zero {
+        if b_is_zero | b_is_nan {
+            result = float32_nan();
+        } else {
+            result = float32_zero(result_sign);
+        }
+    }
+
+    if b_is_zero & !a_is_zero & !a_is_nan {
+        result = float32_infinity(result_sign);
+    }
+
+    if overflows_to_inf & !a_is_zero & !b_is_inf {
+        if directed_overflow_saturates_to_inf(rounding_mode, result_sign) {
+            result = float32_infinity(result_sign);
+        } else {
+            result = float32_max_finite(result_sign);
+        }
+    }
+
+    if a_is_inf & !b_is_nan {
+        if b_is_inf {
+            result = float32_nan();
+        } else {
+            result = float32_infinity(result_sign);
+        }
+    }
+
+    if b_is_inf & !a_is_inf & !a_is_nan {
+        result = float32_zero(result_sign);
+    }
+
+    if a_is_nan | b_is_nan {
+        result = float32_nan();
+    }
+
+    result
+}
+
+pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    div_float32_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN)
+}
