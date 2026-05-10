@@ -70,8 +70,11 @@ Lean session.
 Square root is unit-test-only. `IMPLEMENTATION_PLAN.md` queues
 adding Berkeley TestFloat sqrt vectors (it is the only operation
 without end-to-end MPFR-oracle coverage). The harness already
-supports TestFloat (#44); plugging in sqrt is a scripts-side
-change plus a new `--suite f32-sqrt` / `--suite f64-sqrt` group.
+supports TestFloat (#44); plugging in sqrt means extending
+`scripts/run_tests.py`'s `--operation` choices (currently
+`{add, sub, mul, div}`) to include `sqrt`, generating the matching
+sqrt test packages via `--generate --operation sqrt`, and adding an
+MPFR-sqrt branch to `scripts/noir_ieee754_inputs/reference.py`.
 
 ### 4. Workspace-side strength gap (cross-cutting)
 
@@ -117,8 +120,10 @@ Every change should:
 - pass the post-commit roborev review;
 - not bypass `--no-verify`;
 - run `nargo check` from `ieee754/` before pushing;
-- run `python3 scripts/run_tests.py --suite f32` (and `--suite
-  f64` for f64-touching changes);
+- run `python3 scripts/run_tests.py` (no args runs every generated
+  package; pass a substring filter — e.g. `python3 scripts/run_tests.py
+  add` for the add packages — or `--package <full-name>` for a
+  single package);
 - update `gate_counts.json` if circuit gate counts change (CI
   comments the diff on the PR).
 

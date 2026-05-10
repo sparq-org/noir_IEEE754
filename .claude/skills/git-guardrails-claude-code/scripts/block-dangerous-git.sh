@@ -1,18 +1,22 @@
 #!/bin/bash
+set -euo pipefail
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "block-dangerous-git: 'jq' is required but not installed." >&2
+  echo "Install with 'brew install jq' (macOS) or 'apt-get install jq' (Debian/Ubuntu)." >&2
+  exit 1
+fi
 
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command')
 
 DANGEROUS_PATTERNS=(
-  "git push"
-  "git reset --hard"
-  "git clean -fd"
-  "git clean -f"
-  "git branch -D"
-  "git checkout \."
-  "git restore \."
-  "push --force"
-  "reset --hard"
+  "(^|[[:space:]&|;])git[[:space:]]+push([[:space:]]|$)"
+  "(^|[[:space:]&|;])git[[:space:]]+reset[[:space:]]+--hard"
+  "(^|[[:space:]&|;])git[[:space:]]+clean[[:space:]]+-f"
+  "(^|[[:space:]&|;])git[[:space:]]+branch[[:space:]]+-D"
+  "(^|[[:space:]&|;])git[[:space:]]+checkout[[:space:]]+\\."
+  "(^|[[:space:]&|;])git[[:space:]]+restore[[:space:]]+\\."
 )
 
 for pattern in "${DANGEROUS_PATTERNS[@]}"; do
