@@ -35,7 +35,7 @@ jobs:
       test-groups: ${{ steps.matrix.outputs.groups }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -142,7 +142,7 @@ jobs:
       latest-version: ${{ steps.versions.outputs.latest }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Read Noir versions
         id: versions
@@ -163,7 +163,7 @@ jobs:
         noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Noir
         uses: noir-lang/noirup@v0.1.4
@@ -184,7 +184,7 @@ jobs:
     name: unit-tests (${{ matrix.noir-version }})
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Noir
         uses: noir-lang/noirup@v0.1.4
@@ -219,7 +219,7 @@ jobs:
     name: ieee754 (${{ matrix.group.name }})
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download generated tests
         uses: actions/download-artifact@v8
