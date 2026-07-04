@@ -1,0 +1,59 @@
+# CI — validate sparq_ieee754 on the pinned Noir toolchain.
+#
+# This repo is the published standalone face of the library; development
+# happens in sparq-org/sparq under zk/ieee754. This workflow runs the same
+# validation flow documented in the README on the pinned nargo version.
+#
+# TOOLCHAIN PINNING (supply-chain): nargo is installed via `noirup`, which is
+# itself fetched DIRECTLY from a TAGGED noirup release (NOIRUP_BIN_URL) rather
+# than the upstream `install` helper — that helper curls noirup from
+# `releases/latest`, a moving target that defeats the pin. `noirup --version`
+# then installs the EXACT NARGO_VERSION. GitHub Actions are SHA-pinned.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NARGO_VERSION: "1.0.0-beta.21"
+  NOIRUP_RELEASE: "v0.1.4" # noir-lang/noirup release tag (pins the noirup binary itself)
+  NOIRUP_BIN_URL: "https://github.com/noir-lang/noirup/releases/download/v0.1.4/noirup"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # Install nargo via noirup, pinned to NARGO_VERSION. Two-level pinning:
+      # pinned noirup release + pinned nargo.
+      - name: Install nargo (Noir) — pinned
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.nargo/bin"
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            "${NOIRUP_BIN_URL}" \
+            -o "$HOME/.nargo/bin/noirup"
+          chmod +x "$HOME/.nargo/bin/noirup"
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.nargo/bin:$PATH"
+          noirup --version "${NARGO_VERSION}"
+          nargo --version
+
+      - name: nargo test (in-source suite)
+        run: nargo test --silence-warnings
+
+      - name: Generated arithmetic vectors
+        run: bash ./scripts/test_generated_vectors.sh
+
+      - name: Public API surface + private-internals rejection
+        run: bash ./scripts/test_public_api.sh
+
+      - name: Private-function usage lint
+        run: python3 scripts/lint_private_function_usage.py
