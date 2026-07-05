@@ -1,0 +1,107 @@
+# copilot-review-posted — producer workflow for the "copilot-review-posted"
+# required status-check context in branch-protection ruleset 11111001.
+#
+# WHY: ruleset 11111001 requires the context "copilot-review-posted" as a
+# required_status_check. GitHub's native `copilot_code_review` rule requests
+# the review but does NOT post a commit status context by that name — so the
+# ruleset blocks every PR until a workflow does it explicitly.
+#
+# WHAT THIS DOES: whenever a pull_request_review is submitted (or a new push
+# arrives on a PR), this workflow checks whether GitHub Copilot
+# (copilot-pull-request-reviewer[bot]) has posted at least one review on the
+# PR. If it has, we POST a success commit status for "copilot-review-posted"
+# on the PR head SHA. If not (review not yet arrived, or bot was not requested),
+# we post a pending or failure status so the branch-protection rule stays
+# descriptive rather than silently blocked.
+#
+# TRIGGERS:
+#   pull_request_review (submitted) — fires when any review is submitted.
+#   pull_request (synchronize, opened, reopened) — re-evaluates after new
+#     pushes (a new commit might need a fresh Copilot review, so we re-check).
+#
+# PERMISSIONS:
+#   statuses: write — to POST commit statuses.
+#   pull-requests: read — to LIST reviews on the PR.
+#   contents: read  — default; needed by checkout-less API calls.
+#
+# SUPPLY-CHAIN: GitHub Actions are SHA-pinned per house style. No checkout
+# needed — the entire workflow runs via the GitHub CLI (gh) and the REST API.
+#
+# [SONNET-4.6] sq-5reoy / sq-umj0p fix
+name: copilot-review-posted
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  statuses: write
+  pull-requests: read
+  contents: read
+
+jobs:
+  post-status:
+    name: post copilot-review-posted status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # No checkout needed — we only call the GitHub REST API.
+      - name: Check for Copilot review and post commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.review.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.review.commit_id }}
+        run: |
+          set -euo pipefail
+
+          echo "PR: #${PR_NUMBER}  HEAD SHA: ${HEAD_SHA}"
+          echo "Checking for Copilot review on PR #${PR_NUMBER}..."
+
+          # List all reviews on this PR and look for one by the Copilot bot.
+          # The bot's login is 'copilot-pull-request-reviewer[bot]'.
+          REVIEWS=$(gh api \
+            "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+            --paginate \
+            --jq '[.[].user.login]')
+
+          echo "Reviewers found: ${REVIEWS}"
+
+          COPILOT_REVIEWED=$(echo "${REVIEWS}" | python3 -c "
+          import json, sys
+          reviews = json.load(sys.stdin)
+          found = any('copilot-pull-request-reviewer' in r for r in reviews)
+          print('true' if found else 'false')
+          ")
+
+          echo "copilot_reviewed=${COPILOT_REVIEWED}"
+
+          if [[ "${COPILOT_REVIEWED}" == "true" ]]; then
+            STATE="success"
+            DESCRIPTION="Copilot review has been posted."
+          else
+            # Post failure (not pending) so the ruleset shows a clear signal.
+            # The bot will post its review shortly after the PR opens/pushes;
+            # re-requesting Copilot review will re-trigger this workflow.
+            STATE="failure"
+            DESCRIPTION="Copilot review not yet posted. Request a Copilot review to unblock."
+          fi
+
+          echo "Posting commit status: context=copilot-review-posted state=${STATE}"
+          gh api \
+            --method POST \
+            "repos/${REPO}/statuses/${HEAD_SHA}" \
+            --field "state=${STATE}" \
+            --field "context=copilot-review-posted" \
+            --field "description=${DESCRIPTION}" \
+            --field "target_url=https://github.com/${REPO}/pull/${PR_NUMBER}"
+
+          echo "Status posted: ${STATE}"
+
+          # Exit non-zero so the workflow check itself reflects the status,
+          # but the REQUIRED context is what matters for branch protection —
+          # exit 0 always so the workflow check stays green even when we post
+          # a failure commit status (the commit status is the gate, not the
+          # workflow check-run).

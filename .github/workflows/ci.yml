@@ -9,6 +9,12 @@
 # than the upstream `install` helper — that helper curls noirup from
 # `releases/latest`, a moving target that defeats the pin. `noirup --version`
 # then installs the EXACT NARGO_VERSION. GitHub Actions are SHA-pinned.
+#
+# JOBS:
+#   test        — nargo unit tests + generated vectors + API surface + lint
+#   differential — drift-guard committed oracle + run full harness + self-test
+#   test-summary — aggregator: required context for branch protection ruleset
+#                  (11111001). Passes iff test + differential both passed.
 name: ci
 
 on:
@@ -27,6 +33,7 @@ env:
 
 jobs:
   test:
+    name: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -57,3 +64,101 @@ jobs:
 
       - name: Private-function usage lint
         run: python3 scripts/lint_private_function_usage.py
+
+  # [SONNET-4.6] sq-5reoy — IEEE 754 differential oracle lane (ported from
+  # sparq's zk-toolchain.yml differential-ieee754 job).
+  #
+  # Runs the Rust differential harness which:
+  #   1. Builds the standalone Rust binary (differential/).
+  #   2. Drift-guards the committed oracle (tests/differential_oracle/src/lib.nr)
+  #      against the generator — any stale file fails loudly.
+  #   3. Generates a fresh oracle Noir file and runs `nargo test` (24 test
+  #      functions, ~4500 assertions). Any divergence between the Noir circuit
+  #      and the oracle fails the gate.
+  #   4. SELF-TEST (inject-fault): re-generates with one expected bit flipped and
+  #      asserts `nargo test` FAILS — proving the harness is non-vacuous.
+  #
+  # TCB: oracle is INDEPENDENT of sparq_ieee754 — no shared code path with the circuit.
+  # This is VERIFICATION, not proof (ACIR->Barretenberg lowering NOT covered here).
+  differential:
+    name: differential oracle (PROOF M1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo + target (differential harness)
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          key: ieee754-differential
+          workspaces: differential -> target
+
+      - name: Install nargo (Noir) — pinned
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.nargo/bin"
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            "${NOIRUP_BIN_URL}" \
+            -o "$HOME/.nargo/bin/noirup"
+          chmod +x "$HOME/.nargo/bin/noirup"
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.nargo/bin:$PATH"
+          noirup --version "${NARGO_VERSION}"
+          nargo --version
+
+      # Drift guard: the generator (main.rs) must match the committed oracle file.
+      # Regenerate: bash scripts/run_differential_harness.sh --update-committed
+      - name: Drift guard — committed oracle matches generator
+        run: |
+          set -euo pipefail
+          cargo build --manifest-path differential/Cargo.toml --release --locked
+          HARNESS_BIN="differential/target/release/sparq-ieee754-differential"
+          COMMITTED="tests/differential_oracle/src/lib.nr"
+          TMPF="$(mktemp)"
+          trap 'rm -f "${TMPF}"' EXIT
+          "${HARNESS_BIN}" --output "${TMPF}"
+          diff "${TMPF}" "${COMMITTED}" || {
+            echo "ERROR: committed oracle is stale; regenerate with:" >&2
+            echo "  bash scripts/run_differential_harness.sh --update-committed" >&2
+            exit 1
+          }
+          echo "[drift-guard] committed oracle is current."
+
+      # Run the full differential harness including the inject-fault self-test.
+      # The script exits non-zero if:
+      #   a) the oracle nargo test fails (circuit diverges from oracle), or
+      #   b) the fault-injected nargo test PASSES (harness is vacuous/broken).
+      - name: Run ieee754 differential oracle + self-test
+        run: bash scripts/run_differential_harness.sh
+
+  # Aggregator — the required_status_checks context "test-summary" in ruleset 11111001
+  # points here. This job depends on ALL ci.yml jobs; it passes iff all predecessors
+  # passed (GitHub maps a skipped dependency to a passed aggregator only when the
+  # aggregator itself is not required — here it IS required, so we never skip it).
+  # [SONNET-4.6] sq-5reoy
+  test-summary:
+    name: test-summary
+    runs-on: ubuntu-latest
+    needs: [test, differential]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          DIFFERENTIAL_RESULT: ${{ needs.differential.result }}
+        run: |
+          set -euo pipefail
+          echo "test:         ${TEST_RESULT}"
+          echo "differential: ${DIFFERENTIAL_RESULT}"
+          if [[ "${TEST_RESULT}" != "success" ]]; then
+            echo "::error::job 'test' did not succeed (result: ${TEST_RESULT})"
+            exit 1
+          fi
+          if [[ "${DIFFERENTIAL_RESULT}" != "success" ]]; then
+            echo "::error::job 'differential' did not succeed (result: ${DIFFERENTIAL_RESULT})"
+            exit 1
+          fi
+          echo "All CI jobs passed."
