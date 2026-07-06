@@ -636,6 +636,175 @@ fn new_accepts_canonical_boundary_values() {
 	assert_eq(quad_nan.mantissa, 5192296858534827628530496329220095 as u128);
 }
 
+// -- sq-dtmg9 gap resolutions: abs, named constants, Field<->float ------------
+
+// IEEE 754-2019 5.5.1: abs is a quiet bit-level sign-clear. It must preserve
+// NaN payloads (no canonicalisation) and pass zeros/infinities through with
+// the sign bit cleared. Oracle: the bit patterns below are the operands with
+// the top bit cleared, which is exactly what the standard specifies.
+#[test]
+fn abs_clears_sign_and_preserves_everything_else() {
+	// f16: normals, zeros, subnormals, infinities.
+	assert_eq(f16::new(0xbe00 as u16).abs().bits(), 0x3e00 as u16); // -1.5 -> 1.5
+	assert_eq(f16::new(0x3e00 as u16).abs().bits(), 0x3e00 as u16); // 1.5 -> 1.5
+	assert_eq(f16::new(0x8000 as u16).abs().bits(), 0x0000 as u16); // -0 -> +0
+	assert_eq(f16::new(0x0000 as u16).abs().bits(), 0x0000 as u16); // +0 -> +0
+	assert_eq(f16::new(0x8001 as u16).abs().bits(), 0x0001 as u16); // -min_sub -> min_sub
+	assert_eq(f16::new(0xfc00 as u16).abs().bits(), 0x7c00 as u16); // -inf -> +inf
+	assert_eq(f16::new(0x7c00 as u16).abs().bits(), 0x7c00 as u16); // +inf -> +inf
+	// NaN payload is PRESERVED (quiet operation, not canonalised): only the
+	// sign bit changes.
+	assert_eq(f16::new(0xfe01 as u16).abs().bits(), 0x7e01 as u16);
+
+	// f32 / f64 / f128 spot checks, including negative NaN with payload.
+	assert_eq(f32::new(0xbf800000 as u32).abs().bits(), 0x3f800000 as u32);
+	assert_eq(f32::new(0xffc00001 as u32).abs().bits(), 0x7fc00001 as u32);
+	assert_eq(f64::new(0xc00e000000000000 as u64).abs().bits(), 0x400e000000000000 as u64);
+	assert_eq(f64::new(0x8000000000000001 as u64).abs().bits(), 0x0000000000000001 as u64);
+	assert_eq(f128::new(0xbfff0000000000000000000000000000 as u128).abs().bits(), 0x3fff0000000000000000000000000000 as u128);
+	assert_eq(f128::new(0xffff8000000000000000000000000001 as u128).abs().bits(), 0x7fff8000000000000000000000000001 as u128);
+}
+
+// Named constants: assert the exact IEEE 754 bit pattern for every width.
+// Oracle: the interchange-format constants from IEEE 754-2019 3.4 (also the
+// deprecated library's asserted patterns, e.g. sNaN f32=0x7FA00000).
+#[test]
+fn named_constants_have_canonical_bit_patterns() {
+	assert_eq(f16::zero().bits(), 0x0000 as u16);
+	assert_eq(f16::neg_zero().bits(), 0x8000 as u16);
+	assert_eq(f16::one().bits(), 0x3c00 as u16);
+	assert_eq(f16::neg_one().bits(), 0xbc00 as u16);
+	assert_eq(f16::infinity().bits(), 0x7c00 as u16);
+	assert_eq(f16::neg_infinity().bits(), 0xfc00 as u16);
+	assert_eq(f16::nan().bits(), 0x7e00 as u16);
+	assert_eq(f16::signaling_nan().bits(), 0x7d00 as u16);
+
+	assert_eq(f32::zero().bits(), 0x00000000 as u32);
+	assert_eq(f32::neg_zero().bits(), 0x80000000 as u32);
+	assert_eq(f32::one().bits(), 0x3f800000 as u32);
+	assert_eq(f32::neg_one().bits(), 0xbf800000 as u32);
+	assert_eq(f32::infinity().bits(), 0x7f800000 as u32);
+	assert_eq(f32::neg_infinity().bits(), 0xff800000 as u32);
+	assert_eq(f32::nan().bits(), 0x7fc00000 as u32);
+	assert_eq(f32::signaling_nan().bits(), 0x7fa00000 as u32);
+
+	assert_eq(f64::zero().bits(), 0x0000000000000000 as u64);
+	assert_eq(f64::neg_zero().bits(), 0x8000000000000000 as u64);
+	assert_eq(f64::one().bits(), 0x3ff0000000000000 as u64);
+	assert_eq(f64::neg_one().bits(), 0xbff0000000000000 as u64);
+	assert_eq(f64::infinity().bits(), 0x7ff0000000000000 as u64);
+	assert_eq(f64::neg_infinity().bits(), 0xfff0000000000000 as u64);
+	assert_eq(f64::nan().bits(), 0x7ff8000000000000 as u64);
+	assert_eq(f64::signaling_nan().bits(), 0x7ff4000000000000 as u64);
+
+	assert_eq(f128::zero().bits(), 0x00000000000000000000000000000000 as u128);
+	assert_eq(f128::neg_zero().bits(), 0x80000000000000000000000000000000 as u128);
+	assert_eq(f128::one().bits(), 0x3fff0000000000000000000000000000 as u128);
+	assert_eq(f128::neg_one().bits(), 0xbfff0000000000000000000000000000 as u128);
+	assert_eq(f128::infinity().bits(), 0x7fff0000000000000000000000000000 as u128);
+	assert_eq(f128::neg_infinity().bits(), 0xffff0000000000000000000000000000 as u128);
+	assert_eq(f128::nan().bits(), 0x7fff8000000000000000000000000000 as u128);
+	assert_eq(f128::signaling_nan().bits(), 0x7fff4000000000000000000000000000 as u128);
+}
+
+// Constants must BEHAVE like the values they denote, not merely encode the
+// right bits: exercise them through arithmetic and the comparison predicates.
+#[test]
+fn named_constants_behave_like_their_values() {
+	// one + one == 2.0; one * one == one; zero + x == x.
+	assert_eq((f64::one() + f64::one()).bits(), 0x4000000000000000 as u64);
+	assert_eq((f64::one() * f64::one()).bits(), f64::one().bits());
+	assert_eq((f64::zero() + f64::neg_one()).bits(), f64::neg_one().bits());
+	// -0 == +0 numerically, though the encodings differ.
+	assert(f64::neg_zero().eq(f64::zero()));
+	assert(f64::neg_zero().bits() != f64::zero().bits());
+	// NaN constants are unordered against everything, including themselves.
+	assert(f64::nan().ne(f64::nan()));
+	assert(f64::signaling_nan().ne(f64::signaling_nan()));
+	assert(!f64::nan().eq(f64::one()));
+	// Infinities order around every finite value; inf - inf is NaN.
+	assert(f64::neg_infinity().lt(f64::neg_one()));
+	assert(f64::one().lt(f64::infinity()));
+	assert((f64::infinity() + f64::neg_infinity()).ne(f64::zero()));
+	// Same behavioural checks at the other widths.
+	assert_eq((f16::one() + f16::one()).bits(), 0x4000 as u16);
+	assert(f16::nan().ne(f16::nan()));
+	assert(f32::neg_infinity().lt(f32::infinity()));
+	assert_eq((f128::one() + f128::one()).bits(), 0x40000000000000000000000000000000 as u128);
+	assert(f128::signaling_nan().ne(f128::signaling_nan()));
+}
+
+// from_field interprets the field element as an unsigned integer < 2^128 and
+// converts with round-to-nearest-even -- the same verified path as From<u128>.
+// Expected bit patterns match the From<u8..u128> vectors above.
+#[test]
+fn from_field_converts_with_ieee_rounding() {
+	assert_eq(f64::from_field(0 as Field).bits(), 0x0000000000000000 as u64);
+	assert_eq(f64::from_field(1 as Field).bits(), f64::one().bits());
+	assert_eq(f64::from_field(3 as Field).bits(), 0x4008000000000000 as u64);
+	// RNE at the 53-bit boundary (same vectors as From<u64>).
+	assert_eq(f64::from_field(9007199254740993 as Field).bits(), 0x4340000000000000 as u64);
+	assert_eq(f64::from_field(9007199254740995 as Field).bits(), 0x4340000000000002 as u64);
+	// f16 overflow to infinity (same vector as From<u16>).
+	assert_eq(f16::from_field(65520 as Field).bits(), 0x7c00 as u16);
+	assert_eq(f16::from_field(1 as Field).bits(), f16::one().bits());
+	// f32: 2^128 - 1 rounds above the max finite (2^128 - 2^104) -> +inf.
+	assert_eq(f32::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x7f800000 as u32);
+	assert_eq(f32::from_field(16777217 as Field).bits(), 0x4b800000 as u32);
+	// f128 at the u128 boundary (same vector as From<u128>).
+	assert_eq(f128::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x407f0000000000000000000000000000 as u128);
+}
+
+// The range assert must reject field elements >= 2^128 LOUDLY (the deprecated
+// library truncated them silently mod 2^64).
+#[test(should_fail)]
+fn from_field_rejects_two_pow_128() {
+	let _ = f64::from_field(340282366920938463463374607431768211456 as Field);
+}
+
+#[test(should_fail)]
+fn from_field_rejects_field_modulus_minus_one() {
+	// BN254 r - 1: the largest representable field element.
+	let _ = f32::from_field(
+		21888242871839275222246405745257275088548364400416034343698204186575808495616 as Field,
+	);
+}
+
+// to_field truncates toward zero via the to_u64 kernel, so it shares its loud
+// rejections and its (-1, 0) -> 0 negative-truncation window.
+#[test]
+fn to_field_truncates_toward_zero() {
+	assert_eq(f64::new(0x400e000000000000 as u64).to_field(), 3 as Field); // 3.75 -> 3
+	assert_eq(f64::new(0xbfe0000000000000 as u64).to_field(), 0 as Field); // -0.5 -> 0
+	assert_eq(f64::neg_zero().to_field(), 0 as Field);
+	assert_eq(f16::new(0x7bff as u16).to_field(), 65504 as Field); // f16 max
+	assert_eq(f32::new(0x40b00000 as u32).to_field(), 5 as Field); // 5.5 -> 5
+	// 2^63 is exactly representable and in range for u64.
+	assert_eq(f128::new(0x403e0000000000000000000000000000 as u128).to_field(), 9223372036854775808 as Field);
+	// Near-2^64 truncation (same vector as to_u64).
+	assert_eq(f64::new(0x43efffffffffffff as u64).to_field(), 18446744073709549568 as Field);
+}
+
+#[test(should_fail)]
+fn to_field_rejects_nan() {
+	let _ = f64::nan().to_field();
+}
+
+#[test(should_fail)]
+fn to_field_rejects_infinity() {
+	let _ = f64::infinity().to_field();
+}
+
+#[test(should_fail)]
+fn to_field_rejects_negative_one() {
+	let _ = f64::neg_one().to_field();
+}
+
+#[test(should_fail)]
+fn to_field_rejects_two_pow_64() {
+	let _ = f64::new(0x43f0000000000000 as u64).to_field();
+}
+
 #[test]
 fn uint_types_match_float_component_sizes() {
 	comptime {

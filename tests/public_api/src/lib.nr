@@ -81,3 +81,35 @@ fn integer_conversions_are_public_api() {
     assert_eq(f64::from(9_007_199_254_740_993 as u64).bits(), 0x4340000000000000 as u64);
     assert_eq(f128::from(340282366920938463463374607431768211455 as u128).bits(), 0x407f0000000000000000000000000000 as u128);
 }
+
+// -- sq-dtmg9 gap resolutions ------------------------------------------------
+
+#[test]
+fn abs_is_public_api() {
+    assert_eq(f16::new(0xbe00 as u16).abs().bits(), 0x3e00 as u16);
+    assert_eq(f32::new(0x80000000 as u32).abs().bits(), 0x00000000 as u32);
+    assert_eq(f64::new(0xfff0000000000000 as u64).abs().bits(), 0x7ff0000000000000 as u64);
+    assert_eq(f128::new(0xbfff0000000000000000000000000000 as u128).abs().bits(), 0x3fff0000000000000000000000000000 as u128);
+}
+
+#[test]
+fn named_constants_are_public_api() {
+    assert_eq(f16::one().bits(), 0x3c00 as u16);
+    assert_eq(f32::neg_zero().bits(), 0x80000000 as u32);
+    assert_eq(f64::infinity().bits(), 0x7ff0000000000000 as u64);
+    assert_eq(f64::neg_infinity().bits(), 0xfff0000000000000 as u64);
+    assert_eq(f128::neg_one().bits(), 0xbfff0000000000000000000000000000 as u128);
+    assert_eq(f32::zero().bits(), 0x00000000 as u32);
+    assert(f64::nan().ne(f64::nan()));
+    assert(f16::signaling_nan().ne(f16::signaling_nan()));
+}
+
+#[test]
+fn field_conversions_are_public_api() {
+    assert_eq(f64::from_field(3 as Field).bits(), 0x4008000000000000 as u64);
+    assert_eq(f16::from_field(1 as Field).bits(), 0x3c00 as u16);
+    assert_eq(f32::from_field(16777217 as Field).bits(), 0x4b800000 as u32);
+    assert_eq(f128::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x407f0000000000000000000000000000 as u128);
+    assert_eq(f64::new(0x400e000000000000 as u64).to_field(), 3 as Field);
+    assert_eq(f32::new(0x40b00000 as u32).to_field(), 5 as Field);
+}

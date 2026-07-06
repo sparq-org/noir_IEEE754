@@ -10001,6 +10001,692 @@ fn differential_oracle_f16_le() {
     assert_eq(f16::new(0x0a1d as u16).le(f16::new(0x4141 as u16)), true);
 }
 
+#[test]
+fn differential_oracle_f16_abs() {
+    // corner:0
+    assert_eq(f16::new(0x0000 as u16).abs().bits(), 0x0000 as u16);
+    // corner:1
+    assert_eq(f16::new(0x8000 as u16).abs().bits(), 0x0000 as u16);
+    // corner:2
+    assert_eq(f16::new(0x7c00 as u16).abs().bits(), 0x7c00 as u16);
+    // corner:3
+    assert_eq(f16::new(0xfc00 as u16).abs().bits(), 0x7c00 as u16);
+    // corner:4
+    assert_eq(f16::new(0x7e00 as u16).abs().bits(), 0x7e00 as u16);
+    // corner:5
+    assert_eq(f16::new(0x0001 as u16).abs().bits(), 0x0001 as u16);
+    // corner:6
+    assert_eq(f16::new(0x03ff as u16).abs().bits(), 0x03ff as u16);
+    // corner:7
+    assert_eq(f16::new(0x0400 as u16).abs().bits(), 0x0400 as u16);
+    // corner:8
+    assert_eq(f16::new(0x7bff as u16).abs().bits(), 0x7bff as u16);
+    // corner:9
+    assert_eq(f16::new(0x3c00 as u16).abs().bits(), 0x3c00 as u16);
+    // corner:10
+    assert_eq(f16::new(0x4000 as u16).abs().bits(), 0x4000 as u16);
+    // corner:11
+    assert_eq(f16::new(0xbc00 as u16).abs().bits(), 0x3c00 as u16);
+    // corner:12
+    assert_eq(f16::new(0x3800 as u16).abs().bits(), 0x3800 as u16);
+    // corner:13
+    assert_eq(f16::new(0x3e00 as u16).abs().bits(), 0x3e00 as u16);
+    // corner:14
+    assert_eq(f16::new(0x2400 as u16).abs().bits(), 0x2400 as u16);
+    // corner:15
+    assert_eq(f16::new(0x7e01 as u16).abs().bits(), 0x7e01 as u16);
+    // corner:16
+    assert_eq(f16::new(0xfe01 as u16).abs().bits(), 0x7e01 as u16);
+    // corner:17
+    assert_eq(f16::new(0xfd00 as u16).abs().bits(), 0x7d00 as u16);
+    // corner:18
+    assert_eq(f16::new(0x8001 as u16).abs().bits(), 0x0001 as u16);
+    // random:0
+    assert_eq(f16::new(0x7583 as u16).abs().bits(), 0x7583 as u16);
+    // random:1
+    assert_eq(f16::new(0x37a8 as u16).abs().bits(), 0x37a8 as u16);
+    // random:2
+    assert_eq(f16::new(0x53c7 as u16).abs().bits(), 0x53c7 as u16);
+    // random:3
+    assert_eq(f16::new(0x66a0 as u16).abs().bits(), 0x66a0 as u16);
+    // random:4
+    assert_eq(f16::new(0x6a6d as u16).abs().bits(), 0x6a6d as u16);
+    // random:5
+    assert_eq(f16::new(0x83f9 as u16).abs().bits(), 0x03f9 as u16);
+    // random:6
+    assert_eq(f16::new(0x5ebe as u16).abs().bits(), 0x5ebe as u16);
+    // random:7
+    assert_eq(f16::new(0xd383 as u16).abs().bits(), 0x5383 as u16);
+    // random:8
+    assert_eq(f16::new(0x3ae4 as u16).abs().bits(), 0x3ae4 as u16);
+    // random:9
+    assert_eq(f16::new(0x8d91 as u16).abs().bits(), 0x0d91 as u16);
+    // random:10
+    assert_eq(f16::new(0xf8ca as u16).abs().bits(), 0x78ca as u16);
+    // random:11
+    assert_eq(f16::new(0x5dbb as u16).abs().bits(), 0x5dbb as u16);
+    // random:12
+    assert_eq(f16::new(0xe3c0 as u16).abs().bits(), 0x63c0 as u16);
+    // random:13
+    assert_eq(f16::new(0xce07 as u16).abs().bits(), 0x4e07 as u16);
+    // random:14
+    assert_eq(f16::new(0x405b as u16).abs().bits(), 0x405b as u16);
+    // random:15
+    assert_eq(f16::new(0xd01b as u16).abs().bits(), 0x501b as u16);
+    // random:16
+    assert_eq(f16::new(0x597b as u16).abs().bits(), 0x597b as u16);
+    // random:17
+    assert_eq(f16::new(0x5b09 as u16).abs().bits(), 0x5b09 as u16);
+    // random:18
+    assert_eq(f16::new(0x53ff as u16).abs().bits(), 0x53ff as u16);
+    // random:19
+    assert_eq(f16::new(0xcc98 as u16).abs().bits(), 0x4c98 as u16);
+    // random:20
+    assert_eq(f16::new(0x4901 as u16).abs().bits(), 0x4901 as u16);
+    // random:21
+    assert_eq(f16::new(0x29d3 as u16).abs().bits(), 0x29d3 as u16);
+    // random:22
+    assert_eq(f16::new(0x0740 as u16).abs().bits(), 0x0740 as u16);
+    // random:23
+    assert_eq(f16::new(0x614e as u16).abs().bits(), 0x614e as u16);
+    // random:24
+    assert_eq(f16::new(0x2c0c as u16).abs().bits(), 0x2c0c as u16);
+    // random:25
+    assert_eq(f16::new(0x6b54 as u16).abs().bits(), 0x6b54 as u16);
+    // random:26
+    assert_eq(f16::new(0xc482 as u16).abs().bits(), 0x4482 as u16);
+    // random:27
+    assert_eq(f16::new(0x1d8b as u16).abs().bits(), 0x1d8b as u16);
+    // random:28
+    assert_eq(f16::new(0x6b70 as u16).abs().bits(), 0x6b70 as u16);
+    // random:29
+    assert_eq(f16::new(0x3da6 as u16).abs().bits(), 0x3da6 as u16);
+    // random:30
+    assert_eq(f16::new(0xda5d as u16).abs().bits(), 0x5a5d as u16);
+    // random:31
+    assert_eq(f16::new(0x28a9 as u16).abs().bits(), 0x28a9 as u16);
+}
+
+#[test]
+fn differential_oracle_f32_abs() {
+    // corner:0
+    assert_eq(f32::new(0x00000000 as u32).abs().bits(), 0x00000000 as u32);
+    // corner:1
+    assert_eq(f32::new(0x80000000 as u32).abs().bits(), 0x00000000 as u32);
+    // corner:2
+    assert_eq(f32::new(0x7f800000 as u32).abs().bits(), 0x7f800000 as u32);
+    // corner:3
+    assert_eq(f32::new(0xff800000 as u32).abs().bits(), 0x7f800000 as u32);
+    // corner:4
+    assert_eq(f32::new(0x7fc00000 as u32).abs().bits(), 0x7fc00000 as u32);
+    // corner:5
+    assert_eq(f32::new(0x7f800001 as u32).abs().bits(), 0x7f800001 as u32);
+    // corner:6
+    assert_eq(f32::new(0x00000001 as u32).abs().bits(), 0x00000001 as u32);
+    // corner:7
+    assert_eq(f32::new(0x007fffff as u32).abs().bits(), 0x007fffff as u32);
+    // corner:8
+    assert_eq(f32::new(0x00800000 as u32).abs().bits(), 0x00800000 as u32);
+    // corner:9
+    assert_eq(f32::new(0x7f7fffff as u32).abs().bits(), 0x7f7fffff as u32);
+    // corner:10
+    assert_eq(f32::new(0x3f800000 as u32).abs().bits(), 0x3f800000 as u32);
+    // corner:11
+    assert_eq(f32::new(0x40000000 as u32).abs().bits(), 0x40000000 as u32);
+    // corner:12
+    assert_eq(f32::new(0xbf800000 as u32).abs().bits(), 0x3f800000 as u32);
+    // corner:13
+    assert_eq(f32::new(0x3f000000 as u32).abs().bits(), 0x3f000000 as u32);
+    // corner:14
+    assert_eq(f32::new(0x3fc00000 as u32).abs().bits(), 0x3fc00000 as u32);
+    // corner:15
+    assert_eq(f32::new(0x33800000 as u32).abs().bits(), 0x33800000 as u32);
+    // corner:16
+    assert_eq(f32::new(0x7fc00001 as u32).abs().bits(), 0x7fc00001 as u32);
+    // corner:17
+    assert_eq(f32::new(0xffc00001 as u32).abs().bits(), 0x7fc00001 as u32);
+    // corner:18
+    assert_eq(f32::new(0xffa00000 as u32).abs().bits(), 0x7fa00000 as u32);
+    // corner:19
+    assert_eq(f32::new(0x80000001 as u32).abs().bits(), 0x00000001 as u32);
+    // random:0
+    assert_eq(f32::new(0x263232b8 as u32).abs().bits(), 0x263232b8 as u32);
+    // random:1
+    assert_eq(f32::new(0x1d1ff8dd as u32).abs().bits(), 0x1d1ff8dd as u32);
+    // random:2
+    assert_eq(f32::new(0x5518506c as u32).abs().bits(), 0x5518506c as u32);
+    // random:3
+    assert_eq(f32::new(0x6833fbcc as u32).abs().bits(), 0x6833fbcc as u32);
+    // random:4
+    assert_eq(f32::new(0xaf12ef3b as u32).abs().bits(), 0x2f12ef3b as u32);
+    // random:5
+    assert_eq(f32::new(0x0b5a6425 as u32).abs().bits(), 0x0b5a6425 as u32);
+    // random:6
+    assert_eq(f32::new(0x660b79ad as u32).abs().bits(), 0x660b79ad as u32);
+    // random:7
+    assert_eq(f32::new(0xb710a41e as u32).abs().bits(), 0x3710a41e as u32);
+    // random:8
+    assert_eq(f32::new(0x4b7842d6 as u32).abs().bits(), 0x4b7842d6 as u32);
+    // random:9
+    assert_eq(f32::new(0xf802c7d3 as u32).abs().bits(), 0x7802c7d3 as u32);
+    // random:10
+    assert_eq(f32::new(0xc081569c as u32).abs().bits(), 0x4081569c as u32);
+    // random:11
+    assert_eq(f32::new(0xf9e47331 as u32).abs().bits(), 0x79e47331 as u32);
+    // random:12
+    assert_eq(f32::new(0x56435797 as u32).abs().bits(), 0x56435797 as u32);
+    // random:13
+    assert_eq(f32::new(0x3138d4f8 as u32).abs().bits(), 0x3138d4f8 as u32);
+    // random:14
+    assert_eq(f32::new(0x37529b51 as u32).abs().bits(), 0x37529b51 as u32);
+    // random:15
+    assert_eq(f32::new(0xecbeca27 as u32).abs().bits(), 0x6cbeca27 as u32);
+    // random:16
+    assert_eq(f32::new(0xb977de73 as u32).abs().bits(), 0x3977de73 as u32);
+    // random:17
+    assert_eq(f32::new(0xd022cd0f as u32).abs().bits(), 0x5022cd0f as u32);
+    // random:18
+    assert_eq(f32::new(0x9e3a2b55 as u32).abs().bits(), 0x1e3a2b55 as u32);
+    // random:19
+    assert_eq(f32::new(0xfe602a43 as u32).abs().bits(), 0x7e602a43 as u32);
+    // random:20
+    assert_eq(f32::new(0x93701ad7 as u32).abs().bits(), 0x13701ad7 as u32);
+    // random:21
+    assert_eq(f32::new(0x434eaf22 as u32).abs().bits(), 0x434eaf22 as u32);
+    // random:22
+    assert_eq(f32::new(0x107fbafc as u32).abs().bits(), 0x107fbafc as u32);
+    // random:23
+    assert_eq(f32::new(0x5dfc7a89 as u32).abs().bits(), 0x5dfc7a89 as u32);
+    // random:24
+    assert_eq(f32::new(0xd370003c as u32).abs().bits(), 0x5370003c as u32);
+    // random:25
+    assert_eq(f32::new(0x8aa96f3c as u32).abs().bits(), 0x0aa96f3c as u32);
+    // random:26
+    assert_eq(f32::new(0xd1c472e2 as u32).abs().bits(), 0x51c472e2 as u32);
+    // random:27
+    assert_eq(f32::new(0xb4290287 as u32).abs().bits(), 0x34290287 as u32);
+    // random:28
+    assert_eq(f32::new(0xafd51142 as u32).abs().bits(), 0x2fd51142 as u32);
+    // random:29
+    assert_eq(f32::new(0xd426abe0 as u32).abs().bits(), 0x5426abe0 as u32);
+    // random:30
+    assert_eq(f32::new(0xd8361eb7 as u32).abs().bits(), 0x58361eb7 as u32);
+    // random:31
+    assert_eq(f32::new(0x1f433f4a as u32).abs().bits(), 0x1f433f4a as u32);
+}
+
+#[test]
+fn differential_oracle_f64_abs() {
+    // corner:0
+    assert_eq(f64::new(0x0000000000000000 as u64).abs().bits(), 0x0000000000000000 as u64);
+    // corner:1
+    assert_eq(f64::new(0x8000000000000000 as u64).abs().bits(), 0x0000000000000000 as u64);
+    // corner:2
+    assert_eq(f64::new(0x7ff0000000000000 as u64).abs().bits(), 0x7ff0000000000000 as u64);
+    // corner:3
+    assert_eq(f64::new(0xfff0000000000000 as u64).abs().bits(), 0x7ff0000000000000 as u64);
+    // corner:4
+    assert_eq(f64::new(0x7ff8000000000000 as u64).abs().bits(), 0x7ff8000000000000 as u64);
+    // corner:5
+    assert_eq(f64::new(0x7ff0000000000001 as u64).abs().bits(), 0x7ff0000000000001 as u64);
+    // corner:6
+    assert_eq(f64::new(0x0000000000000001 as u64).abs().bits(), 0x0000000000000001 as u64);
+    // corner:7
+    assert_eq(f64::new(0x000fffffffffffff as u64).abs().bits(), 0x000fffffffffffff as u64);
+    // corner:8
+    assert_eq(f64::new(0x0010000000000000 as u64).abs().bits(), 0x0010000000000000 as u64);
+    // corner:9
+    assert_eq(f64::new(0x7fefffffffffffff as u64).abs().bits(), 0x7fefffffffffffff as u64);
+    // corner:10
+    assert_eq(f64::new(0x3ff0000000000000 as u64).abs().bits(), 0x3ff0000000000000 as u64);
+    // corner:11
+    assert_eq(f64::new(0x4000000000000000 as u64).abs().bits(), 0x4000000000000000 as u64);
+    // corner:12
+    assert_eq(f64::new(0xbff0000000000000 as u64).abs().bits(), 0x3ff0000000000000 as u64);
+    // corner:13
+    assert_eq(f64::new(0x3fe0000000000000 as u64).abs().bits(), 0x3fe0000000000000 as u64);
+    // corner:14
+    assert_eq(f64::new(0x3ff8000000000000 as u64).abs().bits(), 0x3ff8000000000000 as u64);
+    // corner:15
+    assert_eq(f64::new(0x3ca0000000000000 as u64).abs().bits(), 0x3ca0000000000000 as u64);
+    // corner:16
+    assert_eq(f64::new(0x7ff8000000000001 as u64).abs().bits(), 0x7ff8000000000001 as u64);
+    // corner:17
+    assert_eq(f64::new(0xfff8000000000001 as u64).abs().bits(), 0x7ff8000000000001 as u64);
+    // corner:18
+    assert_eq(f64::new(0xfff4000000000000 as u64).abs().bits(), 0x7ff4000000000000 as u64);
+    // corner:19
+    assert_eq(f64::new(0x8000000000000001 as u64).abs().bits(), 0x0000000000000001 as u64);
+    // random:0
+    assert_eq(f64::new(0xaddaa3eca9332bb4 as u64).abs().bits(), 0x2ddaa3eca9332bb4 as u64);
+    // random:1
+    assert_eq(f64::new(0x091acb1d181b20e3 as u64).abs().bits(), 0x091acb1d181b20e3 as u64);
+    // random:2
+    assert_eq(f64::new(0x65451b30dc3b4e62 as u64).abs().bits(), 0x65451b30dc3b4e62 as u64);
+    // random:3
+    assert_eq(f64::new(0x4ac2f38f1a60e07e as u64).abs().bits(), 0x4ac2f38f1a60e07e as u64);
+    // random:4
+    assert_eq(f64::new(0xf95f76257c1ffe3e as u64).abs().bits(), 0x795f76257c1ffe3e as u64);
+    // random:5
+    assert_eq(f64::new(0xcb9f73aad25b8e42 as u64).abs().bits(), 0x4b9f73aad25b8e42 as u64);
+    // random:6
+    assert_eq(f64::new(0xdec53c1bb368e9de as u64).abs().bits(), 0x5ec53c1bb368e9de as u64);
+    // random:7
+    assert_eq(f64::new(0xf47040fd5c158f8d as u64).abs().bits(), 0x747040fd5c158f8d as u64);
+    // random:8
+    assert_eq(f64::new(0x94c510d6dd9be7d2 as u64).abs().bits(), 0x14c510d6dd9be7d2 as u64);
+    // random:9
+    assert_eq(f64::new(0xdf54a0b5a319649d as u64).abs().bits(), 0x5f54a0b5a319649d as u64);
+    // random:10
+    assert_eq(f64::new(0x6a2ad5d480bdd114 as u64).abs().bits(), 0x6a2ad5d480bdd114 as u64);
+    // random:11
+    assert_eq(f64::new(0xfa601c9c63866fb6 as u64).abs().bits(), 0x7a601c9c63866fb6 as u64);
+    // random:12
+    assert_eq(f64::new(0x179a9995eafe4ee9 as u64).abs().bits(), 0x179a9995eafe4ee9 as u64);
+    // random:13
+    assert_eq(f64::new(0xad261a49e70d2834 as u64).abs().bits(), 0x2d261a49e70d2834 as u64);
+    // random:14
+    assert_eq(f64::new(0x9f79ddfa6c47bf64 as u64).abs().bits(), 0x1f79ddfa6c47bf64 as u64);
+    // random:15
+    assert_eq(f64::new(0x9f2be06aaca8691a as u64).abs().bits(), 0x1f2be06aaca8691a as u64);
+    // random:16
+    assert_eq(f64::new(0x13c8450420583f48 as u64).abs().bits(), 0x13c8450420583f48 as u64);
+    // random:17
+    assert_eq(f64::new(0x3a44637183925d36 as u64).abs().bits(), 0x3a44637183925d36 as u64);
+    // random:18
+    assert_eq(f64::new(0xb80d98ec27bcf40c as u64).abs().bits(), 0x380d98ec27bcf40c as u64);
+    // random:19
+    assert_eq(f64::new(0x734120bd93870ee4 as u64).abs().bits(), 0x734120bd93870ee4 as u64);
+    // random:20
+    assert_eq(f64::new(0x2829ee969b4d39f9 as u64).abs().bits(), 0x2829ee969b4d39f9 as u64);
+    // random:21
+    assert_eq(f64::new(0x82d94f91399efdca as u64).abs().bits(), 0x02d94f91399efdca as u64);
+    // random:22
+    assert_eq(f64::new(0xd69a79a44689f2b1 as u64).abs().bits(), 0x569a79a44689f2b1 as u64);
+    // random:23
+    assert_eq(f64::new(0xc1b288cb48066d14 as u64).abs().bits(), 0x41b288cb48066d14 as u64);
+    // random:24
+    assert_eq(f64::new(0xfd9a93575b33a4ce as u64).abs().bits(), 0x7d9a93575b33a4ce as u64);
+    // random:25
+    assert_eq(f64::new(0x9f2d032b2dfb3007 as u64).abs().bits(), 0x1f2d032b2dfb3007 as u64);
+    // random:26
+    assert_eq(f64::new(0xd38430812c2227a7 as u64).abs().bits(), 0x538430812c2227a7 as u64);
+    // random:27
+    assert_eq(f64::new(0x2f61f921b6576a28 as u64).abs().bits(), 0x2f61f921b6576a28 as u64);
+    // random:28
+    assert_eq(f64::new(0x988c5f3c105c4efc as u64).abs().bits(), 0x188c5f3c105c4efc as u64);
+    // random:29
+    assert_eq(f64::new(0x0656e7ec6472c961 as u64).abs().bits(), 0x0656e7ec6472c961 as u64);
+    // random:30
+    assert_eq(f64::new(0xa077cffc504254b3 as u64).abs().bits(), 0x2077cffc504254b3 as u64);
+    // random:31
+    assert_eq(f64::new(0xf3c4b0bccb559cda as u64).abs().bits(), 0x73c4b0bccb559cda as u64);
+}
+
+#[test]
+fn differential_oracle_f32_from_field() {
+    // corner:0
+    assert_eq(f32::from_field(0 as Field).bits(), 0x00000000 as u32);
+    // corner:1
+    assert_eq(f32::from_field(1 as Field).bits(), 0x3f800000 as u32);
+    // corner:2
+    assert_eq(f32::from_field(2 as Field).bits(), 0x40000000 as u32);
+    // corner:3
+    assert_eq(f32::from_field(3 as Field).bits(), 0x40400000 as u32);
+    // corner:4
+    assert_eq(f32::from_field(16777215 as Field).bits(), 0x4b7fffff as u32);
+    // corner:5
+    assert_eq(f32::from_field(16777217 as Field).bits(), 0x4b800000 as u32);
+    // corner:6
+    assert_eq(f32::from_field(16777219 as Field).bits(), 0x4b800002 as u32);
+    // corner:7
+    assert_eq(f32::from_field(9007199254740991 as Field).bits(), 0x5a000000 as u32);
+    // corner:8
+    assert_eq(f32::from_field(9007199254740993 as Field).bits(), 0x5a000000 as u32);
+    // corner:9
+    assert_eq(f32::from_field(9007199254740995 as Field).bits(), 0x5a000000 as u32);
+    // corner:10
+    assert_eq(f32::from_field(9223372036854775808 as Field).bits(), 0x5f000000 as u32);
+    // corner:11
+    assert_eq(f32::from_field(18446744073709551615 as Field).bits(), 0x5f800000 as u32);
+    // corner:12
+    assert_eq(f32::from_field(18446744073709551616 as Field).bits(), 0x5f800000 as u32);
+    // corner:13
+    assert_eq(f32::from_field(170141183460469231731687303715884105728 as Field).bits(), 0x7f000000 as u32);
+    // corner:14
+    assert_eq(f32::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x7f800000 as u32);
+    // random:0
+    assert_eq(f32::from_field(8796418457634160995 as Field).bits(), 0x5ef42650 as u32);
+    // random:1
+    assert_eq(f32::from_field(71352420398681540104904780766685345399 as Field).bits(), 0x7e56b7e8 as u32);
+    // random:2
+    assert_eq(f32::from_field(8788277819511000795 as Field).bits(), 0x5ef3ec78 as u32);
+    // random:3
+    assert_eq(f32::from_field(92648415181765271645377582434816441761 as Field).bits(), 0x7e8b66df as u32);
+    // random:4
+    assert_eq(f32::from_field(17942167770237341594 as Field).bits(), 0x5f78ff63 as u32);
+    // random:5
+    assert_eq(f32::from_field(319532818967627430301455043560203471041 as Field).bits(), 0x7f7063c8 as u32);
+    // random:6
+    assert_eq(f32::from_field(6969130317231747856 as Field).bits(), 0x5ec16ea6 as u32);
+    // random:7
+    assert_eq(f32::from_field(45211879040306610029107930410356428571 as Field).bits(), 0x7e080df7 as u32);
+    // random:8
+    assert_eq(f32::from_field(5141870439120355909 as Field).bits(), 0x5e8eb730 as u32);
+    // random:9
+    assert_eq(f32::from_field(162860565714061794271704567226488206400 as Field).bits(), 0x7ef50b9c as u32);
+    // random:10
+    assert_eq(f32::from_field(8956398657035403304 as Field).bits(), 0x5ef8970a as u32);
+    // random:11
+    assert_eq(f32::from_field(234501179367347942370421624956986271674 as Field).bits(), 0x7f306b49 as u32);
+    // random:12
+    assert_eq(f32::from_field(13985924276673859445 as Field).bits(), 0x5f4217fc as u32);
+    // random:13
+    assert_eq(f32::from_field(87810681966511865194690509917103723694 as Field).bits(), 0x7e841f72 as u32);
+    // random:14
+    assert_eq(f32::from_field(6727486302023875335 as Field).bits(), 0x5ebab9aa as u32);
+    // random:15
+    assert_eq(f32::from_field(332779852205508728014631699905464742661 as Field).bits(), 0x7f7a5b11 as u32);
+    // random:16
+    assert_eq(f32::from_field(4042373477664914723 as Field).bits(), 0x5e606595 as u32);
+    // random:17
+    assert_eq(f32::from_field(242894054550630503350905382216800790343 as Field).bits(), 0x7f36bbb1 as u32);
+    // random:18
+    assert_eq(f32::from_field(5129121065365683529 as Field).bits(), 0x5e8e5c99 as u32);
+    // random:19
+    assert_eq(f32::from_field(117080345543120426255968641676569833293 as Field).bits(), 0x7eb029b5 as u32);
+    // random:20
+    assert_eq(f32::from_field(9940735411749387987 as Field).bits(), 0x5f09f496 as u32);
+    // random:21
+    assert_eq(f32::from_field(317388910865831465793338105037080649701 as Field).bits(), 0x7f6ec6e1 as u32);
+    // random:22
+    assert_eq(f32::from_field(8438067291281535514 as Field).bits(), 0x5eea3413 as u32);
+    // random:23
+    assert_eq(f32::from_field(114489137027517185359040515687035933217 as Field).bits(), 0x7eac439d as u32);
+    // random:24
+    assert_eq(f32::from_field(14765211278820496709 as Field).bits(), 0x5f4ce891 as u32);
+    // random:25
+    assert_eq(f32::from_field(180527386977081181968169514311428720280 as Field).bits(), 0x7f07d04f as u32);
+    // random:26
+    assert_eq(f32::from_field(8123009148441590549 as Field).bits(), 0x5ee17574 as u32);
+    // random:27
+    assert_eq(f32::from_field(93739180440347774546506388297761940016 as Field).bits(), 0x7e8d0b05 as u32);
+    // random:28
+    assert_eq(f32::from_field(17769028921222003188 as Field).bits(), 0x5f769846 as u32);
+    // random:29
+    assert_eq(f32::from_field(325295299677850003519368955388584553631 as Field).bits(), 0x7f74b999 as u32);
+    // random:30
+    assert_eq(f32::from_field(13467600919683464070 as Field).bits(), 0x5f3ae688 as u32);
+    // random:31
+    assert_eq(f32::from_field(189191565159972622188033787012553586646 as Field).bits(), 0x7f0e54f8 as u32);
+}
+
+#[test]
+fn differential_oracle_f64_from_field() {
+    // corner:0
+    assert_eq(f64::from_field(0 as Field).bits(), 0x0000000000000000 as u64);
+    // corner:1
+    assert_eq(f64::from_field(1 as Field).bits(), 0x3ff0000000000000 as u64);
+    // corner:2
+    assert_eq(f64::from_field(2 as Field).bits(), 0x4000000000000000 as u64);
+    // corner:3
+    assert_eq(f64::from_field(3 as Field).bits(), 0x4008000000000000 as u64);
+    // corner:4
+    assert_eq(f64::from_field(16777215 as Field).bits(), 0x416fffffe0000000 as u64);
+    // corner:5
+    assert_eq(f64::from_field(16777217 as Field).bits(), 0x4170000010000000 as u64);
+    // corner:6
+    assert_eq(f64::from_field(16777219 as Field).bits(), 0x4170000030000000 as u64);
+    // corner:7
+    assert_eq(f64::from_field(9007199254740991 as Field).bits(), 0x433fffffffffffff as u64);
+    // corner:8
+    assert_eq(f64::from_field(9007199254740993 as Field).bits(), 0x4340000000000000 as u64);
+    // corner:9
+    assert_eq(f64::from_field(9007199254740995 as Field).bits(), 0x4340000000000002 as u64);
+    // corner:10
+    assert_eq(f64::from_field(9223372036854775808 as Field).bits(), 0x43e0000000000000 as u64);
+    // corner:11
+    assert_eq(f64::from_field(18446744073709551615 as Field).bits(), 0x43f0000000000000 as u64);
+    // corner:12
+    assert_eq(f64::from_field(18446744073709551616 as Field).bits(), 0x43f0000000000000 as u64);
+    // corner:13
+    assert_eq(f64::from_field(170141183460469231731687303715884105728 as Field).bits(), 0x47e0000000000000 as u64);
+    // corner:14
+    assert_eq(f64::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x47f0000000000000 as u64);
+    // random:0
+    assert_eq(f64::from_field(2767175006881639481 as Field).bits(), 0x43c3337d80fa4276 as u64);
+    // random:1
+    assert_eq(f64::from_field(139238574112857725609285862706999469174 as Field).bits(), 0x47da3017ee7724f3 as u64);
+    // random:2
+    assert_eq(f64::from_field(11318294238729304510 as Field).bits(), 0x43e3a255149559ef as u64);
+    // random:3
+    assert_eq(f64::from_field(226775175227289220497120082298805881116 as Field).bits(), 0x47e55369ec05dd29 as u64);
+    // random:4
+    assert_eq(f64::from_field(16864998707666698254 as Field).bits(), 0x43ed41905f0a7ca8 as u64);
+    // random:5
+    assert_eq(f64::from_field(49912488944956434330761945358872663068 as Field).bits(), 0x47c2c665d9b007a5 as u64);
+    // random:6
+    assert_eq(f64::from_field(12482848368983431860 as Field).bits(), 0x43e5a77f8e8c4a4b as u64);
+    // random:7
+    assert_eq(f64::from_field(306619092980834976555027963467522415335 as Field).bits(), 0x47ecd5960e7e6a9a as u64);
+    // random:8
+    assert_eq(f64::from_field(2566346945948455442 as Field).bits(), 0x43c1cebf79a1d549 as u64);
+    // random:9
+    assert_eq(f64::from_field(228698188267375139107679563620909735985 as Field).bits(), 0x47e581b567a354e0 as u64);
+    // random:10
+    assert_eq(f64::from_field(2698294351329018033 as Field).bits(), 0x43c2b922354b3460 as u64);
+    // random:11
+    assert_eq(f64::from_field(250151441946685090687565854066310923594 as Field).bits(), 0x47e7862d49df7044 as u64);
+    // random:12
+    assert_eq(f64::from_field(6258526034290788160 as Field).bits(), 0x43d5b6b01138dbf2 as u64);
+    // random:13
+    assert_eq(f64::from_field(340185902580115799039719700684654338783 as Field).bits(), 0x47effdad7e1b0599 as u64);
+    // random:14
+    assert_eq(f64::from_field(5064374259235825626 as Field).bits(), 0x43d19211639ed88a as u64);
+    // random:15
+    assert_eq(f64::from_field(251948705268626056353154013881767962879 as Field).bits(), 0x47e7b171c76a398b as u64);
+    // random:16
+    assert_eq(f64::from_field(1668832039906949998 as Field).bits(), 0x43b728e1e60071bb as u64);
+    // random:17
+    assert_eq(f64::from_field(32346859620140075857383566218905985311 as Field).bits(), 0x47b855c74f604244 as u64);
+    // random:18
+    assert_eq(f64::from_field(10561305505861875869 as Field).bits(), 0x43e252296cd828c7 as u64);
+    // random:19
+    assert_eq(f64::from_field(141372549899051876329976201483098806987 as Field).bits(), 0x47da96d736bf404d as u64);
+    // random:20
+    assert_eq(f64::from_field(8363022138756636862 as Field).bits(), 0x43dd03db14dd5448 as u64);
+    // random:21
+    assert_eq(f64::from_field(182516033342060500539696362137387984485 as Field).bits(), 0x47e129e9e68f234e as u64);
+    // random:22
+    assert_eq(f64::from_field(7390371298261463785 as Field).bits(), 0x43d9a3f7e28dc77d as u64);
+    // random:23
+    assert_eq(f64::from_field(112915926508312181160255343898346034410 as Field).bits(), 0x47d53cb43fff3295 as u64);
+    // random:24
+    assert_eq(f64::from_field(16605502702746655555 as Field).bits(), 0x43ecce53174f401b as u64);
+    // random:25
+    assert_eq(f64::from_field(186944571726793438240648493549160875937 as Field).bits(), 0x47e19486e028380d as u64);
+    // random:26
+    assert_eq(f64::from_field(16508456378246280302 as Field).bits(), 0x43eca33a3388ecd7 as u64);
+    // random:27
+    assert_eq(f64::from_field(261945785160609357170698405589843790403 as Field).bits(), 0x47e8a21d8a66b894 as u64);
+    // random:28
+    assert_eq(f64::from_field(11892187580443203607 as Field).bits(), 0x43e4a1313319d423 as u64);
+    // random:29
+    assert_eq(f64::from_field(127325779678762671170052752736189074264 as Field).bits(), 0x47d7f2836742edb0 as u64);
+    // random:30
+    assert_eq(f64::from_field(5776882243385268430 as Field).bits(), 0x43d40ae6f2c28f66 as u64);
+    // random:31
+    assert_eq(f64::from_field(209888861582666924669934894846983323551 as Field).bits(), 0x47e3bce3fab01502 as u64);
+}
+
+#[test]
+fn differential_oracle_f64_to_field() {
+    // corner:0
+    assert_eq(f64::new(0x0000000000000000 as u64).to_field(), 0 as Field);
+    // corner:1
+    assert_eq(f64::new(0x8000000000000000 as u64).to_field(), 0 as Field);
+    // corner:2
+    assert_eq(f64::new(0x3ff0000000000000 as u64).to_field(), 1 as Field);
+    // corner:3
+    assert_eq(f64::new(0x400e000000000000 as u64).to_field(), 3 as Field);
+    // corner:4
+    assert_eq(f64::new(0x3fe0000000000000 as u64).to_field(), 0 as Field);
+    // corner:5
+    assert_eq(f64::new(0xbfe0000000000000 as u64).to_field(), 0 as Field);
+    // corner:6
+    assert_eq(f64::new(0x43e0000000000000 as u64).to_field(), 9223372036854775808 as Field);
+    // corner:7
+    assert_eq(f64::new(0x43efffffffffffff as u64).to_field(), 18446744073709549568 as Field);
+    // corner:8
+    assert_eq(f64::new(0x4340000000000000 as u64).to_field(), 9007199254740992 as Field);
+    // random:0
+    assert_eq(f64::new(0x43e1e1ac904f5f30 as u64).to_field(), 10308005633692631040 as Field);
+    // random:1
+    assert_eq(f64::new(0x439d42248bc1c5d6 as u64).to_field(), 527071939558208896 as Field);
+    // random:2
+    assert_eq(f64::new(0x439c368ebcc75811 as u64).to_field(), 508242305813447744 as Field);
+    // random:3
+    assert_eq(f64::new(0x43ba69325cc394a6 as u64).to_field(), 1903107691540424192 as Field);
+    // random:4
+    assert_eq(f64::new(0x439f130f41c67fd4 as u64).to_field(), 559787553727706368 as Field);
+    // random:5
+    assert_eq(f64::new(0x4394c526ef789fbe as u64).to_field(), 374161315283332992 as Field);
+    // random:6
+    assert_eq(f64::new(0x43828d27349479aa as u64).to_field(), 167095971397711168 as Field);
+    // random:7
+    assert_eq(f64::new(0x435cf6bb4b70d410 as u64).to_field(), 32610334531604544 as Field);
+    // random:8
+    assert_eq(f64::new(0x4364c43c2ce0be8f as u64).to_field(), 46762098113770616 as Field);
+    // random:9
+    assert_eq(f64::new(0x435bcfd3d4a37a62 as u64).to_field(), 31313332334881160 as Field);
+    // random:10
+    assert_eq(f64::new(0x4344f6cf834a8bbb as u64).to_field(), 11801741311154038 as Field);
+    // random:11
+    assert_eq(f64::new(0x431f22fe6f12d783 as u64).to_field(), 2191050114643424 as Field);
+    // random:12
+    assert_eq(f64::new(0x4300d1e126a97325 as u64).to_field(), 591795571732068 as Field);
+    // random:13
+    assert_eq(f64::new(0x431af9ab774dfeb0 as u64).to_field(), 1898216057700268 as Field);
+    // random:14
+    assert_eq(f64::new(0x42ecb5a7c57a28c6 as u64).to_field(), 252532235161926 as Field);
+    // random:15
+    assert_eq(f64::new(0x42f594a6fba82295 as u64).to_field(), 379651213656617 as Field);
+    // random:16
+    assert_eq(f64::new(0x42ebe9e9c8cdce36 as u64).to_field(), 245531708649073 as Field);
+    // random:17
+    assert_eq(f64::new(0x42df3ac18cf3930e as u64).to_field(), 137348863217228 as Field);
+    // random:18
+    assert_eq(f64::new(0x42ac2211ffa0b902 as u64).to_field(), 15466328215644 as Field);
+    // random:19
+    assert_eq(f64::new(0x42a7cdb31d558646 as u64).to_field(), 13086120389315 as Field);
+    // random:20
+    assert_eq(f64::new(0x42999d901488b7c7 as u64).to_field(), 7041129456173 as Field);
+    // random:21
+    assert_eq(f64::new(0x429f0d8fc8c65cb0 as u64).to_field(), 8535776833943 as Field);
+    // random:22
+    assert_eq(f64::new(0x42811812c9d4df19 as u64).to_field(), 2349386513051 as Field);
+    // random:23
+    assert_eq(f64::new(0x4258375ba6a3c9fc as u64).to_field(), 416031873679 as Field);
+    // random:24
+    assert_eq(f64::new(0x4260226b076a4989 as u64).to_field(), 554375330642 as Field);
+    // random:25
+    assert_eq(f64::new(0x424e5b4080cda106 as u64).to_field(), 260759945627 as Field);
+    // random:26
+    assert_eq(f64::new(0x4236ef2ec8e5d26f as u64).to_field(), 98502101221 as Field);
+    // random:27
+    assert_eq(f64::new(0x42338a6a033dbd2f as u64).to_field(), 83926582077 as Field);
+    // random:28
+    assert_eq(f64::new(0x4211a3a525f14ed9 as u64).to_field(), 18939988348 as Field);
+    // random:29
+    assert_eq(f64::new(0x42170d1f05dcd604 as u64).to_field(), 24751096183 as Field);
+    // random:30
+    assert_eq(f64::new(0x420c195a333be979 as u64).to_field(), 15085553255 as Field);
+    // random:31
+    assert_eq(f64::new(0x41f5e312119ced91 as u64).to_field(), 5875245337 as Field);
+}
+
+#[test]
+fn differential_oracle_f32_to_field() {
+    // corner:0
+    assert_eq(f32::new(0x00000000 as u32).to_field(), 0 as Field);
+    // corner:1
+    assert_eq(f32::new(0x80000000 as u32).to_field(), 0 as Field);
+    // corner:2
+    assert_eq(f32::new(0x3f800000 as u32).to_field(), 1 as Field);
+    // corner:3
+    assert_eq(f32::new(0x40700000 as u32).to_field(), 3 as Field);
+    // corner:4
+    assert_eq(f32::new(0xbf000000 as u32).to_field(), 0 as Field);
+    // corner:5
+    assert_eq(f32::new(0x5f000000 as u32).to_field(), 9223372036854775808 as Field);
+    // corner:6
+    assert_eq(f32::new(0x5f7fffff as u32).to_field(), 18446742974197923840 as Field);
+    // random:0
+    assert_eq(f32::new(0x4d30005a as u32).to_field(), 184550816 as Field);
+    // random:1
+    assert_eq(f32::new(0x4d9cc239 as u32).to_field(), 328746784 as Field);
+    // random:2
+    assert_eq(f32::new(0x4d87006d as u32).to_field(), 283119008 as Field);
+    // random:3
+    assert_eq(f32::new(0x4d658f94 as u32).to_field(), 240712000 as Field);
+    // random:4
+    assert_eq(f32::new(0x4ccb036a as u32).to_field(), 106437456 as Field);
+    // random:5
+    assert_eq(f32::new(0x4c984780 as u32).to_field(), 79838208 as Field);
+    // random:6
+    assert_eq(f32::new(0x4b90480e as u32).to_field(), 18911260 as Field);
+    // random:7
+    assert_eq(f32::new(0x481acab5 as u32).to_field(), 158506 as Field);
+    // random:8
+    assert_eq(f32::new(0x4b77ddb3 as u32).to_field(), 16244147 as Field);
+    // random:9
+    assert_eq(f32::new(0x4a9ccf85 as u32).to_field(), 5138370 as Field);
+    // random:10
+    assert_eq(f32::new(0x491de8cb as u32).to_field(), 646796 as Field);
+    // random:11
+    assert_eq(f32::new(0x49fed0af as u32).to_field(), 2087445 as Field);
+    // random:12
+    assert_eq(f32::new(0x494bc36a as u32).to_field(), 834614 as Field);
+    // random:13
+    assert_eq(f32::new(0x48b00a98 as u32).to_field(), 360532 as Field);
+    // random:14
+    assert_eq(f32::new(0x48038f03 as u32).to_field(), 134716 as Field);
+    // random:15
+    assert_eq(f32::new(0x478a268a as u32).to_field(), 70733 as Field);
+    // random:16
+    assert_eq(f32::new(0x46aaf32e as u32).to_field(), 21881 as Field);
+    // random:17
+    assert_eq(f32::new(0x4e603e7e as u32).to_field(), 940547968 as Field);
+    // random:18
+    assert_eq(f32::new(0x4ecc7973 as u32).to_field(), 1715255680 as Field);
+    // random:19
+    assert_eq(f32::new(0x4c525d5e as u32).to_field(), 55145848 as Field);
+    // random:20
+    assert_eq(f32::new(0x4d549b28 as u32).to_field(), 222933632 as Field);
+    // random:21
+    assert_eq(f32::new(0x4d3deb3f as u32).to_field(), 199144432 as Field);
+    // random:22
+    assert_eq(f32::new(0x4cb967dd as u32).to_field(), 97205992 as Field);
+    // random:23
+    assert_eq(f32::new(0x4ba69d6e as u32).to_field(), 21838556 as Field);
+    // random:24
+    assert_eq(f32::new(0x4adbae33 as u32).to_field(), 7198489 as Field);
+    // random:25
+    assert_eq(f32::new(0x4aa828b9 as u32).to_field(), 5510236 as Field);
+    // random:26
+    assert_eq(f32::new(0x48f44fda as u32).to_field(), 500350 as Field);
+    // random:27
+    assert_eq(f32::new(0x4a55866a as u32).to_field(), 3498394 as Field);
+    // random:28
+    assert_eq(f32::new(0x49bf61fd as u32).to_field(), 1567807 as Field);
+    // random:29
+    assert_eq(f32::new(0x49780073 as u32).to_field(), 1015815 as Field);
+    // random:30
+    assert_eq(f32::new(0x482337ab as u32).to_field(), 167134 as Field);
+    // random:31
+    assert_eq(f32::new(0x48218d06 as u32).to_field(), 165428 as Field);
+}
+
 // f128 differential oracle: DEFERRED to sq-3x7dl.14.2.
 // Reason: Rust `f128` is nightly-only (unstable) and no stable soft-float
 // binding with verified IEEE 754 quad-precision conformance is available

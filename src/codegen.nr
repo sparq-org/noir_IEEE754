@@ -80,6 +80,11 @@ pub comptime fn float_type_from_params(bits: u8) -> Quoted {
     let exponent_scale = (1 as u128) << (mant_size as u128);
     let exponent_mask = ((1 as u128) << (exp_size as u128)) - 1;
     let mantissa_mask = ((1 as u128) << (mant_size as u128)) - 1;
+    // Named-constant bit patterns (sq-dtmg9). All are comptime constants, so the
+    // constructors below compile to circuit constants (no decode, no gates).
+    let bias = ((1 as u128) << ((exp_size - 1) as u128)) - 1;
+    let quiet_bit = (1 as u128) << ((mant_size - 1) as u128);
+    let signaling_bit = (1 as u128) << ((mant_size - 2) as u128);
     let exponent_pack = if bits == 128 {
         quote { ((self.exponent as $full_type) << ($mant_size as $full_type)) }
     } else {
@@ -153,6 +158,57 @@ pub comptime fn float_type_from_params(bits: u8) -> Quoted {
 
             fn from_magnitude<let INPUT_BITS: u32>(sign: bool, magnitude: u128) -> Self {
                 Self::from_parts($from_magnitude_parts)
+            }
+
+            // Named constant constructors (sq-dtmg9). Each returns the canonical
+            // IEEE 754 bit pattern for this width as a comptime-constant struct
+            // literal -- no decode circuit, no gates.
+
+            /// Positive zero (+0).
+            pub fn zero() -> Self {
+                Self { sign: false, exponent: 0 as $exp_type, mantissa: 0 as $mant_type }
+            }
+
+            /// Negative zero (-0). Equal to +0 under `eq`, distinct under `bits()`.
+            pub fn neg_zero() -> Self {
+                Self { sign: true, exponent: 0 as $exp_type, mantissa: 0 as $mant_type }
+            }
+
+            /// One (1.0): biased exponent, zero mantissa.
+            pub fn one() -> Self {
+                Self { sign: false, exponent: $bias as $exp_type, mantissa: 0 as $mant_type }
+            }
+
+            /// Negative one (-1.0).
+            pub fn neg_one() -> Self {
+                Self { sign: true, exponent: $bias as $exp_type, mantissa: 0 as $mant_type }
+            }
+
+            /// Positive infinity: all-ones exponent, zero mantissa.
+            pub fn infinity() -> Self {
+                Self { sign: false, exponent: $exponent_mask as $exp_type, mantissa: 0 as $mant_type }
+            }
+
+            /// Negative infinity.
+            pub fn neg_infinity() -> Self {
+                Self { sign: true, exponent: $exponent_mask as $exp_type, mantissa: 0 as $mant_type }
+            }
+
+            /// Canonical quiet NaN: all-ones exponent, quiet bit (mantissa MSB)
+            /// set, all other mantissa bits zero. This is the same pattern the
+            /// arithmetic kernels canonicalise every NaN result to.
+            pub fn nan() -> Self {
+                Self { sign: false, exponent: $exponent_mask as $exp_type, mantissa: $quiet_bit as $mant_type }
+            }
+
+            /// Signaling NaN bit pattern: all-ones exponent, quiet bit CLEAR,
+            /// next-highest mantissa bit set (the deprecated library's pattern,
+            /// e.g. 0x7FA00000 for f32). NOTE: this library implements no
+            /// signaling semantics -- an sNaN input behaves like any other NaN
+            /// and every NaN RESULT is canonicalised to the quiet `nan()`
+            /// pattern. The constructor exists for bit-level interoperability.
+            pub fn signaling_nan() -> Self {
+                Self { sign: false, exponent: $exponent_mask as $exp_type, mantissa: $signaling_bit as $mant_type }
             }
 
             // IEEE 754 comparison predicates. These are deliberately inherent
@@ -233,6 +289,16 @@ pub comptime fn float_type_from_params(bits: u8) -> Quoted {
                 $round_ties_even_call
             }
 
+            /// IEEE 754-2019 abs (5.5.1 `abs(x)`): copies the operand with the
+            /// sign bit set to 0 and changes nothing else. This is the quiet
+            /// bit-level operation the standard specifies -- NaN payloads pass
+            /// through unchanged (NOT canonicalised) and no exception is
+            /// signalled, matching hardware `fabs`. Costs no gates beyond the
+            /// operand decode.
+            pub fn abs(self) -> Self {
+                Self { sign: false, exponent: self.exponent, mantissa: self.mantissa }
+            }
+
             /// IEEE 754 squareRoot with round-to-nearest-even. NaN inputs and
             /// negative non-zero inputs (including -inf) return the canonical
             /// NaN; sqrt(+-0) preserves the zero's sign; sqrt(+inf) is +inf.
@@ -258,6 +324,33 @@ pub comptime fn float_type_from_params(bits: u8) -> Quoted {
             /// outside [-2^63, 2^63 - 1] after truncation.
             pub fn to_i64(self) -> i64 {
                 $to_i64_call
+            }
+
+            // Field <-> float conversion (sq-dtmg9). The deprecated library's
+            // versions truncated silently (from_field: mod 2^64; to_field:
+            // NaN/negative -> 0). These are the LOUD-failure counterparts,
+            // composed from the already-verified integer conversion kernels.
+
+            /// Field -> float with IEEE round-to-nearest-even. The field
+            /// element is interpreted as an unsigned integer and MUST fit in
+            /// 128 bits: an in-circuit range assert rejects values at or above
+            /// 2^128 (no silent modular truncation). Equivalent to
+            /// `from(value as u128)` with the cast made sound by the range
+            /// assert.
+            pub fn from_field(value: Field) -> Self {
+                value.assert_max_bit_size::<128>();
+                // The truncating u128 cast is exact: the range assert above
+                // pins value < 2^128.
+                Self::from_magnitude::<128>(false, value as u128)
+            }
+
+            /// Float -> Field, truncating toward zero. Implemented as the
+            /// `to_u64` cast followed by a widening Field cast, so it inherits
+            /// to_u64's loud rejections: asserts on NaN, infinity, values at
+            /// or above 2^64, and values at or below -1 (negative inputs above
+            /// -1 truncate to 0).
+            pub fn to_field(self) -> Field {
+                self.to_u64() as Field
             }
         }
 

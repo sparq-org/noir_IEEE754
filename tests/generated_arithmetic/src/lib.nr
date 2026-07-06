@@ -2734,6 +2734,86 @@ fn generated_f16_sqrt_vectors_match_reference() {
 }
 
 #[test]
+fn generated_f16_abs_vectors_match_reference() {
+    // curated:0
+    assert_eq(f16::new(0x0000 as u16).abs().bits(), 0x0000 as u16);
+    // curated:1
+    assert_eq(f16::new(0x8000 as u16).abs().bits(), 0x0000 as u16);
+    // curated:2
+    assert_eq(f16::new(0x3c00 as u16).abs().bits(), 0x3c00 as u16);
+    // curated:3
+    assert_eq(f16::new(0xbc00 as u16).abs().bits(), 0x3c00 as u16);
+    // curated:4
+    assert_eq(f16::new(0x3c01 as u16).abs().bits(), 0x3c01 as u16);
+    // curated:5
+    assert_eq(f16::new(0xbc01 as u16).abs().bits(), 0x3c01 as u16);
+    // curated:6
+    assert_eq(f16::new(0x3800 as u16).abs().bits(), 0x3800 as u16);
+    // curated:7
+    assert_eq(f16::new(0xb800 as u16).abs().bits(), 0x3800 as u16);
+    // curated:8
+    assert_eq(f16::new(0x3e00 as u16).abs().bits(), 0x3e00 as u16);
+    // curated:9
+    assert_eq(f16::new(0xbe00 as u16).abs().bits(), 0x3e00 as u16);
+    // curated:10
+    assert_eq(f16::new(0x4100 as u16).abs().bits(), 0x4100 as u16);
+    // curated:11
+    assert_eq(f16::new(0xc100 as u16).abs().bits(), 0x4100 as u16);
+    // curated:12
+    assert_eq(f16::new(0x4300 as u16).abs().bits(), 0x4300 as u16);
+    // curated:13
+    assert_eq(f16::new(0x3400 as u16).abs().bits(), 0x3400 as u16);
+    // curated:14
+    assert_eq(f16::new(0xb400 as u16).abs().bits(), 0x3400 as u16);
+    // curated:15
+    assert_eq(f16::new(0x0001 as u16).abs().bits(), 0x0001 as u16);
+    // curated:16
+    assert_eq(f16::new(0x8001 as u16).abs().bits(), 0x0001 as u16);
+    // curated:17
+    assert_eq(f16::new(0x03ff as u16).abs().bits(), 0x03ff as u16);
+    // curated:18
+    assert_eq(f16::new(0x83ff as u16).abs().bits(), 0x03ff as u16);
+    // curated:19
+    assert_eq(f16::new(0x0400 as u16).abs().bits(), 0x0400 as u16);
+    // curated:20
+    assert_eq(f16::new(0x63ff as u16).abs().bits(), 0x63ff as u16);
+    // curated:21
+    assert_eq(f16::new(0xe3ff as u16).abs().bits(), 0x63ff as u16);
+    // curated:22
+    assert_eq(f16::new(0x6400 as u16).abs().bits(), 0x6400 as u16);
+    // curated:23
+    assert_eq(f16::new(0x7bff as u16).abs().bits(), 0x7bff as u16);
+    // curated:24
+    assert_eq(f16::new(0x7c00 as u16).abs().bits(), 0x7c00 as u16);
+    // curated:25
+    assert_eq(f16::new(0xfc00 as u16).abs().bits(), 0x7c00 as u16);
+    // curated:26
+    assert_eq(f16::new(0x7e00 as u16).abs().bits(), 0x7e00 as u16);
+    // curated:27
+    assert_eq(f16::new(0x7e01 as u16).abs().bits(), 0x7e01 as u16);
+    // curated:28
+    assert_eq(f16::new(0xfe01 as u16).abs().bits(), 0x7e01 as u16);
+    // curated:29
+    assert_eq(f16::new(0xfd00 as u16).abs().bits(), 0x7d00 as u16);
+    // random:754:0
+    assert_eq(f16::new(0xc53c as u16).abs().bits(), 0x453c as u16);
+    // random:754:1
+    assert_eq(f16::new(0xd3ba as u16).abs().bits(), 0x53ba as u16);
+    // random:754:2
+    assert_eq(f16::new(0xe85c as u16).abs().bits(), 0x685c as u16);
+    // random:754:3
+    assert_eq(f16::new(0x9884 as u16).abs().bits(), 0x1884 as u16);
+    // random:754:4
+    assert_eq(f16::new(0xd332 as u16).abs().bits(), 0x5332 as u16);
+    // random:754:5
+    assert_eq(f16::new(0xf68f as u16).abs().bits(), 0x768f as u16);
+    // random:754:6
+    assert_eq(f16::new(0x8071 as u16).abs().bits(), 0x0071 as u16);
+    // random:754:7
+    assert_eq(f16::new(0x8114 as u16).abs().bits(), 0x0114 as u16);
+}
+
+#[test]
 fn generated_f32_floor_vectors_match_reference() {
     // curated:0
     assert_eq(f32::new(0x00000000 as u32).floor().bits(), 0x00000000 as u32);
@@ -3088,6 +3168,86 @@ fn generated_f32_sqrt_vectors_match_reference() {
 }
 
 #[test]
+fn generated_f32_abs_vectors_match_reference() {
+    // curated:0
+    assert_eq(f32::new(0x00000000 as u32).abs().bits(), 0x00000000 as u32);
+    // curated:1
+    assert_eq(f32::new(0x80000000 as u32).abs().bits(), 0x00000000 as u32);
+    // curated:2
+    assert_eq(f32::new(0x3f800000 as u32).abs().bits(), 0x3f800000 as u32);
+    // curated:3
+    assert_eq(f32::new(0xbf800000 as u32).abs().bits(), 0x3f800000 as u32);
+    // curated:4
+    assert_eq(f32::new(0x3f800001 as u32).abs().bits(), 0x3f800001 as u32);
+    // curated:5
+    assert_eq(f32::new(0xbf800001 as u32).abs().bits(), 0x3f800001 as u32);
+    // curated:6
+    assert_eq(f32::new(0x3f000000 as u32).abs().bits(), 0x3f000000 as u32);
+    // curated:7
+    assert_eq(f32::new(0xbf000000 as u32).abs().bits(), 0x3f000000 as u32);
+    // curated:8
+    assert_eq(f32::new(0x3fc00000 as u32).abs().bits(), 0x3fc00000 as u32);
+    // curated:9
+    assert_eq(f32::new(0xbfc00000 as u32).abs().bits(), 0x3fc00000 as u32);
+    // curated:10
+    assert_eq(f32::new(0x40200000 as u32).abs().bits(), 0x40200000 as u32);
+    // curated:11
+    assert_eq(f32::new(0xc0200000 as u32).abs().bits(), 0x40200000 as u32);
+    // curated:12
+    assert_eq(f32::new(0x40600000 as u32).abs().bits(), 0x40600000 as u32);
+    // curated:13
+    assert_eq(f32::new(0x3e800000 as u32).abs().bits(), 0x3e800000 as u32);
+    // curated:14
+    assert_eq(f32::new(0xbe800000 as u32).abs().bits(), 0x3e800000 as u32);
+    // curated:15
+    assert_eq(f32::new(0x00000001 as u32).abs().bits(), 0x00000001 as u32);
+    // curated:16
+    assert_eq(f32::new(0x80000001 as u32).abs().bits(), 0x00000001 as u32);
+    // curated:17
+    assert_eq(f32::new(0x007fffff as u32).abs().bits(), 0x007fffff as u32);
+    // curated:18
+    assert_eq(f32::new(0x807fffff as u32).abs().bits(), 0x007fffff as u32);
+    // curated:19
+    assert_eq(f32::new(0x00800000 as u32).abs().bits(), 0x00800000 as u32);
+    // curated:20
+    assert_eq(f32::new(0x4affffff as u32).abs().bits(), 0x4affffff as u32);
+    // curated:21
+    assert_eq(f32::new(0xcaffffff as u32).abs().bits(), 0x4affffff as u32);
+    // curated:22
+    assert_eq(f32::new(0x4b000000 as u32).abs().bits(), 0x4b000000 as u32);
+    // curated:23
+    assert_eq(f32::new(0x7f7fffff as u32).abs().bits(), 0x7f7fffff as u32);
+    // curated:24
+    assert_eq(f32::new(0x7f800000 as u32).abs().bits(), 0x7f800000 as u32);
+    // curated:25
+    assert_eq(f32::new(0xff800000 as u32).abs().bits(), 0x7f800000 as u32);
+    // curated:26
+    assert_eq(f32::new(0x7fc00000 as u32).abs().bits(), 0x7fc00000 as u32);
+    // curated:27
+    assert_eq(f32::new(0x7fc00001 as u32).abs().bits(), 0x7fc00001 as u32);
+    // curated:28
+    assert_eq(f32::new(0xffc00001 as u32).abs().bits(), 0x7fc00001 as u32);
+    // curated:29
+    assert_eq(f32::new(0xffa00000 as u32).abs().bits(), 0x7fa00000 as u32);
+    // random:754:0
+    assert_eq(f32::new(0x12365426 as u32).abs().bits(), 0x12365426 as u32);
+    // random:754:1
+    assert_eq(f32::new(0xe8c8f998 as u32).abs().bits(), 0x68c8f998 as u32);
+    // random:754:2
+    assert_eq(f32::new(0x354f6cd1 as u32).abs().bits(), 0x354f6cd1 as u32);
+    // random:754:3
+    assert_eq(f32::new(0x8e4927e8 as u32).abs().bits(), 0x0e4927e8 as u32);
+    // random:754:4
+    assert_eq(f32::new(0x754492ed as u32).abs().bits(), 0x754492ed as u32);
+    // random:754:5
+    assert_eq(f32::new(0xda4ff8cc as u32).abs().bits(), 0x5a4ff8cc as u32);
+    // random:754:6
+    assert_eq(f32::new(0xad3ad24d as u32).abs().bits(), 0x2d3ad24d as u32);
+    // random:754:7
+    assert_eq(f32::new(0xb164bbb4 as u32).abs().bits(), 0x3164bbb4 as u32);
+}
+
+#[test]
 fn generated_f64_floor_vectors_match_reference() {
     // curated:0
     assert_eq(f64::new(0x0000000000000000 as u64).floor().bits(), 0x0000000000000000 as u64);
@@ -3431,6 +3591,84 @@ fn generated_f64_sqrt_vectors_match_reference() {
     assert_eq(f64::new(0x199fd16a5b858bf6 as u64).sqrt().bits(), 0x2cc6902009ab65db as u64);
     // random:754:7
     assert_eq(f64::new(0x48038a453a95688a as u64).sqrt().bits(), 0x43f90173f1b9bb22 as u64);
+}
+
+#[test]
+fn generated_f64_abs_vectors_match_reference() {
+    // curated:0
+    assert_eq(f64::new(0x0000000000000000 as u64).abs().bits(), 0x0000000000000000 as u64);
+    // curated:1
+    assert_eq(f64::new(0x8000000000000000 as u64).abs().bits(), 0x0000000000000000 as u64);
+    // curated:2
+    assert_eq(f64::new(0x3ff0000000000000 as u64).abs().bits(), 0x3ff0000000000000 as u64);
+    // curated:3
+    assert_eq(f64::new(0xbff0000000000000 as u64).abs().bits(), 0x3ff0000000000000 as u64);
+    // curated:4
+    assert_eq(f64::new(0x3ff0000000000001 as u64).abs().bits(), 0x3ff0000000000001 as u64);
+    // curated:5
+    assert_eq(f64::new(0xbff0000000000001 as u64).abs().bits(), 0x3ff0000000000001 as u64);
+    // curated:6
+    assert_eq(f64::new(0x3fe0000000000000 as u64).abs().bits(), 0x3fe0000000000000 as u64);
+    // curated:7
+    assert_eq(f64::new(0xbfe0000000000000 as u64).abs().bits(), 0x3fe0000000000000 as u64);
+    // curated:8
+    assert_eq(f64::new(0x3ff8000000000000 as u64).abs().bits(), 0x3ff8000000000000 as u64);
+    // curated:9
+    assert_eq(f64::new(0xbff8000000000000 as u64).abs().bits(), 0x3ff8000000000000 as u64);
+    // curated:10
+    assert_eq(f64::new(0x4004000000000000 as u64).abs().bits(), 0x4004000000000000 as u64);
+    // curated:11
+    assert_eq(f64::new(0xc004000000000000 as u64).abs().bits(), 0x4004000000000000 as u64);
+    // curated:12
+    assert_eq(f64::new(0x400c000000000000 as u64).abs().bits(), 0x400c000000000000 as u64);
+    // curated:13
+    assert_eq(f64::new(0x3fd0000000000000 as u64).abs().bits(), 0x3fd0000000000000 as u64);
+    // curated:14
+    assert_eq(f64::new(0xbfd0000000000000 as u64).abs().bits(), 0x3fd0000000000000 as u64);
+    // curated:15
+    assert_eq(f64::new(0x0000000000000001 as u64).abs().bits(), 0x0000000000000001 as u64);
+    // curated:16
+    assert_eq(f64::new(0x8000000000000001 as u64).abs().bits(), 0x0000000000000001 as u64);
+    // curated:17
+    assert_eq(f64::new(0x000fffffffffffff as u64).abs().bits(), 0x000fffffffffffff as u64);
+    // curated:18
+    assert_eq(f64::new(0x800fffffffffffff as u64).abs().bits(), 0x000fffffffffffff as u64);
+    // curated:19
+    assert_eq(f64::new(0x0010000000000000 as u64).abs().bits(), 0x0010000000000000 as u64);
+    // curated:20
+    assert_eq(f64::new(0x432fffffffffffff as u64).abs().bits(), 0x432fffffffffffff as u64);
+    // curated:21
+    assert_eq(f64::new(0xc32fffffffffffff as u64).abs().bits(), 0x432fffffffffffff as u64);
+    // curated:22
+    assert_eq(f64::new(0x4330000000000000 as u64).abs().bits(), 0x4330000000000000 as u64);
+    // curated:23
+    assert_eq(f64::new(0x7fefffffffffffff as u64).abs().bits(), 0x7fefffffffffffff as u64);
+    // curated:24
+    assert_eq(f64::new(0x7ff0000000000000 as u64).abs().bits(), 0x7ff0000000000000 as u64);
+    // curated:25
+    assert_eq(f64::new(0xfff0000000000000 as u64).abs().bits(), 0x7ff0000000000000 as u64);
+    // curated:26
+    assert_eq(f64::new(0x7ff8000000000000 as u64).abs().bits(), 0x7ff8000000000000 as u64);
+    // curated:27
+    assert_eq(f64::new(0x7ff8000000000001 as u64).abs().bits(), 0x7ff8000000000001 as u64);
+    // curated:28
+    assert_eq(f64::new(0xfff8000000000001 as u64).abs().bits(), 0x7ff8000000000001 as u64);
+    // curated:29
+    assert_eq(f64::new(0xfff4000000000000 as u64).abs().bits(), 0x7ff4000000000000 as u64);
+    // random:754:0
+    assert_eq(f64::new(0x65549c0f3a171dc3 as u64).abs().bits(), 0x65549c0f3a171dc3 as u64);
+    // random:754:1
+    assert_eq(f64::new(0xfa321a4b47a429df as u64).abs().bits(), 0x7a321a4b47a429df as u64);
+    // random:754:2
+    assert_eq(f64::new(0x634f44192efa1247 as u64).abs().bits(), 0x634f44192efa1247 as u64);
+    // random:754:3
+    assert_eq(f64::new(0xb733926f400cd347 as u64).abs().bits(), 0x3733926f400cd347 as u64);
+    // random:754:5
+    assert_eq(f64::new(0xc79b42b1d181e3d5 as u64).abs().bits(), 0x479b42b1d181e3d5 as u64);
+    // random:754:6
+    assert_eq(f64::new(0xdca06fb97331ba46 as u64).abs().bits(), 0x5ca06fb97331ba46 as u64);
+    // random:754:7
+    assert_eq(f64::new(0x9172bfa7b27a6083 as u64).abs().bits(), 0x1172bfa7b27a6083 as u64);
 }
 
 #[test]
@@ -3782,6 +4020,82 @@ fn generated_f128_sqrt_vectors_match_reference() {
 }
 
 #[test]
+fn generated_f128_abs_vectors_match_reference() {
+    // curated:0
+    assert_eq(f128::new(0x00000000000000000000000000000000 as u128).abs().bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    assert_eq(f128::new(0x80000000000000000000000000000000 as u128).abs().bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:2
+    assert_eq(f128::new(0x3fff0000000000000000000000000000 as u128).abs().bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:3
+    assert_eq(f128::new(0xbfff0000000000000000000000000000 as u128).abs().bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:4
+    assert_eq(f128::new(0x3fff0000000000000000000000000001 as u128).abs().bits(), 0x3fff0000000000000000000000000001 as u128);
+    // curated:5
+    assert_eq(f128::new(0xbfff0000000000000000000000000001 as u128).abs().bits(), 0x3fff0000000000000000000000000001 as u128);
+    // curated:6
+    assert_eq(f128::new(0x3ffe0000000000000000000000000000 as u128).abs().bits(), 0x3ffe0000000000000000000000000000 as u128);
+    // curated:7
+    assert_eq(f128::new(0xbffe0000000000000000000000000000 as u128).abs().bits(), 0x3ffe0000000000000000000000000000 as u128);
+    // curated:8
+    assert_eq(f128::new(0x3fff8000000000000000000000000000 as u128).abs().bits(), 0x3fff8000000000000000000000000000 as u128);
+    // curated:9
+    assert_eq(f128::new(0xbfff8000000000000000000000000000 as u128).abs().bits(), 0x3fff8000000000000000000000000000 as u128);
+    // curated:10
+    assert_eq(f128::new(0x40004000000000000000000000000000 as u128).abs().bits(), 0x40004000000000000000000000000000 as u128);
+    // curated:11
+    assert_eq(f128::new(0xc0004000000000000000000000000000 as u128).abs().bits(), 0x40004000000000000000000000000000 as u128);
+    // curated:12
+    assert_eq(f128::new(0x4000c000000000000000000000000000 as u128).abs().bits(), 0x4000c000000000000000000000000000 as u128);
+    // curated:13
+    assert_eq(f128::new(0x3ffd0000000000000000000000000000 as u128).abs().bits(), 0x3ffd0000000000000000000000000000 as u128);
+    // curated:14
+    assert_eq(f128::new(0xbffd0000000000000000000000000000 as u128).abs().bits(), 0x3ffd0000000000000000000000000000 as u128);
+    // curated:15
+    assert_eq(f128::new(0x00000000000000000000000000000001 as u128).abs().bits(), 0x00000000000000000000000000000001 as u128);
+    // curated:16
+    assert_eq(f128::new(0x80000000000000000000000000000001 as u128).abs().bits(), 0x00000000000000000000000000000001 as u128);
+    // curated:17
+    assert_eq(f128::new(0x0000ffffffffffffffffffffffffffff as u128).abs().bits(), 0x0000ffffffffffffffffffffffffffff as u128);
+    // curated:18
+    assert_eq(f128::new(0x8000ffffffffffffffffffffffffffff as u128).abs().bits(), 0x0000ffffffffffffffffffffffffffff as u128);
+    // curated:19
+    assert_eq(f128::new(0x00010000000000000000000000000000 as u128).abs().bits(), 0x00010000000000000000000000000000 as u128);
+    // curated:20
+    assert_eq(f128::new(0x406effffffffffffffffffffffffffff as u128).abs().bits(), 0x406effffffffffffffffffffffffffff as u128);
+    // curated:21
+    assert_eq(f128::new(0xc06effffffffffffffffffffffffffff as u128).abs().bits(), 0x406effffffffffffffffffffffffffff as u128);
+    // curated:22
+    assert_eq(f128::new(0x406f0000000000000000000000000000 as u128).abs().bits(), 0x406f0000000000000000000000000000 as u128);
+    // curated:23
+    assert_eq(f128::new(0x7ffeffffffffffffffffffffffffffff as u128).abs().bits(), 0x7ffeffffffffffffffffffffffffffff as u128);
+    // curated:24
+    assert_eq(f128::new(0x7fff0000000000000000000000000000 as u128).abs().bits(), 0x7fff0000000000000000000000000000 as u128);
+    // curated:25
+    assert_eq(f128::new(0xffff0000000000000000000000000000 as u128).abs().bits(), 0x7fff0000000000000000000000000000 as u128);
+    // curated:26
+    assert_eq(f128::new(0x7fff8000000000000000000000000000 as u128).abs().bits(), 0x7fff8000000000000000000000000000 as u128);
+    // curated:27
+    assert_eq(f128::new(0x7fff8000000000000000000000000001 as u128).abs().bits(), 0x7fff8000000000000000000000000001 as u128);
+    // curated:28
+    assert_eq(f128::new(0xffff8000000000000000000000000001 as u128).abs().bits(), 0x7fff8000000000000000000000000001 as u128);
+    // curated:29
+    assert_eq(f128::new(0xffff4000000000000000000000000000 as u128).abs().bits(), 0x7fff4000000000000000000000000000 as u128);
+    // random:754:0
+    assert_eq(f128::new(0x32b71d8d12012c9258e8a82c83e005f8 as u128).abs().bits(), 0x32b71d8d12012c9258e8a82c83e005f8 as u128);
+    // random:754:1
+    assert_eq(f128::new(0x800096035c0e7fd3dbfd255f25374f72 as u128).abs().bits(), 0x000096035c0e7fd3dbfd255f25374f72 as u128);
+    // random:754:2
+    assert_eq(f128::new(0x0000fa16848d9e19d9393525574ec5cf as u128).abs().bits(), 0x0000fa16848d9e19d9393525574ec5cf as u128);
+    // random:754:4
+    assert_eq(f128::new(0x80003b02b6e4321073d336041cde0154 as u128).abs().bits(), 0x00003b02b6e4321073d336041cde0154 as u128);
+    // random:754:5
+    assert_eq(f128::new(0xcb7e3d7235fa52e7cf723e5fc96056b4 as u128).abs().bits(), 0x4b7e3d7235fa52e7cf723e5fc96056b4 as u128);
+    // random:754:6
+    assert_eq(f128::new(0xc8d2f73b28cf75f7ab7aa12420ad217e as u128).abs().bits(), 0x48d2f73b28cf75f7ab7aa12420ad217e as u128);
+}
+
+#[test]
 fn generated_f16_to_u64_vectors_match_reference() {
     // curated:0
     assert_eq(f16::new(0x0000 as u16).to_u64(), 0 as u64);
@@ -3801,18 +4115,16 @@ fn generated_f16_to_u64_vectors_match_reference() {
     assert_eq(f16::new(0x8001 as u16).to_u64(), 0 as u64);
     // curated:10
     assert_eq(f16::new(0x7bff as u16).to_u64(), 65504 as u64);
-    // random:754:0
-    assert_eq(f16::new(0x53ba as u16).to_u64(), 61 as u64);
     // random:754:1
-    assert_eq(f16::new(0x1884 as u16).to_u64(), 0 as u64);
-    // random:754:2
-    assert_eq(f16::new(0x8071 as u16).to_u64(), 0 as u64);
-    // random:754:3
-    assert_eq(f16::new(0x0114 as u16).to_u64(), 0 as u64);
-    // random:754:5
     assert_eq(f16::new(0x01cc as u16).to_u64(), 0 as u64);
-    // random:754:7
+    // random:754:3
     assert_eq(f16::new(0x10c9 as u16).to_u64(), 0 as u64);
+    // random:754:4
+    assert_eq(f16::new(0x009e as u16).to_u64(), 0 as u64);
+    // random:754:5
+    assert_eq(f16::new(0xa450 as u16).to_u64(), 0 as u64);
+    // random:754:6
+    assert_eq(f16::new(0xb1e0 as u16).to_u64(), 0 as u64);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -3875,19 +4187,19 @@ fn generated_f16_to_i64_vectors_match_reference() {
     // curated:10
     assert_eq(f16::new(0x7bff as u16).to_i64(), 65504);
     // random:754:0
-    assert_eq(f16::new(0x009e as u16).to_i64(), 0);
-    // random:754:1
-    assert_eq(f16::new(0xa450 as u16).to_i64(), 0);
-    // random:754:2
-    assert_eq(f16::new(0xedc7 as u16).to_i64(), -5916);
-    // random:754:3
-    assert_eq(f16::new(0xd295 as u16).to_i64(), -52);
-    // random:754:4
-    assert_eq(f16::new(0xed69 as u16).to_i64(), -5540);
-    // random:754:5
-    assert_eq(f16::new(0xb1e0 as u16).to_i64(), 0);
-    // random:754:7
     assert_eq(f16::new(0x819f as u16).to_i64(), 0);
+    // random:754:1
+    assert_eq(f16::new(0xf8c7 as u16).to_i64(), -39136);
+    // random:754:2
+    assert_eq(f16::new(0x54f0 as u16).to_i64(), 79);
+    // random:754:3
+    assert_eq(f16::new(0x51ac as u16).to_i64(), 45);
+    // random:754:4
+    assert_eq(f16::new(0x8ed8 as u16).to_i64(), 0);
+    // random:754:6
+    assert_eq(f16::new(0xe53b as u16).to_i64(), -1339);
+    // random:754:7
+    assert_eq(f16::new(0x02fe as u16).to_i64(), 0);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -3912,6 +4224,77 @@ fn generated_f16_to_i64_invalid_2() {
 }
 
 #[test]
+fn generated_f16_to_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f16::new(0x0000 as u16).to_field(), 0 as Field);
+    // curated:1
+    assert_eq(f16::new(0x8000 as u16).to_field(), 0 as Field);
+    // curated:2
+    assert_eq(f16::new(0x3c00 as u16).to_field(), 1 as Field);
+    // curated:4
+    assert_eq(f16::new(0x3800 as u16).to_field(), 0 as Field);
+    // curated:5
+    assert_eq(f16::new(0xb800 as u16).to_field(), 0 as Field);
+    // curated:6
+    assert_eq(f16::new(0x3e00 as u16).to_field(), 1 as Field);
+    // curated:8
+    assert_eq(f16::new(0x0001 as u16).to_field(), 0 as Field);
+    // curated:9
+    assert_eq(f16::new(0x8001 as u16).to_field(), 0 as Field);
+    // curated:10
+    assert_eq(f16::new(0x7bff as u16).to_field(), 65504 as Field);
+    // random:754:0
+    assert_eq(f16::new(0x7a81 as u16).to_field(), 53280 as Field);
+    // random:754:1
+    assert_eq(f16::new(0x3222 as u16).to_field(), 0 as Field);
+    // random:754:2
+    assert_eq(f16::new(0xa154 as u16).to_field(), 0 as Field);
+    // random:754:3
+    assert_eq(f16::new(0x1948 as u16).to_field(), 0 as Field);
+    // random:754:5
+    assert_eq(f16::new(0x9035 as u16).to_field(), 0 as Field);
+    // random:754:6
+    assert_eq(f16::new(0x0121 as u16).to_field(), 0 as Field);
+    // random:754:7
+    assert_eq(f16::new(0x54be as u16).to_field(), 75 as Field);
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:3
+#[test(should_fail)]
+fn generated_f16_to_field_invalid_0() {
+    let _ = f16::new(0xbc00 as u16).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:7
+#[test(should_fail)]
+fn generated_f16_to_field_invalid_1() {
+    let _ = f16::new(0xbe00 as u16).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:11
+#[test(should_fail)]
+fn generated_f16_to_field_invalid_2() {
+    let _ = f16::new(0x7c00 as u16).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:12
+#[test(should_fail)]
+fn generated_f16_to_field_invalid_3() {
+    let _ = f16::new(0xfc00 as u16).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:13
+#[test(should_fail)]
+fn generated_f16_to_field_invalid_4() {
+    let _ = f16::new(0x7e00 as u16).to_field();
+}
+
+#[test]
 fn generated_f32_to_u64_vectors_match_reference() {
     // curated:0
     assert_eq(f32::new(0x00000000 as u32).to_u64(), 0 as u64);
@@ -3932,21 +4315,21 @@ fn generated_f32_to_u64_vectors_match_reference() {
     // curated:14
     assert_eq(f32::new(0x5f000000 as u32).to_u64(), 9223372036854775808 as u64);
     // random:754:0
-    assert_eq(f32::new(0x12365426 as u32).to_u64(), 0 as u64);
-    // random:754:1
-    assert_eq(f32::new(0x354f6cd1 as u32).to_u64(), 0 as u64);
-    // random:754:2
-    assert_eq(f32::new(0x0e4927e8 as u32).to_u64(), 0 as u64);
-    // random:754:3
-    assert_eq(f32::new(0x5a4ff8cc as u32).to_u64(), 14634718809030656 as u64);
-    // random:754:4
-    assert_eq(f32::new(0xad3ad24d as u32).to_u64(), 0 as u64);
-    // random:754:5
-    assert_eq(f32::new(0xb164bbb4 as u32).to_u64(), 0 as u64);
-    // random:754:6
     assert_eq(f32::new(0x00051bc2 as u32).to_u64(), 0 as u64);
-    // random:754:7
+    // random:754:1
     assert_eq(f32::new(0x0060eb44 as u32).to_u64(), 0 as u64);
+    // random:754:2
+    assert_eq(f32::new(0x1115482e as u32).to_u64(), 0 as u64);
+    // random:754:3
+    assert_eq(f32::new(0xad93f3e5 as u32).to_u64(), 0 as u64);
+    // random:754:4
+    assert_eq(f32::new(0x2352712a as u32).to_u64(), 0 as u64);
+    // random:754:5
+    assert_eq(f32::new(0x806eb66f as u32).to_u64(), 0 as u64);
+    // random:754:6
+    assert_eq(f32::new(0x10f3d513 as u32).to_u64(), 0 as u64);
+    // random:754:7
+    assert_eq(f32::new(0x801189db as u32).to_u64(), 0 as u64);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -4029,20 +4412,20 @@ fn generated_f32_to_i64_vectors_match_reference() {
     assert_eq(f32::new(0x80000001 as u32).to_i64(), 0);
     // curated:15
     assert_eq(f32::new(0xdf000000 as u32).to_i64(), -9223372036854775807 - 1);
-    // random:754:0
-    assert_eq(f32::new(0x1115482e as u32).to_i64(), 0);
     // random:754:1
-    assert_eq(f32::new(0xad93f3e5 as u32).to_i64(), 0);
+    assert_eq(f32::new(0x80408188 as u32).to_i64(), 0);
     // random:754:2
-    assert_eq(f32::new(0xde64a16f as u32).to_i64(), -4118642739422167040);
+    assert_eq(f32::new(0x3373373f as u32).to_i64(), 0);
     // random:754:3
-    assert_eq(f32::new(0x2352712a as u32).to_i64(), 0);
+    assert_eq(f32::new(0x37ca4578 as u32).to_i64(), 0);
     // random:754:4
-    assert_eq(f32::new(0x806eb66f as u32).to_i64(), 0);
+    assert_eq(f32::new(0x9165dafb as u32).to_i64(), 0);
     // random:754:5
-    assert_eq(f32::new(0x10f3d513 as u32).to_i64(), 0);
+    assert_eq(f32::new(0xae509525 as u32).to_i64(), 0);
     // random:754:6
-    assert_eq(f32::new(0x801189db as u32).to_i64(), 0);
+    assert_eq(f32::new(0x8228d448 as u32).to_i64(), 0);
+    // random:754:7
+    assert_eq(f32::new(0x0a563106 as u32).to_i64(), 0);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -4088,6 +4471,94 @@ fn generated_f32_to_i64_invalid_5() {
 }
 
 #[test]
+fn generated_f32_to_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f32::new(0x00000000 as u32).to_field(), 0 as Field);
+    // curated:1
+    assert_eq(f32::new(0x80000000 as u32).to_field(), 0 as Field);
+    // curated:2
+    assert_eq(f32::new(0x3f800000 as u32).to_field(), 1 as Field);
+    // curated:4
+    assert_eq(f32::new(0x3f000000 as u32).to_field(), 0 as Field);
+    // curated:5
+    assert_eq(f32::new(0xbf000000 as u32).to_field(), 0 as Field);
+    // curated:6
+    assert_eq(f32::new(0x3fc00000 as u32).to_field(), 1 as Field);
+    // curated:8
+    assert_eq(f32::new(0x00000001 as u32).to_field(), 0 as Field);
+    // curated:9
+    assert_eq(f32::new(0x80000001 as u32).to_field(), 0 as Field);
+    // curated:14
+    assert_eq(f32::new(0x5f000000 as u32).to_field(), 9223372036854775808 as Field);
+    // random:754:0
+    assert_eq(f32::new(0x80097e10 as u32).to_field(), 0 as Field);
+    // random:754:2
+    assert_eq(f32::new(0x57211db7 as u32).to_field(), 177148996354048 as Field);
+    // random:754:3
+    assert_eq(f32::new(0x0af9f3d6 as u32).to_field(), 0 as Field);
+    // random:754:4
+    assert_eq(f32::new(0x0c2e84ff as u32).to_field(), 0 as Field);
+    // random:754:7
+    assert_eq(f32::new(0x8b2eb5ac as u32).to_field(), 0 as Field);
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:3
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_0() {
+    let _ = f32::new(0xbf800000 as u32).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:7
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_1() {
+    let _ = f32::new(0xbfc00000 as u32).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:10
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_2() {
+    let _ = f32::new(0x7f7fffff as u32).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:11
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_3() {
+    let _ = f32::new(0x7f800000 as u32).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:12
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_4() {
+    let _ = f32::new(0xff800000 as u32).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:13
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_5() {
+    let _ = f32::new(0x7fc00000 as u32).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:15
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_6() {
+    let _ = f32::new(0xdf000000 as u32).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:16
+#[test(should_fail)]
+fn generated_f32_to_field_invalid_7() {
+    let _ = f32::new(0x5f800000 as u32).to_field();
+}
+
+#[test]
 fn generated_f64_to_u64_vectors_match_reference() {
     // curated:0
     assert_eq(f64::new(0x0000000000000000 as u64).to_u64(), 0 as u64);
@@ -4108,17 +4579,19 @@ fn generated_f64_to_u64_vectors_match_reference() {
     // curated:14
     assert_eq(f64::new(0x43e0000000000000 as u64).to_u64(), 9223372036854775808 as u64);
     // random:754:0
-    assert_eq(f64::new(0x3733926f400cd347 as u64).to_u64(), 0 as u64);
-    // random:754:2
-    assert_eq(f64::new(0x9172bfa7b27a6083 as u64).to_u64(), 0 as u64);
-    // random:754:3
     assert_eq(f64::new(0x9f3cfa2128032158 as u64).to_u64(), 0 as u64);
-    // random:754:4
+    // random:754:1
     assert_eq(f64::new(0x00062428b7b52b31 as u64).to_u64(), 0 as u64);
-    // random:754:5
+    // random:754:2
     assert_eq(f64::new(0x000e15f42485c420 as u64).to_u64(), 0 as u64);
-    // random:754:6
+    // random:754:3
     assert_eq(f64::new(0x1a217f3f239deef8 as u64).to_u64(), 0 as u64);
+    // random:754:5
+    assert_eq(f64::new(0x8003de53843f8430 as u64).to_u64(), 0 as u64);
+    // random:754:6
+    assert_eq(f64::new(0xb895bd1025d64282 as u64).to_u64(), 0 as u64);
+    // random:754:7
+    assert_eq(f64::new(0x000b2ea62113a7ee as u64).to_u64(), 0 as u64);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -4202,21 +4675,21 @@ fn generated_f64_to_i64_vectors_match_reference() {
     // curated:15
     assert_eq(f64::new(0xc3e0000000000000 as u64).to_i64(), -9223372036854775807 - 1);
     // random:754:0
-    assert_eq(f64::new(0x8003de53843f8430 as u64).to_i64(), 0);
-    // random:754:1
-    assert_eq(f64::new(0xb895bd1025d64282 as u64).to_i64(), 0);
-    // random:754:2
-    assert_eq(f64::new(0x000b2ea62113a7ee as u64).to_i64(), 0);
-    // random:754:3
     assert_eq(f64::new(0x1b0850adece90d42 as u64).to_i64(), 0);
-    // random:754:4
+    // random:754:1
     assert_eq(f64::new(0x8009db30e00f3c2f as u64).to_i64(), 0);
-    // random:754:5
+    // random:754:2
     assert_eq(f64::new(0x99dd4e031e506196 as u64).to_i64(), 0);
-    // random:754:6
+    // random:754:3
     assert_eq(f64::new(0x800d31fb39bb7fbe as u64).to_i64(), 0);
-    // random:754:7
+    // random:754:4
     assert_eq(f64::new(0x00094d50e0167827 as u64).to_i64(), 0);
+    // random:754:5
+    assert_eq(f64::new(0x3e2d0f5f4e039bf7 as u64).to_i64(), 0);
+    // random:754:6
+    assert_eq(f64::new(0xb5351d19e0b52674 as u64).to_i64(), 0);
+    // random:754:7
+    assert_eq(f64::new(0x8001c6bfd6cb2b85 as u64).to_i64(), 0);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -4262,6 +4735,98 @@ fn generated_f64_to_i64_invalid_5() {
 }
 
 #[test]
+fn generated_f64_to_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f64::new(0x0000000000000000 as u64).to_field(), 0 as Field);
+    // curated:1
+    assert_eq(f64::new(0x8000000000000000 as u64).to_field(), 0 as Field);
+    // curated:2
+    assert_eq(f64::new(0x3ff0000000000000 as u64).to_field(), 1 as Field);
+    // curated:4
+    assert_eq(f64::new(0x3fe0000000000000 as u64).to_field(), 0 as Field);
+    // curated:5
+    assert_eq(f64::new(0xbfe0000000000000 as u64).to_field(), 0 as Field);
+    // curated:6
+    assert_eq(f64::new(0x3ff8000000000000 as u64).to_field(), 1 as Field);
+    // curated:8
+    assert_eq(f64::new(0x0000000000000001 as u64).to_field(), 0 as Field);
+    // curated:9
+    assert_eq(f64::new(0x8000000000000001 as u64).to_field(), 0 as Field);
+    // curated:14
+    assert_eq(f64::new(0x43e0000000000000 as u64).to_field(), 9223372036854775808 as Field);
+    // random:754:1
+    assert_eq(f64::new(0x000819ecef62ffa9 as u64).to_field(), 0 as Field);
+    // random:754:2
+    assert_eq(f64::new(0x8009ec1a6df8c11b as u64).to_field(), 0 as Field);
+    // random:754:3
+    assert_eq(f64::new(0x2a0c0e0dcb445b7d as u64).to_field(), 0 as Field);
+    // random:754:4
+    assert_eq(f64::new(0x94963b1f5694ae5e as u64).to_field(), 0 as Field);
+    // random:754:5
+    assert_eq(f64::new(0x000ae4ea73c0bb9b as u64).to_field(), 0 as Field);
+    // random:754:6
+    assert_eq(f64::new(0x000ece0ce40e8e8b as u64).to_field(), 0 as Field);
+    // random:754:7
+    assert_eq(f64::new(0x9fd642d9db673afe as u64).to_field(), 0 as Field);
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:3
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_0() {
+    let _ = f64::new(0xbff0000000000000 as u64).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:7
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_1() {
+    let _ = f64::new(0xbff8000000000000 as u64).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:10
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_2() {
+    let _ = f64::new(0x7fefffffffffffff as u64).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:11
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_3() {
+    let _ = f64::new(0x7ff0000000000000 as u64).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:12
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_4() {
+    let _ = f64::new(0xfff0000000000000 as u64).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:13
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_5() {
+    let _ = f64::new(0x7ff8000000000000 as u64).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:15
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_6() {
+    let _ = f64::new(0xc3e0000000000000 as u64).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:16
+#[test(should_fail)]
+fn generated_f64_to_field_invalid_7() {
+    let _ = f64::new(0x43f0000000000000 as u64).to_field();
+}
+
+#[test]
 fn generated_f128_to_u64_vectors_match_reference() {
     // curated:0
     assert_eq(f128::new(0x00000000000000000000000000000000 as u128).to_u64(), 0 as u64);
@@ -4286,17 +4851,21 @@ fn generated_f128_to_u64_vectors_match_reference() {
     // curated:19
     assert_eq(f128::new(0x403efffffffffffffffe000000000000 as u128).to_u64(), 18446744073709551615 as u64);
     // random:754:0
-    assert_eq(f128::new(0x32b71d8d12012c9258e8a82c83e005f8 as u128).to_u64(), 0 as u64);
-    // random:754:1
-    assert_eq(f128::new(0x800096035c0e7fd3dbfd255f25374f72 as u128).to_u64(), 0 as u64);
-    // random:754:2
-    assert_eq(f128::new(0x0000fa16848d9e19d9393525574ec5cf as u128).to_u64(), 0 as u64);
-    // random:754:4
-    assert_eq(f128::new(0x80003b02b6e4321073d336041cde0154 as u128).to_u64(), 0 as u64);
-    // random:754:6
     assert_eq(f128::new(0x33b393a3c23c9997432f74980f4773ce as u128).to_u64(), 0 as u64);
-    // random:754:7
+    // random:754:1
     assert_eq(f128::new(0x80006ffc4c2386b5f0f2e8c164fcc373 as u128).to_u64(), 0 as u64);
+    // random:754:2
+    assert_eq(f128::new(0x8000efaa2a831ac879dd917ce0ec2cd5 as u128).to_u64(), 0 as u64);
+    // random:754:3
+    assert_eq(f128::new(0x3f9413cdef7371934753b6e7a6ab148c as u128).to_u64(), 0 as u64);
+    // random:754:4
+    assert_eq(f128::new(0x00005930a5e8c7e5662c708db10f80a2 as u128).to_u64(), 0 as u64);
+    // random:754:5
+    assert_eq(f128::new(0x80007ad501c04f82b5f761505430e610 as u128).to_u64(), 0 as u64);
+    // random:754:6
+    assert_eq(f128::new(0x000074b50e7894fef9e860d6210baed8 as u128).to_u64(), 0 as u64);
+    // random:754:7
+    assert_eq(f128::new(0x8000c068faf62b1153c023bf3db4f557 as u128).to_u64(), 0 as u64);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -4389,21 +4958,19 @@ fn generated_f128_to_i64_vectors_match_reference() {
     // curated:17
     assert_eq(f128::new(0x403dfffffffffffffffc000000000000 as u128).to_i64(), 9223372036854775807);
     // random:754:0
-    assert_eq(f128::new(0x8000efaa2a831ac879dd917ce0ec2cd5 as u128).to_i64(), 0);
-    // random:754:1
-    assert_eq(f128::new(0x3f9413cdef7371934753b6e7a6ab148c as u128).to_i64(), 0);
-    // random:754:2
-    assert_eq(f128::new(0x00005930a5e8c7e5662c708db10f80a2 as u128).to_i64(), 0);
-    // random:754:3
-    assert_eq(f128::new(0x80007ad501c04f82b5f761505430e610 as u128).to_i64(), 0);
-    // random:754:4
-    assert_eq(f128::new(0x000074b50e7894fef9e860d6210baed8 as u128).to_i64(), 0);
-    // random:754:5
-    assert_eq(f128::new(0x8000c068faf62b1153c023bf3db4f557 as u128).to_i64(), 0);
-    // random:754:6
     assert_eq(f128::new(0x07b56118974034250f469fe19079e34d as u128).to_i64(), 0);
-    // random:754:7
+    // random:754:1
     assert_eq(f128::new(0x8000c9efc1e591a2e00b5d387344e7ec as u128).to_i64(), 0);
+    // random:754:3
+    assert_eq(f128::new(0x895367a2428fe8a3051461d3fef58187 as u128).to_i64(), 0);
+    // random:754:4
+    assert_eq(f128::new(0x80007de90956230e6e97bc4eb4e38218 as u128).to_i64(), 0);
+    // random:754:5
+    assert_eq(f128::new(0x80004b2775eecf9487ca101aecf664a4 as u128).to_i64(), 0);
+    // random:754:6
+    assert_eq(f128::new(0x1ec14f04c684c5b402d4c1d57068b2e7 as u128).to_i64(), 0);
+    // random:754:7
+    assert_eq(f128::new(0xa7c766752842ce6875553ae312d03431 as u128).to_i64(), 0);
 }
 
 // out-of-range or non-numeric cast must fail to prove
@@ -4460,4 +5027,3008 @@ fn generated_f128_to_i64_invalid_6() {
 #[test(should_fail)]
 fn generated_f128_to_i64_invalid_7() {
     let _ = f128::new(0x403efffffffffffffffe000000000000 as u128).to_i64();
+}
+
+#[test]
+fn generated_f128_to_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f128::new(0x00000000000000000000000000000000 as u128).to_field(), 0 as Field);
+    // curated:1
+    assert_eq(f128::new(0x80000000000000000000000000000000 as u128).to_field(), 0 as Field);
+    // curated:2
+    assert_eq(f128::new(0x3fff0000000000000000000000000000 as u128).to_field(), 1 as Field);
+    // curated:4
+    assert_eq(f128::new(0x3ffe0000000000000000000000000000 as u128).to_field(), 0 as Field);
+    // curated:5
+    assert_eq(f128::new(0xbffe0000000000000000000000000000 as u128).to_field(), 0 as Field);
+    // curated:6
+    assert_eq(f128::new(0x3fff8000000000000000000000000000 as u128).to_field(), 1 as Field);
+    // curated:8
+    assert_eq(f128::new(0x00000000000000000000000000000001 as u128).to_field(), 0 as Field);
+    // curated:9
+    assert_eq(f128::new(0x80000000000000000000000000000001 as u128).to_field(), 0 as Field);
+    // curated:14
+    assert_eq(f128::new(0x403e0000000000000000000000000000 as u128).to_field(), 9223372036854775808 as Field);
+    // curated:17
+    assert_eq(f128::new(0x403dfffffffffffffffc000000000000 as u128).to_field(), 9223372036854775807 as Field);
+    // curated:19
+    assert_eq(f128::new(0x403efffffffffffffffe000000000000 as u128).to_field(), 18446744073709551615 as Field);
+    // random:754:0
+    assert_eq(f128::new(0x0000b63a3572f9ddd59d7eb18845ca34 as u128).to_field(), 0 as Field);
+    // random:754:1
+    assert_eq(f128::new(0x90f4ebdc8697f434bebc55c0ee6614bd as u128).to_field(), 0 as Field);
+    // random:754:2
+    assert_eq(f128::new(0x2ee48ef56446e4880ac634445338eef8 as u128).to_field(), 0 as Field);
+    // random:754:3
+    assert_eq(f128::new(0x80000764fc2012dc6935c9c60280c8dd as u128).to_field(), 0 as Field);
+    // random:754:5
+    assert_eq(f128::new(0x8000cc5f76446f274e9ed2a2006b405b as u128).to_field(), 0 as Field);
+    // random:754:6
+    assert_eq(f128::new(0x3cf66ec0ae204c95b31898bb1bfdcf33 as u128).to_field(), 0 as Field);
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:3
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_0() {
+    let _ = f128::new(0xbfff0000000000000000000000000000 as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:7
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_1() {
+    let _ = f128::new(0xbfff8000000000000000000000000000 as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:10
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_2() {
+    let _ = f128::new(0x7ffeffffffffffffffffffffffffffff as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:11
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_3() {
+    let _ = f128::new(0x7fff0000000000000000000000000000 as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:12
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_4() {
+    let _ = f128::new(0xffff0000000000000000000000000000 as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:13
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_5() {
+    let _ = f128::new(0x7fff8000000000000000000000000000 as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:15
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_6() {
+    let _ = f128::new(0xc03e0000000000000000000000000000 as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:16
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_7() {
+    let _ = f128::new(0x403f0000000000000000000000000000 as u128).to_field();
+}
+
+// out-of-range or non-numeric cast must fail to prove
+// curated:18
+#[test(should_fail)]
+fn generated_f128_to_field_invalid_8() {
+    let _ = f128::new(0xc03e0000000000000002000000000000 as u128).to_field();
+}
+
+#[test]
+fn generated_f16_from_u8_vectors_match_reference() {
+    // curated:0
+    let value_0: u8 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: u8 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: u8 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: u8 = 255;
+    assert_eq(f16::from(value_3).bits(), 0x5bf8 as u16);
+    // curated:4
+    let value_4: u8 = 254;
+    assert_eq(f16::from(value_4).bits(), 0x5bf0 as u16);
+    // curated:5
+    let value_5: u8 = 85;
+    assert_eq(f16::from(value_5).bits(), 0x5550 as u16);
+    // random:754:0
+    let value_6: u8 = 135;
+    assert_eq(f16::from(value_6).bits(), 0x5838 as u16);
+    // random:754:1
+    let value_7: u8 = 131;
+    assert_eq(f16::from(value_7).bits(), 0x5818 as u16);
+    // random:754:2
+    let value_8: u8 = 22;
+    assert_eq(f16::from(value_8).bits(), 0x4d80 as u16);
+    // random:754:3
+    let value_9: u8 = 88;
+    assert_eq(f16::from(value_9).bits(), 0x5580 as u16);
+    // random:754:4
+    let value_10: u8 = 40;
+    assert_eq(f16::from(value_10).bits(), 0x5100 as u16);
+    // random:754:5
+    let value_11: u8 = 110;
+    assert_eq(f16::from(value_11).bits(), 0x56e0 as u16);
+    // random:754:6
+    let value_12: u8 = 222;
+    assert_eq(f16::from(value_12).bits(), 0x5af0 as u16);
+    // random:754:7
+    let value_13: u8 = 174;
+    assert_eq(f16::from(value_13).bits(), 0x5970 as u16);
+}
+
+#[test]
+fn generated_f16_from_u16_vectors_match_reference() {
+    // curated:0
+    let value_0: u16 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: u16 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: u16 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: u16 = 65535;
+    assert_eq(f16::from(value_3).bits(), 0x7c00 as u16);
+    // curated:4
+    let value_4: u16 = 65534;
+    assert_eq(f16::from(value_4).bits(), 0x7c00 as u16);
+    // curated:5
+    let value_5: u16 = 21845;
+    assert_eq(f16::from(value_5).bits(), 0x7555 as u16);
+    // curated:6
+    let value_6: u16 = 2047;
+    assert_eq(f16::from(value_6).bits(), 0x67ff as u16);
+    // curated:7
+    let value_7: u16 = 2049;
+    assert_eq(f16::from(value_7).bits(), 0x6800 as u16);
+    // curated:8
+    let value_8: u16 = 2051;
+    assert_eq(f16::from(value_8).bits(), 0x6802 as u16);
+    // random:754:0
+    let value_9: u16 = 10335;
+    assert_eq(f16::from(value_9).bits(), 0x710c as u16);
+    // random:754:1
+    let value_10: u16 = 30361;
+    assert_eq(f16::from(value_10).bits(), 0x776a as u16);
+    // random:754:2
+    let value_11: u16 = 31646;
+    assert_eq(f16::from(value_11).bits(), 0x77ba as u16);
+    // random:754:3
+    let value_12: u16 = 11520;
+    assert_eq(f16::from(value_12).bits(), 0x71a0 as u16);
+    // random:754:4
+    let value_13: u16 = 30729;
+    assert_eq(f16::from(value_13).bits(), 0x7781 as u16);
+    // random:754:5
+    let value_14: u16 = 9002;
+    assert_eq(f16::from(value_14).bits(), 0x7065 as u16);
+    // random:754:6
+    let value_15: u16 = 27544;
+    assert_eq(f16::from(value_15).bits(), 0x76ba as u16);
+    // random:754:7
+    let value_16: u16 = 15220;
+    assert_eq(f16::from(value_16).bits(), 0x736e as u16);
+}
+
+#[test]
+fn generated_f16_from_u32_vectors_match_reference() {
+    // curated:0
+    let value_0: u32 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: u32 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: u32 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: u32 = 4294967295;
+    assert_eq(f16::from(value_3).bits(), 0x7c00 as u16);
+    // curated:4
+    let value_4: u32 = 4294967294;
+    assert_eq(f16::from(value_4).bits(), 0x7c00 as u16);
+    // curated:5
+    let value_5: u32 = 1431655765;
+    assert_eq(f16::from(value_5).bits(), 0x7c00 as u16);
+    // curated:6
+    let value_6: u32 = 2047;
+    assert_eq(f16::from(value_6).bits(), 0x67ff as u16);
+    // curated:7
+    let value_7: u32 = 2049;
+    assert_eq(f16::from(value_7).bits(), 0x6800 as u16);
+    // curated:8
+    let value_8: u32 = 2051;
+    assert_eq(f16::from(value_8).bits(), 0x6802 as u16);
+    // curated:9
+    let value_9: u32 = 16777215;
+    assert_eq(f16::from(value_9).bits(), 0x7c00 as u16);
+    // curated:10
+    let value_10: u32 = 16777217;
+    assert_eq(f16::from(value_10).bits(), 0x7c00 as u16);
+    // curated:11
+    let value_11: u32 = 16777219;
+    assert_eq(f16::from(value_11).bits(), 0x7c00 as u16);
+    // random:754:0
+    let value_12: u32 = 634784152;
+    assert_eq(f16::from(value_12).bits(), 0x7c00 as u16);
+    // random:754:1
+    let value_13: u32 = 2626990628;
+    assert_eq(f16::from(value_13).bits(), 0x7c00 as u16);
+    // random:754:2
+    let value_14: u32 = 3642106502;
+    assert_eq(f16::from(value_14).bits(), 0x7c00 as u16);
+    // random:754:3
+    let value_15: u32 = 1711248366;
+    assert_eq(f16::from(value_15).bits(), 0x7c00 as u16);
+    // random:754:4
+    let value_16: u32 = 2815729850;
+    assert_eq(f16::from(value_16).bits(), 0x7c00 as u16);
+    // random:754:5
+    let value_17: u32 = 798919876;
+    assert_eq(f16::from(value_17).bits(), 0x7c00 as u16);
+    // random:754:6
+    let value_18: u32 = 2873268491;
+    assert_eq(f16::from(value_18).bits(), 0x7c00 as u16);
+    // random:754:7
+    let value_19: u32 = 2112463860;
+    assert_eq(f16::from(value_19).bits(), 0x7c00 as u16);
+}
+
+#[test]
+fn generated_f16_from_u64_vectors_match_reference() {
+    // curated:0
+    let value_0: u64 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: u64 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: u64 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: u64 = 18446744073709551615;
+    assert_eq(f16::from(value_3).bits(), 0x7c00 as u16);
+    // curated:4
+    let value_4: u64 = 18446744073709551614;
+    assert_eq(f16::from(value_4).bits(), 0x7c00 as u16);
+    // curated:5
+    let value_5: u64 = 6148914691236517205;
+    assert_eq(f16::from(value_5).bits(), 0x7c00 as u16);
+    // curated:6
+    let value_6: u64 = 2047;
+    assert_eq(f16::from(value_6).bits(), 0x67ff as u16);
+    // curated:7
+    let value_7: u64 = 2049;
+    assert_eq(f16::from(value_7).bits(), 0x6800 as u16);
+    // curated:8
+    let value_8: u64 = 2051;
+    assert_eq(f16::from(value_8).bits(), 0x6802 as u16);
+    // curated:9
+    let value_9: u64 = 16777215;
+    assert_eq(f16::from(value_9).bits(), 0x7c00 as u16);
+    // curated:10
+    let value_10: u64 = 16777217;
+    assert_eq(f16::from(value_10).bits(), 0x7c00 as u16);
+    // curated:11
+    let value_11: u64 = 16777219;
+    assert_eq(f16::from(value_11).bits(), 0x7c00 as u16);
+    // curated:12
+    let value_12: u64 = 9007199254740991;
+    assert_eq(f16::from(value_12).bits(), 0x7c00 as u16);
+    // curated:13
+    let value_13: u64 = 9007199254740993;
+    assert_eq(f16::from(value_13).bits(), 0x7c00 as u16);
+    // curated:14
+    let value_14: u64 = 9007199254740995;
+    assert_eq(f16::from(value_14).bits(), 0x7c00 as u16);
+    // random:754:0
+    let value_15: u64 = 12950546985833438257;
+    assert_eq(f16::from(value_15).bits(), 0x7c00 as u16);
+    // random:754:1
+    let value_16: u64 = 17636882125652614445;
+    assert_eq(f16::from(value_16).bits(), 0x7c00 as u16);
+    // random:754:2
+    let value_17: u64 = 14814198234896982234;
+    assert_eq(f16::from(value_17).bits(), 0x7c00 as u16);
+    // random:754:3
+    let value_18: u64 = 17061606280862038218;
+    assert_eq(f16::from(value_18).bits(), 0x7c00 as u16);
+    // random:754:4
+    let value_19: u64 = 6644204941328213689;
+    assert_eq(f16::from(value_19).bits(), 0x7c00 as u16);
+    // random:754:5
+    let value_20: u64 = 12861397568070964457;
+    assert_eq(f16::from(value_20).bits(), 0x7c00 as u16);
+    // random:754:6
+    let value_21: u64 = 7716103418095454651;
+    assert_eq(f16::from(value_21).bits(), 0x7c00 as u16);
+    // random:754:7
+    let value_22: u64 = 7326994701302595715;
+    assert_eq(f16::from(value_22).bits(), 0x7c00 as u16);
+}
+
+#[test]
+fn generated_f16_from_u128_vectors_match_reference() {
+    // curated:0
+    let value_0: u128 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: u128 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: u128 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: u128 = 340282366920938463463374607431768211455;
+    assert_eq(f16::from(value_3).bits(), 0x7c00 as u16);
+    // curated:4
+    let value_4: u128 = 340282366920938463463374607431768211454;
+    assert_eq(f16::from(value_4).bits(), 0x7c00 as u16);
+    // curated:5
+    let value_5: u128 = 113427455640312821154458202477256070485;
+    assert_eq(f16::from(value_5).bits(), 0x7c00 as u16);
+    // curated:6
+    let value_6: u128 = 2047;
+    assert_eq(f16::from(value_6).bits(), 0x67ff as u16);
+    // curated:7
+    let value_7: u128 = 2049;
+    assert_eq(f16::from(value_7).bits(), 0x6800 as u16);
+    // curated:8
+    let value_8: u128 = 2051;
+    assert_eq(f16::from(value_8).bits(), 0x6802 as u16);
+    // curated:9
+    let value_9: u128 = 16777215;
+    assert_eq(f16::from(value_9).bits(), 0x7c00 as u16);
+    // curated:10
+    let value_10: u128 = 16777217;
+    assert_eq(f16::from(value_10).bits(), 0x7c00 as u16);
+    // curated:11
+    let value_11: u128 = 16777219;
+    assert_eq(f16::from(value_11).bits(), 0x7c00 as u16);
+    // curated:12
+    let value_12: u128 = 9007199254740991;
+    assert_eq(f16::from(value_12).bits(), 0x7c00 as u16);
+    // curated:13
+    let value_13: u128 = 9007199254740993;
+    assert_eq(f16::from(value_13).bits(), 0x7c00 as u16);
+    // curated:14
+    let value_14: u128 = 9007199254740995;
+    assert_eq(f16::from(value_14).bits(), 0x7c00 as u16);
+    // curated:15
+    let value_15: u128 = 10384593717069655257060992658440191;
+    assert_eq(f16::from(value_15).bits(), 0x7c00 as u16);
+    // curated:16
+    let value_16: u128 = 10384593717069655257060992658440193;
+    assert_eq(f16::from(value_16).bits(), 0x7c00 as u16);
+    // curated:17
+    let value_17: u128 = 10384593717069655257060992658440195;
+    assert_eq(f16::from(value_17).bits(), 0x7c00 as u16);
+    // random:754:0
+    let value_18: u128 = 229132544365972611237451496150328287031;
+    assert_eq(f16::from(value_18).bits(), 0x7c00 as u16);
+    // random:754:1
+    let value_19: u128 = 161095237445783113892518115330645246391;
+    assert_eq(f16::from(value_19).bits(), 0x7c00 as u16);
+    // random:754:2
+    let value_20: u128 = 49540684057981677026798050273282321849;
+    assert_eq(f16::from(value_20).bits(), 0x7c00 as u16);
+    // random:754:3
+    let value_21: u128 = 78817853551626589597637180398168874442;
+    assert_eq(f16::from(value_21).bits(), 0x7c00 as u16);
+    // random:754:4
+    let value_22: u128 = 146447694798610083602104025914928347710;
+    assert_eq(f16::from(value_22).bits(), 0x7c00 as u16);
+    // random:754:5
+    let value_23: u128 = 165076463122957346996991763932485052878;
+    assert_eq(f16::from(value_23).bits(), 0x7c00 as u16);
+    // random:754:6
+    let value_24: u128 = 134779827303750764890133338416317368905;
+    assert_eq(f16::from(value_24).bits(), 0x7c00 as u16);
+    // random:754:7
+    let value_25: u128 = 63623017861961412634418098222388294736;
+    assert_eq(f16::from(value_25).bits(), 0x7c00 as u16);
+}
+
+#[test]
+fn generated_f16_from_i8_vectors_match_reference() {
+    // curated:0
+    let value_0: i8 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: i8 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: i8 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: i8 = 127;
+    assert_eq(f16::from(value_3).bits(), 0x57f0 as u16);
+    // curated:4
+    let value_4: i8 = 126;
+    assert_eq(f16::from(value_4).bits(), 0x57e0 as u16);
+    // curated:5
+    let value_5: i8 = 42;
+    assert_eq(f16::from(value_5).bits(), 0x5140 as u16);
+    // curated:6
+    let value_6: i8 = -1;
+    assert_eq(f16::from(value_6).bits(), 0xbc00 as u16);
+    // curated:7
+    let value_7: i8 = -2;
+    assert_eq(f16::from(value_7).bits(), 0xc000 as u16);
+    // curated:8
+    let value_8: i8 = -127 - 1;
+    assert_eq(f16::from(value_8).bits(), 0xd800 as u16);
+    // curated:9
+    let value_9: i8 = -127;
+    assert_eq(f16::from(value_9).bits(), 0xd7f0 as u16);
+    // curated:10
+    let value_10: i8 = -42;
+    assert_eq(f16::from(value_10).bits(), 0xd140 as u16);
+    // random:754:0
+    let value_11: i8 = 5;
+    assert_eq(f16::from(value_11).bits(), 0x4500 as u16);
+    // random:754:1
+    let value_12: i8 = 111;
+    assert_eq(f16::from(value_12).bits(), 0x56f0 as u16);
+    // random:754:2
+    let value_13: i8 = 49;
+    assert_eq(f16::from(value_13).bits(), 0x5220 as u16);
+    // random:754:3
+    let value_14: i8 = 68;
+    assert_eq(f16::from(value_14).bits(), 0x5440 as u16);
+    // random:754:4
+    let value_15: i8 = 99;
+    assert_eq(f16::from(value_15).bits(), 0x5630 as u16);
+    // random:754:5
+    let value_16: i8 = -31;
+    assert_eq(f16::from(value_16).bits(), 0xcfc0 as u16);
+    // random:754:6
+    let value_17: i8 = 98;
+    assert_eq(f16::from(value_17).bits(), 0x5620 as u16);
+    // random:754:7
+    let value_18: i8 = 71;
+    assert_eq(f16::from(value_18).bits(), 0x5470 as u16);
+}
+
+#[test]
+fn generated_f16_from_i16_vectors_match_reference() {
+    // curated:0
+    let value_0: i16 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: i16 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: i16 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: i16 = 32767;
+    assert_eq(f16::from(value_3).bits(), 0x7800 as u16);
+    // curated:4
+    let value_4: i16 = 32766;
+    assert_eq(f16::from(value_4).bits(), 0x7800 as u16);
+    // curated:5
+    let value_5: i16 = 10922;
+    assert_eq(f16::from(value_5).bits(), 0x7155 as u16);
+    // curated:6
+    let value_6: i16 = -1;
+    assert_eq(f16::from(value_6).bits(), 0xbc00 as u16);
+    // curated:7
+    let value_7: i16 = -2;
+    assert_eq(f16::from(value_7).bits(), 0xc000 as u16);
+    // curated:8
+    let value_8: i16 = -32767 - 1;
+    assert_eq(f16::from(value_8).bits(), 0xf800 as u16);
+    // curated:9
+    let value_9: i16 = -32767;
+    assert_eq(f16::from(value_9).bits(), 0xf800 as u16);
+    // curated:10
+    let value_10: i16 = -10922;
+    assert_eq(f16::from(value_10).bits(), 0xf155 as u16);
+    // curated:11
+    let value_11: i16 = 2047;
+    assert_eq(f16::from(value_11).bits(), 0x67ff as u16);
+    // curated:12
+    let value_12: i16 = -2047;
+    assert_eq(f16::from(value_12).bits(), 0xe7ff as u16);
+    // curated:13
+    let value_13: i16 = 2049;
+    assert_eq(f16::from(value_13).bits(), 0x6800 as u16);
+    // curated:14
+    let value_14: i16 = -2049;
+    assert_eq(f16::from(value_14).bits(), 0xe800 as u16);
+    // curated:15
+    let value_15: i16 = 2051;
+    assert_eq(f16::from(value_15).bits(), 0x6802 as u16);
+    // curated:16
+    let value_16: i16 = -2051;
+    assert_eq(f16::from(value_16).bits(), 0xe802 as u16);
+    // random:754:0
+    let value_17: i16 = 625;
+    assert_eq(f16::from(value_17).bits(), 0x60e2 as u16);
+    // random:754:1
+    let value_18: i16 = 23938;
+    assert_eq(f16::from(value_18).bits(), 0x75d8 as u16);
+    // random:754:2
+    let value_19: i16 = -23804;
+    assert_eq(f16::from(value_19).bits(), 0xf5d0 as u16);
+    // random:754:3
+    let value_20: i16 = -22845;
+    assert_eq(f16::from(value_20).bits(), 0xf594 as u16);
+    // random:754:4
+    let value_21: i16 = -9461;
+    assert_eq(f16::from(value_21).bits(), 0xf09f as u16);
+    // random:754:5
+    let value_22: i16 = -16391;
+    assert_eq(f16::from(value_22).bits(), 0xf400 as u16);
+    // random:754:6
+    let value_23: i16 = 29457;
+    assert_eq(f16::from(value_23).bits(), 0x7731 as u16);
+    // random:754:7
+    let value_24: i16 = -31801;
+    assert_eq(f16::from(value_24).bits(), 0xf7c4 as u16);
+}
+
+#[test]
+fn generated_f16_from_i32_vectors_match_reference() {
+    // curated:0
+    let value_0: i32 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: i32 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: i32 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: i32 = 2147483647;
+    assert_eq(f16::from(value_3).bits(), 0x7c00 as u16);
+    // curated:4
+    let value_4: i32 = 2147483646;
+    assert_eq(f16::from(value_4).bits(), 0x7c00 as u16);
+    // curated:5
+    let value_5: i32 = 715827882;
+    assert_eq(f16::from(value_5).bits(), 0x7c00 as u16);
+    // curated:6
+    let value_6: i32 = -1;
+    assert_eq(f16::from(value_6).bits(), 0xbc00 as u16);
+    // curated:7
+    let value_7: i32 = -2;
+    assert_eq(f16::from(value_7).bits(), 0xc000 as u16);
+    // curated:8
+    let value_8: i32 = -2147483647 - 1;
+    assert_eq(f16::from(value_8).bits(), 0xfc00 as u16);
+    // curated:9
+    let value_9: i32 = -2147483647;
+    assert_eq(f16::from(value_9).bits(), 0xfc00 as u16);
+    // curated:10
+    let value_10: i32 = -715827882;
+    assert_eq(f16::from(value_10).bits(), 0xfc00 as u16);
+    // curated:11
+    let value_11: i32 = 2047;
+    assert_eq(f16::from(value_11).bits(), 0x67ff as u16);
+    // curated:12
+    let value_12: i32 = -2047;
+    assert_eq(f16::from(value_12).bits(), 0xe7ff as u16);
+    // curated:13
+    let value_13: i32 = 2049;
+    assert_eq(f16::from(value_13).bits(), 0x6800 as u16);
+    // curated:14
+    let value_14: i32 = -2049;
+    assert_eq(f16::from(value_14).bits(), 0xe800 as u16);
+    // curated:15
+    let value_15: i32 = 2051;
+    assert_eq(f16::from(value_15).bits(), 0x6802 as u16);
+    // curated:16
+    let value_16: i32 = -2051;
+    assert_eq(f16::from(value_16).bits(), 0xe802 as u16);
+    // curated:17
+    let value_17: i32 = 16777215;
+    assert_eq(f16::from(value_17).bits(), 0x7c00 as u16);
+    // curated:18
+    let value_18: i32 = -16777215;
+    assert_eq(f16::from(value_18).bits(), 0xfc00 as u16);
+    // curated:19
+    let value_19: i32 = 16777217;
+    assert_eq(f16::from(value_19).bits(), 0x7c00 as u16);
+    // curated:20
+    let value_20: i32 = -16777217;
+    assert_eq(f16::from(value_20).bits(), 0xfc00 as u16);
+    // curated:21
+    let value_21: i32 = 16777219;
+    assert_eq(f16::from(value_21).bits(), 0x7c00 as u16);
+    // curated:22
+    let value_22: i32 = -16777219;
+    assert_eq(f16::from(value_22).bits(), 0xfc00 as u16);
+    // random:754:0
+    let value_23: i32 = 134038063;
+    assert_eq(f16::from(value_23).bits(), 0x7c00 as u16);
+    // random:754:1
+    let value_24: i32 = -472007322;
+    assert_eq(f16::from(value_24).bits(), 0xfc00 as u16);
+    // random:754:2
+    let value_25: i32 = -1145940016;
+    assert_eq(f16::from(value_25).bits(), 0xfc00 as u16);
+    // random:754:3
+    let value_26: i32 = 711406163;
+    assert_eq(f16::from(value_26).bits(), 0x7c00 as u16);
+    // random:754:4
+    let value_27: i32 = 1561285798;
+    assert_eq(f16::from(value_27).bits(), 0x7c00 as u16);
+    // random:754:5
+    let value_28: i32 = 400213525;
+    assert_eq(f16::from(value_28).bits(), 0x7c00 as u16);
+    // random:754:6
+    let value_29: i32 = -1492334133;
+    assert_eq(f16::from(value_29).bits(), 0xfc00 as u16);
+    // random:754:7
+    let value_30: i32 = 2069117687;
+    assert_eq(f16::from(value_30).bits(), 0x7c00 as u16);
+}
+
+#[test]
+fn generated_f16_from_i64_vectors_match_reference() {
+    // curated:0
+    let value_0: i64 = 0;
+    assert_eq(f16::from(value_0).bits(), 0x0000 as u16);
+    // curated:1
+    let value_1: i64 = 1;
+    assert_eq(f16::from(value_1).bits(), 0x3c00 as u16);
+    // curated:2
+    let value_2: i64 = 2;
+    assert_eq(f16::from(value_2).bits(), 0x4000 as u16);
+    // curated:3
+    let value_3: i64 = 9223372036854775807;
+    assert_eq(f16::from(value_3).bits(), 0x7c00 as u16);
+    // curated:4
+    let value_4: i64 = 9223372036854775806;
+    assert_eq(f16::from(value_4).bits(), 0x7c00 as u16);
+    // curated:5
+    let value_5: i64 = 3074457345618258602;
+    assert_eq(f16::from(value_5).bits(), 0x7c00 as u16);
+    // curated:6
+    let value_6: i64 = -1;
+    assert_eq(f16::from(value_6).bits(), 0xbc00 as u16);
+    // curated:7
+    let value_7: i64 = -2;
+    assert_eq(f16::from(value_7).bits(), 0xc000 as u16);
+    // curated:8
+    let value_8: i64 = -9223372036854775807 - 1;
+    assert_eq(f16::from(value_8).bits(), 0xfc00 as u16);
+    // curated:9
+    let value_9: i64 = -9223372036854775807;
+    assert_eq(f16::from(value_9).bits(), 0xfc00 as u16);
+    // curated:10
+    let value_10: i64 = -3074457345618258602;
+    assert_eq(f16::from(value_10).bits(), 0xfc00 as u16);
+    // curated:11
+    let value_11: i64 = 2047;
+    assert_eq(f16::from(value_11).bits(), 0x67ff as u16);
+    // curated:12
+    let value_12: i64 = -2047;
+    assert_eq(f16::from(value_12).bits(), 0xe7ff as u16);
+    // curated:13
+    let value_13: i64 = 2049;
+    assert_eq(f16::from(value_13).bits(), 0x6800 as u16);
+    // curated:14
+    let value_14: i64 = -2049;
+    assert_eq(f16::from(value_14).bits(), 0xe800 as u16);
+    // curated:15
+    let value_15: i64 = 2051;
+    assert_eq(f16::from(value_15).bits(), 0x6802 as u16);
+    // curated:16
+    let value_16: i64 = -2051;
+    assert_eq(f16::from(value_16).bits(), 0xe802 as u16);
+    // curated:17
+    let value_17: i64 = 16777215;
+    assert_eq(f16::from(value_17).bits(), 0x7c00 as u16);
+    // curated:18
+    let value_18: i64 = -16777215;
+    assert_eq(f16::from(value_18).bits(), 0xfc00 as u16);
+    // curated:19
+    let value_19: i64 = 16777217;
+    assert_eq(f16::from(value_19).bits(), 0x7c00 as u16);
+    // curated:20
+    let value_20: i64 = -16777217;
+    assert_eq(f16::from(value_20).bits(), 0xfc00 as u16);
+    // curated:21
+    let value_21: i64 = 16777219;
+    assert_eq(f16::from(value_21).bits(), 0x7c00 as u16);
+    // curated:22
+    let value_22: i64 = -16777219;
+    assert_eq(f16::from(value_22).bits(), 0xfc00 as u16);
+    // curated:23
+    let value_23: i64 = 9007199254740991;
+    assert_eq(f16::from(value_23).bits(), 0x7c00 as u16);
+    // curated:24
+    let value_24: i64 = -9007199254740991;
+    assert_eq(f16::from(value_24).bits(), 0xfc00 as u16);
+    // curated:25
+    let value_25: i64 = 9007199254740993;
+    assert_eq(f16::from(value_25).bits(), 0x7c00 as u16);
+    // curated:26
+    let value_26: i64 = -9007199254740993;
+    assert_eq(f16::from(value_26).bits(), 0xfc00 as u16);
+    // curated:27
+    let value_27: i64 = 9007199254740995;
+    assert_eq(f16::from(value_27).bits(), 0x7c00 as u16);
+    // curated:28
+    let value_28: i64 = -9007199254740995;
+    assert_eq(f16::from(value_28).bits(), 0xfc00 as u16);
+    // random:754:0
+    let value_29: i64 = -3571649730860053997;
+    assert_eq(f16::from(value_29).bits(), 0xfc00 as u16);
+    // random:754:1
+    let value_30: i64 = -8914266895572893232;
+    assert_eq(f16::from(value_30).bits(), 0xfc00 as u16);
+    // random:754:2
+    let value_31: i64 = -8460707406255513680;
+    assert_eq(f16::from(value_31).bits(), 0xfc00 as u16);
+    // random:754:3
+    let value_32: i64 = -6031682366589760568;
+    assert_eq(f16::from(value_32).bits(), 0xfc00 as u16);
+    // random:754:4
+    let value_33: i64 = -3341438161165454355;
+    assert_eq(f16::from(value_33).bits(), 0xfc00 as u16);
+    // random:754:5
+    let value_34: i64 = -5590507246081587319;
+    assert_eq(f16::from(value_34).bits(), 0xfc00 as u16);
+    // random:754:6
+    let value_35: i64 = 3843984479995749150;
+    assert_eq(f16::from(value_35).bits(), 0x7c00 as u16);
+    // random:754:7
+    let value_36: i64 = -5467132694335675826;
+    assert_eq(f16::from(value_36).bits(), 0xfc00 as u16);
+}
+
+#[test]
+fn generated_f16_from_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f16::from_field(0 as Field).bits(), 0x0000 as u16);
+    // curated:1
+    assert_eq(f16::from_field(1 as Field).bits(), 0x3c00 as u16);
+    // curated:2
+    assert_eq(f16::from_field(2 as Field).bits(), 0x4000 as u16);
+    // curated:3
+    assert_eq(f16::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x7c00 as u16);
+    // curated:4
+    assert_eq(f16::from_field(340282366920938463463374607431768211454 as Field).bits(), 0x7c00 as u16);
+    // curated:5
+    assert_eq(f16::from_field(113427455640312821154458202477256070485 as Field).bits(), 0x7c00 as u16);
+    // curated:6
+    assert_eq(f16::from_field(2047 as Field).bits(), 0x67ff as u16);
+    // curated:7
+    assert_eq(f16::from_field(2049 as Field).bits(), 0x6800 as u16);
+    // curated:8
+    assert_eq(f16::from_field(2051 as Field).bits(), 0x6802 as u16);
+    // curated:9
+    assert_eq(f16::from_field(16777215 as Field).bits(), 0x7c00 as u16);
+    // curated:10
+    assert_eq(f16::from_field(16777217 as Field).bits(), 0x7c00 as u16);
+    // curated:11
+    assert_eq(f16::from_field(16777219 as Field).bits(), 0x7c00 as u16);
+    // curated:12
+    assert_eq(f16::from_field(9007199254740991 as Field).bits(), 0x7c00 as u16);
+    // curated:13
+    assert_eq(f16::from_field(9007199254740993 as Field).bits(), 0x7c00 as u16);
+    // curated:14
+    assert_eq(f16::from_field(9007199254740995 as Field).bits(), 0x7c00 as u16);
+    // curated:15
+    assert_eq(f16::from_field(10384593717069655257060992658440191 as Field).bits(), 0x7c00 as u16);
+    // curated:16
+    assert_eq(f16::from_field(10384593717069655257060992658440193 as Field).bits(), 0x7c00 as u16);
+    // curated:17
+    assert_eq(f16::from_field(10384593717069655257060992658440195 as Field).bits(), 0x7c00 as u16);
+    // random:754:0
+    assert_eq(f16::from_field(160644251304735817390399575016828043226 as Field).bits(), 0x7c00 as u16);
+    // random:754:1
+    assert_eq(f16::from_field(3234402417886258857594099797750672017 as Field).bits(), 0x7c00 as u16);
+    // random:754:2
+    assert_eq(f16::from_field(54781596840717679496949514247922192744 as Field).bits(), 0x7c00 as u16);
+    // random:754:3
+    assert_eq(f16::from_field(224489786029447201083763814997483858121 as Field).bits(), 0x7c00 as u16);
+    // random:754:4
+    assert_eq(f16::from_field(306253096071474863132158001677783927578 as Field).bits(), 0x7c00 as u16);
+    // random:754:5
+    assert_eq(f16::from_field(145870954523085335781543517940170115593 as Field).bits(), 0x7c00 as u16);
+    // random:754:6
+    assert_eq(f16::from_field(108414777735480470072642964526887436649 as Field).bits(), 0x7c00 as u16);
+    // random:754:7
+    assert_eq(f16::from_field(215824909401094962682108680457364149383 as Field).bits(), 0x7c00 as u16);
+}
+
+#[test]
+fn generated_f32_from_u8_vectors_match_reference() {
+    // curated:0
+    let value_0: u8 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: u8 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: u8 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: u8 = 255;
+    assert_eq(f32::from(value_3).bits(), 0x437f0000 as u32);
+    // curated:4
+    let value_4: u8 = 254;
+    assert_eq(f32::from(value_4).bits(), 0x437e0000 as u32);
+    // curated:5
+    let value_5: u8 = 85;
+    assert_eq(f32::from(value_5).bits(), 0x42aa0000 as u32);
+    // random:754:0
+    let value_6: u8 = 132;
+    assert_eq(f32::from(value_6).bits(), 0x43040000 as u32);
+    // random:754:1
+    let value_7: u8 = 43;
+    assert_eq(f32::from(value_7).bits(), 0x422c0000 as u32);
+    // random:754:2
+    let value_8: u8 = 90;
+    assert_eq(f32::from(value_8).bits(), 0x42b40000 as u32);
+    // random:754:3
+    let value_9: u8 = 93;
+    assert_eq(f32::from(value_9).bits(), 0x42ba0000 as u32);
+    // random:754:4
+    let value_10: u8 = 5;
+    assert_eq(f32::from(value_10).bits(), 0x40a00000 as u32);
+    // random:754:5
+    let value_11: u8 = 20;
+    assert_eq(f32::from(value_11).bits(), 0x41a00000 as u32);
+    // random:754:6
+    let value_12: u8 = 35;
+    assert_eq(f32::from(value_12).bits(), 0x420c0000 as u32);
+    // random:754:7
+    let value_13: u8 = 97;
+    assert_eq(f32::from(value_13).bits(), 0x42c20000 as u32);
+}
+
+#[test]
+fn generated_f32_from_u16_vectors_match_reference() {
+    // curated:0
+    let value_0: u16 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: u16 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: u16 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: u16 = 65535;
+    assert_eq(f32::from(value_3).bits(), 0x477fff00 as u32);
+    // curated:4
+    let value_4: u16 = 65534;
+    assert_eq(f32::from(value_4).bits(), 0x477ffe00 as u32);
+    // curated:5
+    let value_5: u16 = 21845;
+    assert_eq(f32::from(value_5).bits(), 0x46aaaa00 as u32);
+    // curated:6
+    let value_6: u16 = 2047;
+    assert_eq(f32::from(value_6).bits(), 0x44ffe000 as u32);
+    // curated:7
+    let value_7: u16 = 2049;
+    assert_eq(f32::from(value_7).bits(), 0x45001000 as u32);
+    // curated:8
+    let value_8: u16 = 2051;
+    assert_eq(f32::from(value_8).bits(), 0x45003000 as u32);
+    // random:754:0
+    let value_9: u16 = 5723;
+    assert_eq(f32::from(value_9).bits(), 0x45b2d800 as u32);
+    // random:754:1
+    let value_10: u16 = 38976;
+    assert_eq(f32::from(value_10).bits(), 0x47184000 as u32);
+    // random:754:2
+    let value_11: u16 = 21627;
+    assert_eq(f32::from(value_11).bits(), 0x46a8f600 as u32);
+    // random:754:3
+    let value_12: u16 = 636;
+    assert_eq(f32::from(value_12).bits(), 0x441f0000 as u32);
+    // random:754:4
+    let value_13: u16 = 33236;
+    assert_eq(f32::from(value_13).bits(), 0x4701d400 as u32);
+    // random:754:5
+    let value_14: u16 = 6808;
+    assert_eq(f32::from(value_14).bits(), 0x45d4c000 as u32);
+    // random:754:6
+    let value_15: u16 = 12346;
+    assert_eq(f32::from(value_15).bits(), 0x4640e800 as u32);
+    // random:754:7
+    let value_16: u16 = 63890;
+    assert_eq(f32::from(value_16).bits(), 0x47799200 as u32);
+}
+
+#[test]
+fn generated_f32_from_u32_vectors_match_reference() {
+    // curated:0
+    let value_0: u32 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: u32 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: u32 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: u32 = 4294967295;
+    assert_eq(f32::from(value_3).bits(), 0x4f800000 as u32);
+    // curated:4
+    let value_4: u32 = 4294967294;
+    assert_eq(f32::from(value_4).bits(), 0x4f800000 as u32);
+    // curated:5
+    let value_5: u32 = 1431655765;
+    assert_eq(f32::from(value_5).bits(), 0x4eaaaaab as u32);
+    // curated:6
+    let value_6: u32 = 2047;
+    assert_eq(f32::from(value_6).bits(), 0x44ffe000 as u32);
+    // curated:7
+    let value_7: u32 = 2049;
+    assert_eq(f32::from(value_7).bits(), 0x45001000 as u32);
+    // curated:8
+    let value_8: u32 = 2051;
+    assert_eq(f32::from(value_8).bits(), 0x45003000 as u32);
+    // curated:9
+    let value_9: u32 = 16777215;
+    assert_eq(f32::from(value_9).bits(), 0x4b7fffff as u32);
+    // curated:10
+    let value_10: u32 = 16777217;
+    assert_eq(f32::from(value_10).bits(), 0x4b800000 as u32);
+    // curated:11
+    let value_11: u32 = 16777219;
+    assert_eq(f32::from(value_11).bits(), 0x4b800002 as u32);
+    // random:754:0
+    let value_12: u32 = 1716287431;
+    assert_eq(f32::from(value_12).bits(), 0x4ecc98f0 as u32);
+    // random:754:1
+    let value_13: u32 = 2462161786;
+    assert_eq(f32::from(value_13).bits(), 0x4f12c19b as u32);
+    // random:754:2
+    let value_14: u32 = 428666877;
+    assert_eq(f32::from(value_14).bits(), 0x4dcc6780 as u32);
+    // random:754:3
+    let value_15: u32 = 1162471639;
+    assert_eq(f32::from(value_15).bits(), 0x4e8a93d2 as u32);
+    // random:754:4
+    let value_16: u32 = 2118395099;
+    assert_eq(f32::from(value_16).bits(), 0x4efc884a as u32);
+    // random:754:5
+    let value_17: u32 = 2802639616;
+    assert_eq(f32::from(value_17).bits(), 0x4f270ce3 as u32);
+    // random:754:6
+    let value_18: u32 = 78077552;
+    assert_eq(f32::from(value_18).bits(), 0x4c94ebce as u32);
+    // random:754:7
+    let value_19: u32 = 2278153898;
+    assert_eq(f32::from(value_19).bits(), 0x4f07c9df as u32);
+}
+
+#[test]
+fn generated_f32_from_u64_vectors_match_reference() {
+    // curated:0
+    let value_0: u64 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: u64 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: u64 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: u64 = 18446744073709551615;
+    assert_eq(f32::from(value_3).bits(), 0x5f800000 as u32);
+    // curated:4
+    let value_4: u64 = 18446744073709551614;
+    assert_eq(f32::from(value_4).bits(), 0x5f800000 as u32);
+    // curated:5
+    let value_5: u64 = 6148914691236517205;
+    assert_eq(f32::from(value_5).bits(), 0x5eaaaaab as u32);
+    // curated:6
+    let value_6: u64 = 2047;
+    assert_eq(f32::from(value_6).bits(), 0x44ffe000 as u32);
+    // curated:7
+    let value_7: u64 = 2049;
+    assert_eq(f32::from(value_7).bits(), 0x45001000 as u32);
+    // curated:8
+    let value_8: u64 = 2051;
+    assert_eq(f32::from(value_8).bits(), 0x45003000 as u32);
+    // curated:9
+    let value_9: u64 = 16777215;
+    assert_eq(f32::from(value_9).bits(), 0x4b7fffff as u32);
+    // curated:10
+    let value_10: u64 = 16777217;
+    assert_eq(f32::from(value_10).bits(), 0x4b800000 as u32);
+    // curated:11
+    let value_11: u64 = 16777219;
+    assert_eq(f32::from(value_11).bits(), 0x4b800002 as u32);
+    // curated:12
+    let value_12: u64 = 9007199254740991;
+    assert_eq(f32::from(value_12).bits(), 0x5a000000 as u32);
+    // curated:13
+    let value_13: u64 = 9007199254740993;
+    assert_eq(f32::from(value_13).bits(), 0x5a000000 as u32);
+    // curated:14
+    let value_14: u64 = 9007199254740995;
+    assert_eq(f32::from(value_14).bits(), 0x5a000000 as u32);
+    // random:754:0
+    let value_15: u64 = 18442856710269181953;
+    assert_eq(f32::from(value_15).bits(), 0x5f7ff230 as u32);
+    // random:754:1
+    let value_16: u64 = 2229770574656373546;
+    assert_eq(f32::from(value_16).bits(), 0x5df78de4 as u32);
+    // random:754:2
+    let value_17: u64 = 5861534700124117451;
+    assert_eq(f32::from(value_17).bits(), 0x5ea2b0b6 as u32);
+    // random:754:3
+    let value_18: u64 = 12204240598923523165;
+    assert_eq(f32::from(value_18).bits(), 0x5f295e2c as u32);
+    // random:754:4
+    let value_19: u64 = 9651270887777711968;
+    assert_eq(f32::from(value_19).bits(), 0x5f05f034 as u32);
+    // random:754:5
+    let value_20: u64 = 3867918157020976157;
+    assert_eq(f32::from(value_20).bits(), 0x5e56b66c as u32);
+    // random:754:6
+    let value_21: u64 = 6639986702667380469;
+    assert_eq(f32::from(value_21).bits(), 0x5eb84bf1 as u32);
+    // random:754:7
+    let value_22: u64 = 351604369233826534;
+    assert_eq(f32::from(value_22).bits(), 0x5c9c24ca as u32);
+}
+
+#[test]
+fn generated_f32_from_u128_vectors_match_reference() {
+    // curated:0
+    let value_0: u128 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: u128 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: u128 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: u128 = 340282366920938463463374607431768211455;
+    assert_eq(f32::from(value_3).bits(), 0x7f800000 as u32);
+    // curated:4
+    let value_4: u128 = 340282366920938463463374607431768211454;
+    assert_eq(f32::from(value_4).bits(), 0x7f800000 as u32);
+    // curated:5
+    let value_5: u128 = 113427455640312821154458202477256070485;
+    assert_eq(f32::from(value_5).bits(), 0x7eaaaaab as u32);
+    // curated:6
+    let value_6: u128 = 2047;
+    assert_eq(f32::from(value_6).bits(), 0x44ffe000 as u32);
+    // curated:7
+    let value_7: u128 = 2049;
+    assert_eq(f32::from(value_7).bits(), 0x45001000 as u32);
+    // curated:8
+    let value_8: u128 = 2051;
+    assert_eq(f32::from(value_8).bits(), 0x45003000 as u32);
+    // curated:9
+    let value_9: u128 = 16777215;
+    assert_eq(f32::from(value_9).bits(), 0x4b7fffff as u32);
+    // curated:10
+    let value_10: u128 = 16777217;
+    assert_eq(f32::from(value_10).bits(), 0x4b800000 as u32);
+    // curated:11
+    let value_11: u128 = 16777219;
+    assert_eq(f32::from(value_11).bits(), 0x4b800002 as u32);
+    // curated:12
+    let value_12: u128 = 9007199254740991;
+    assert_eq(f32::from(value_12).bits(), 0x5a000000 as u32);
+    // curated:13
+    let value_13: u128 = 9007199254740993;
+    assert_eq(f32::from(value_13).bits(), 0x5a000000 as u32);
+    // curated:14
+    let value_14: u128 = 9007199254740995;
+    assert_eq(f32::from(value_14).bits(), 0x5a000000 as u32);
+    // curated:15
+    let value_15: u128 = 10384593717069655257060992658440191;
+    assert_eq(f32::from(value_15).bits(), 0x78000000 as u32);
+    // curated:16
+    let value_16: u128 = 10384593717069655257060992658440193;
+    assert_eq(f32::from(value_16).bits(), 0x78000000 as u32);
+    // curated:17
+    let value_17: u128 = 10384593717069655257060992658440195;
+    assert_eq(f32::from(value_17).bits(), 0x78000000 as u32);
+    // random:754:0
+    let value_18: u128 = 284892604539579099317903097214606078339;
+    assert_eq(f32::from(value_18).bits(), 0x7f565452 as u32);
+    // random:754:1
+    let value_19: u128 = 51639544246510433668461762297486096874;
+    assert_eq(f32::from(value_19).bits(), 0x7e1b65a8 as u32);
+    // random:754:2
+    let value_20: u128 = 88209299979127954417157491726487534475;
+    assert_eq(f32::from(value_20).bits(), 0x7e84b8fd as u32);
+    // random:754:3
+    let value_21: u128 = 209285715526187752058417636153257873803;
+    assert_eq(f32::from(value_21).bits(), 0x7f1d72f6 as u32);
+    // random:754:4
+    let value_22: u128 = 214764721462095383498122133351629344032;
+    assert_eq(f32::from(value_22).bits(), 0x7f21922e as u32);
+    // random:754:5
+    let value_23: u128 = 102174418313342184675525377127468611151;
+    assert_eq(f32::from(value_23).bits(), 0x7e99bc28 as u32);
+    // random:754:6
+    let value_24: u128 = 219993039242295756619488600815003816353;
+    assert_eq(f32::from(value_24).bits(), 0x7f25811e as u32);
+    // random:754:7
+    let value_25: u128 = 317163570604190882316682275549838678390;
+    assert_eq(f32::from(value_25).bits(), 0x7f6e9b7b as u32);
+}
+
+#[test]
+fn generated_f32_from_i8_vectors_match_reference() {
+    // curated:0
+    let value_0: i8 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: i8 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: i8 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: i8 = 127;
+    assert_eq(f32::from(value_3).bits(), 0x42fe0000 as u32);
+    // curated:4
+    let value_4: i8 = 126;
+    assert_eq(f32::from(value_4).bits(), 0x42fc0000 as u32);
+    // curated:5
+    let value_5: i8 = 42;
+    assert_eq(f32::from(value_5).bits(), 0x42280000 as u32);
+    // curated:6
+    let value_6: i8 = -1;
+    assert_eq(f32::from(value_6).bits(), 0xbf800000 as u32);
+    // curated:7
+    let value_7: i8 = -2;
+    assert_eq(f32::from(value_7).bits(), 0xc0000000 as u32);
+    // curated:8
+    let value_8: i8 = -127 - 1;
+    assert_eq(f32::from(value_8).bits(), 0xc3000000 as u32);
+    // curated:9
+    let value_9: i8 = -127;
+    assert_eq(f32::from(value_9).bits(), 0xc2fe0000 as u32);
+    // curated:10
+    let value_10: i8 = -42;
+    assert_eq(f32::from(value_10).bits(), 0xc2280000 as u32);
+    // random:754:0
+    let value_11: i8 = -40;
+    assert_eq(f32::from(value_11).bits(), 0xc2200000 as u32);
+    // random:754:1
+    let value_12: i8 = -3;
+    assert_eq(f32::from(value_12).bits(), 0xc0400000 as u32);
+    // random:754:2
+    let value_13: i8 = -79;
+    assert_eq(f32::from(value_13).bits(), 0xc29e0000 as u32);
+    // random:754:3
+    let value_14: i8 = 114;
+    assert_eq(f32::from(value_14).bits(), 0x42e40000 as u32);
+    // random:754:5
+    let value_15: i8 = 29;
+    assert_eq(f32::from(value_15).bits(), 0x41e80000 as u32);
+    // random:754:6
+    let value_16: i8 = 77;
+    assert_eq(f32::from(value_16).bits(), 0x429a0000 as u32);
+    // random:754:7
+    let value_17: i8 = 63;
+    assert_eq(f32::from(value_17).bits(), 0x427c0000 as u32);
+}
+
+#[test]
+fn generated_f32_from_i16_vectors_match_reference() {
+    // curated:0
+    let value_0: i16 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: i16 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: i16 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: i16 = 32767;
+    assert_eq(f32::from(value_3).bits(), 0x46fffe00 as u32);
+    // curated:4
+    let value_4: i16 = 32766;
+    assert_eq(f32::from(value_4).bits(), 0x46fffc00 as u32);
+    // curated:5
+    let value_5: i16 = 10922;
+    assert_eq(f32::from(value_5).bits(), 0x462aa800 as u32);
+    // curated:6
+    let value_6: i16 = -1;
+    assert_eq(f32::from(value_6).bits(), 0xbf800000 as u32);
+    // curated:7
+    let value_7: i16 = -2;
+    assert_eq(f32::from(value_7).bits(), 0xc0000000 as u32);
+    // curated:8
+    let value_8: i16 = -32767 - 1;
+    assert_eq(f32::from(value_8).bits(), 0xc7000000 as u32);
+    // curated:9
+    let value_9: i16 = -32767;
+    assert_eq(f32::from(value_9).bits(), 0xc6fffe00 as u32);
+    // curated:10
+    let value_10: i16 = -10922;
+    assert_eq(f32::from(value_10).bits(), 0xc62aa800 as u32);
+    // curated:11
+    let value_11: i16 = 2047;
+    assert_eq(f32::from(value_11).bits(), 0x44ffe000 as u32);
+    // curated:12
+    let value_12: i16 = -2047;
+    assert_eq(f32::from(value_12).bits(), 0xc4ffe000 as u32);
+    // curated:13
+    let value_13: i16 = 2049;
+    assert_eq(f32::from(value_13).bits(), 0x45001000 as u32);
+    // curated:14
+    let value_14: i16 = -2049;
+    assert_eq(f32::from(value_14).bits(), 0xc5001000 as u32);
+    // curated:15
+    let value_15: i16 = 2051;
+    assert_eq(f32::from(value_15).bits(), 0x45003000 as u32);
+    // curated:16
+    let value_16: i16 = -2051;
+    assert_eq(f32::from(value_16).bits(), 0xc5003000 as u32);
+    // random:754:0
+    let value_17: i16 = -1996;
+    assert_eq(f32::from(value_17).bits(), 0xc4f98000 as u32);
+    // random:754:1
+    let value_18: i16 = -14140;
+    assert_eq(f32::from(value_18).bits(), 0xc65cf000 as u32);
+    // random:754:2
+    let value_19: i16 = 30344;
+    assert_eq(f32::from(value_19).bits(), 0x46ed1000 as u32);
+    // random:754:3
+    let value_20: i16 = -7648;
+    assert_eq(f32::from(value_20).bits(), 0xc5ef0000 as u32);
+    // random:754:4
+    let value_21: i16 = 31573;
+    assert_eq(f32::from(value_21).bits(), 0x46f6aa00 as u32);
+    // random:754:5
+    let value_22: i16 = 26446;
+    assert_eq(f32::from(value_22).bits(), 0x46ce9c00 as u32);
+    // random:754:6
+    let value_23: i16 = -15506;
+    assert_eq(f32::from(value_23).bits(), 0xc6724800 as u32);
+    // random:754:7
+    let value_24: i16 = 7453;
+    assert_eq(f32::from(value_24).bits(), 0x45e8e800 as u32);
+}
+
+#[test]
+fn generated_f32_from_i32_vectors_match_reference() {
+    // curated:0
+    let value_0: i32 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: i32 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: i32 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: i32 = 2147483647;
+    assert_eq(f32::from(value_3).bits(), 0x4f000000 as u32);
+    // curated:4
+    let value_4: i32 = 2147483646;
+    assert_eq(f32::from(value_4).bits(), 0x4f000000 as u32);
+    // curated:5
+    let value_5: i32 = 715827882;
+    assert_eq(f32::from(value_5).bits(), 0x4e2aaaab as u32);
+    // curated:6
+    let value_6: i32 = -1;
+    assert_eq(f32::from(value_6).bits(), 0xbf800000 as u32);
+    // curated:7
+    let value_7: i32 = -2;
+    assert_eq(f32::from(value_7).bits(), 0xc0000000 as u32);
+    // curated:8
+    let value_8: i32 = -2147483647 - 1;
+    assert_eq(f32::from(value_8).bits(), 0xcf000000 as u32);
+    // curated:9
+    let value_9: i32 = -2147483647;
+    assert_eq(f32::from(value_9).bits(), 0xcf000000 as u32);
+    // curated:10
+    let value_10: i32 = -715827882;
+    assert_eq(f32::from(value_10).bits(), 0xce2aaaab as u32);
+    // curated:11
+    let value_11: i32 = 2047;
+    assert_eq(f32::from(value_11).bits(), 0x44ffe000 as u32);
+    // curated:12
+    let value_12: i32 = -2047;
+    assert_eq(f32::from(value_12).bits(), 0xc4ffe000 as u32);
+    // curated:13
+    let value_13: i32 = 2049;
+    assert_eq(f32::from(value_13).bits(), 0x45001000 as u32);
+    // curated:14
+    let value_14: i32 = -2049;
+    assert_eq(f32::from(value_14).bits(), 0xc5001000 as u32);
+    // curated:15
+    let value_15: i32 = 2051;
+    assert_eq(f32::from(value_15).bits(), 0x45003000 as u32);
+    // curated:16
+    let value_16: i32 = -2051;
+    assert_eq(f32::from(value_16).bits(), 0xc5003000 as u32);
+    // curated:17
+    let value_17: i32 = 16777215;
+    assert_eq(f32::from(value_17).bits(), 0x4b7fffff as u32);
+    // curated:18
+    let value_18: i32 = -16777215;
+    assert_eq(f32::from(value_18).bits(), 0xcb7fffff as u32);
+    // curated:19
+    let value_19: i32 = 16777217;
+    assert_eq(f32::from(value_19).bits(), 0x4b800000 as u32);
+    // curated:20
+    let value_20: i32 = -16777217;
+    assert_eq(f32::from(value_20).bits(), 0xcb800000 as u32);
+    // curated:21
+    let value_21: i32 = 16777219;
+    assert_eq(f32::from(value_21).bits(), 0x4b800002 as u32);
+    // curated:22
+    let value_22: i32 = -16777219;
+    assert_eq(f32::from(value_22).bits(), 0xcb800002 as u32);
+    // random:754:0
+    let value_23: i32 = 494844767;
+    assert_eq(f32::from(value_23).bits(), 0x4debf5db as u32);
+    // random:754:1
+    let value_24: i32 = 1269698158;
+    assert_eq(f32::from(value_24).bits(), 0x4e975c1d as u32);
+    // random:754:2
+    let value_25: i32 = 1652229971;
+    assert_eq(f32::from(value_25).bits(), 0x4ec4f60f as u32);
+    // random:754:3
+    let value_26: i32 = -448348659;
+    assert_eq(f32::from(value_26).bits(), 0xcdd5ca10 as u32);
+    // random:754:4
+    let value_27: i32 = 1914971958;
+    assert_eq(f32::from(value_27).bits(), 0x4ee4484e as u32);
+    // random:754:5
+    let value_28: i32 = 1047495912;
+    assert_eq(f32::from(value_28).bits(), 0x4e79be14 as u32);
+    // random:754:6
+    let value_29: i32 = -645251838;
+    assert_eq(f32::from(value_29).bits(), 0xce19d70c as u32);
+    // random:754:7
+    let value_30: i32 = 618547580;
+    assert_eq(f32::from(value_30).bits(), 0x4e137926 as u32);
+}
+
+#[test]
+fn generated_f32_from_i64_vectors_match_reference() {
+    // curated:0
+    let value_0: i64 = 0;
+    assert_eq(f32::from(value_0).bits(), 0x00000000 as u32);
+    // curated:1
+    let value_1: i64 = 1;
+    assert_eq(f32::from(value_1).bits(), 0x3f800000 as u32);
+    // curated:2
+    let value_2: i64 = 2;
+    assert_eq(f32::from(value_2).bits(), 0x40000000 as u32);
+    // curated:3
+    let value_3: i64 = 9223372036854775807;
+    assert_eq(f32::from(value_3).bits(), 0x5f000000 as u32);
+    // curated:4
+    let value_4: i64 = 9223372036854775806;
+    assert_eq(f32::from(value_4).bits(), 0x5f000000 as u32);
+    // curated:5
+    let value_5: i64 = 3074457345618258602;
+    assert_eq(f32::from(value_5).bits(), 0x5e2aaaab as u32);
+    // curated:6
+    let value_6: i64 = -1;
+    assert_eq(f32::from(value_6).bits(), 0xbf800000 as u32);
+    // curated:7
+    let value_7: i64 = -2;
+    assert_eq(f32::from(value_7).bits(), 0xc0000000 as u32);
+    // curated:8
+    let value_8: i64 = -9223372036854775807 - 1;
+    assert_eq(f32::from(value_8).bits(), 0xdf000000 as u32);
+    // curated:9
+    let value_9: i64 = -9223372036854775807;
+    assert_eq(f32::from(value_9).bits(), 0xdf000000 as u32);
+    // curated:10
+    let value_10: i64 = -3074457345618258602;
+    assert_eq(f32::from(value_10).bits(), 0xde2aaaab as u32);
+    // curated:11
+    let value_11: i64 = 2047;
+    assert_eq(f32::from(value_11).bits(), 0x44ffe000 as u32);
+    // curated:12
+    let value_12: i64 = -2047;
+    assert_eq(f32::from(value_12).bits(), 0xc4ffe000 as u32);
+    // curated:13
+    let value_13: i64 = 2049;
+    assert_eq(f32::from(value_13).bits(), 0x45001000 as u32);
+    // curated:14
+    let value_14: i64 = -2049;
+    assert_eq(f32::from(value_14).bits(), 0xc5001000 as u32);
+    // curated:15
+    let value_15: i64 = 2051;
+    assert_eq(f32::from(value_15).bits(), 0x45003000 as u32);
+    // curated:16
+    let value_16: i64 = -2051;
+    assert_eq(f32::from(value_16).bits(), 0xc5003000 as u32);
+    // curated:17
+    let value_17: i64 = 16777215;
+    assert_eq(f32::from(value_17).bits(), 0x4b7fffff as u32);
+    // curated:18
+    let value_18: i64 = -16777215;
+    assert_eq(f32::from(value_18).bits(), 0xcb7fffff as u32);
+    // curated:19
+    let value_19: i64 = 16777217;
+    assert_eq(f32::from(value_19).bits(), 0x4b800000 as u32);
+    // curated:20
+    let value_20: i64 = -16777217;
+    assert_eq(f32::from(value_20).bits(), 0xcb800000 as u32);
+    // curated:21
+    let value_21: i64 = 16777219;
+    assert_eq(f32::from(value_21).bits(), 0x4b800002 as u32);
+    // curated:22
+    let value_22: i64 = -16777219;
+    assert_eq(f32::from(value_22).bits(), 0xcb800002 as u32);
+    // curated:23
+    let value_23: i64 = 9007199254740991;
+    assert_eq(f32::from(value_23).bits(), 0x5a000000 as u32);
+    // curated:24
+    let value_24: i64 = -9007199254740991;
+    assert_eq(f32::from(value_24).bits(), 0xda000000 as u32);
+    // curated:25
+    let value_25: i64 = 9007199254740993;
+    assert_eq(f32::from(value_25).bits(), 0x5a000000 as u32);
+    // curated:26
+    let value_26: i64 = -9007199254740993;
+    assert_eq(f32::from(value_26).bits(), 0xda000000 as u32);
+    // curated:27
+    let value_27: i64 = 9007199254740995;
+    assert_eq(f32::from(value_27).bits(), 0x5a000000 as u32);
+    // curated:28
+    let value_28: i64 = -9007199254740995;
+    assert_eq(f32::from(value_28).bits(), 0xda000000 as u32);
+    // random:754:0
+    let value_29: i64 = -4735613059070132083;
+    assert_eq(f32::from(value_29).bits(), 0xde83708e as u32);
+    // random:754:1
+    let value_30: i64 = -4083542778721859082;
+    assert_eq(f32::from(value_30).bits(), 0xde62aea2 as u32);
+    // random:754:2
+    let value_31: i64 = 8447843900793236108;
+    assert_eq(f32::from(value_31).bits(), 0x5eea798b as u32);
+    // random:754:3
+    let value_32: i64 = 7943743901230483119;
+    assert_eq(f32::from(value_32).bits(), 0x5edc7bb2 as u32);
+    // random:754:4
+    let value_33: i64 = 1826681404577408087;
+    assert_eq(f32::from(value_33).bits(), 0x5dcacd68 as u32);
+    // random:754:5
+    let value_34: i64 = 3682133365247413033;
+    assert_eq(f32::from(value_34).bits(), 0x5e4c6643 as u32);
+    // random:754:6
+    let value_35: i64 = -1846102460297225809;
+    assert_eq(f32::from(value_35).bits(), 0xddccf563 as u32);
+    // random:754:7
+    let value_36: i64 = -3418371156509818258;
+    assert_eq(f32::from(value_36).bits(), 0xde3dc1fa as u32);
+}
+
+#[test]
+fn generated_f32_from_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f32::from_field(0 as Field).bits(), 0x00000000 as u32);
+    // curated:1
+    assert_eq(f32::from_field(1 as Field).bits(), 0x3f800000 as u32);
+    // curated:2
+    assert_eq(f32::from_field(2 as Field).bits(), 0x40000000 as u32);
+    // curated:3
+    assert_eq(f32::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x7f800000 as u32);
+    // curated:4
+    assert_eq(f32::from_field(340282366920938463463374607431768211454 as Field).bits(), 0x7f800000 as u32);
+    // curated:5
+    assert_eq(f32::from_field(113427455640312821154458202477256070485 as Field).bits(), 0x7eaaaaab as u32);
+    // curated:6
+    assert_eq(f32::from_field(2047 as Field).bits(), 0x44ffe000 as u32);
+    // curated:7
+    assert_eq(f32::from_field(2049 as Field).bits(), 0x45001000 as u32);
+    // curated:8
+    assert_eq(f32::from_field(2051 as Field).bits(), 0x45003000 as u32);
+    // curated:9
+    assert_eq(f32::from_field(16777215 as Field).bits(), 0x4b7fffff as u32);
+    // curated:10
+    assert_eq(f32::from_field(16777217 as Field).bits(), 0x4b800000 as u32);
+    // curated:11
+    assert_eq(f32::from_field(16777219 as Field).bits(), 0x4b800002 as u32);
+    // curated:12
+    assert_eq(f32::from_field(9007199254740991 as Field).bits(), 0x5a000000 as u32);
+    // curated:13
+    assert_eq(f32::from_field(9007199254740993 as Field).bits(), 0x5a000000 as u32);
+    // curated:14
+    assert_eq(f32::from_field(9007199254740995 as Field).bits(), 0x5a000000 as u32);
+    // curated:15
+    assert_eq(f32::from_field(10384593717069655257060992658440191 as Field).bits(), 0x78000000 as u32);
+    // curated:16
+    assert_eq(f32::from_field(10384593717069655257060992658440193 as Field).bits(), 0x78000000 as u32);
+    // curated:17
+    assert_eq(f32::from_field(10384593717069655257060992658440195 as Field).bits(), 0x78000000 as u32);
+    // random:754:0
+    assert_eq(f32::from_field(19349642760125188001593836570978708695 as Field).bits(), 0x7d68e9b1 as u32);
+    // random:754:1
+    assert_eq(f32::from_field(207293168381488210972390943712048586820 as Field).bits(), 0x7f1bf336 as u32);
+    // random:754:2
+    assert_eq(f32::from_field(322538318253343459910781209255579081962 as Field).bits(), 0x7f72a69f as u32);
+    // random:754:3
+    assert_eq(f32::from_field(114372115390823502275125515839376944435 as Field).bits(), 0x7eac1689 as u32);
+    // random:754:4
+    assert_eq(f32::from_field(130902793910049038740647138734609734205 as Field).bits(), 0x7ec4f5ec as u32);
+    // random:754:5
+    assert_eq(f32::from_field(31188145142574879730807349683073572795 as Field).bits(), 0x7dbbb4f2 as u32);
+    // random:754:6
+    assert_eq(f32::from_field(223903124647870763700891048488024044858 as Field).bits(), 0x7f28722c as u32);
+    // random:754:7
+    assert_eq(f32::from_field(208205830908539447969076531437079616440 as Field).bits(), 0x7f1ca2fc as u32);
+}
+
+#[test]
+fn generated_f64_from_u8_vectors_match_reference() {
+    // curated:0
+    let value_0: u8 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: u8 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: u8 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: u8 = 255;
+    assert_eq(f64::from(value_3).bits(), 0x406fe00000000000 as u64);
+    // curated:4
+    let value_4: u8 = 254;
+    assert_eq(f64::from(value_4).bits(), 0x406fc00000000000 as u64);
+    // curated:5
+    let value_5: u8 = 85;
+    assert_eq(f64::from(value_5).bits(), 0x4055400000000000 as u64);
+    // random:754:1
+    let value_6: u8 = 68;
+    assert_eq(f64::from(value_6).bits(), 0x4051000000000000 as u64);
+    // random:754:3
+    let value_7: u8 = 149;
+    assert_eq(f64::from(value_7).bits(), 0x4062a00000000000 as u64);
+    // random:754:4
+    let value_8: u8 = 200;
+    assert_eq(f64::from(value_8).bits(), 0x4069000000000000 as u64);
+    // random:754:5
+    let value_9: u8 = 93;
+    assert_eq(f64::from(value_9).bits(), 0x4057400000000000 as u64);
+    // random:754:6
+    let value_10: u8 = 19;
+    assert_eq(f64::from(value_10).bits(), 0x4033000000000000 as u64);
+    // random:754:7
+    let value_11: u8 = 205;
+    assert_eq(f64::from(value_11).bits(), 0x4069a00000000000 as u64);
+}
+
+#[test]
+fn generated_f64_from_u16_vectors_match_reference() {
+    // curated:0
+    let value_0: u16 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: u16 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: u16 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: u16 = 65535;
+    assert_eq(f64::from(value_3).bits(), 0x40efffe000000000 as u64);
+    // curated:4
+    let value_4: u16 = 65534;
+    assert_eq(f64::from(value_4).bits(), 0x40efffc000000000 as u64);
+    // curated:5
+    let value_5: u16 = 21845;
+    assert_eq(f64::from(value_5).bits(), 0x40d5554000000000 as u64);
+    // curated:6
+    let value_6: u16 = 2047;
+    assert_eq(f64::from(value_6).bits(), 0x409ffc0000000000 as u64);
+    // curated:7
+    let value_7: u16 = 2049;
+    assert_eq(f64::from(value_7).bits(), 0x40a0020000000000 as u64);
+    // curated:8
+    let value_8: u16 = 2051;
+    assert_eq(f64::from(value_8).bits(), 0x40a0060000000000 as u64);
+    // random:754:0
+    let value_9: u16 = 46439;
+    assert_eq(f64::from(value_9).bits(), 0x40e6ace000000000 as u64);
+    // random:754:1
+    let value_10: u16 = 18120;
+    assert_eq(f64::from(value_10).bits(), 0x40d1b20000000000 as u64);
+    // random:754:2
+    let value_11: u16 = 18527;
+    assert_eq(f64::from(value_11).bits(), 0x40d217c000000000 as u64);
+    // random:754:3
+    let value_12: u16 = 26068;
+    assert_eq(f64::from(value_12).bits(), 0x40d9750000000000 as u64);
+    // random:754:4
+    let value_13: u16 = 22067;
+    assert_eq(f64::from(value_13).bits(), 0x40d58cc000000000 as u64);
+    // random:754:5
+    let value_14: u16 = 31473;
+    assert_eq(f64::from(value_14).bits(), 0x40debc4000000000 as u64);
+    // random:754:6
+    let value_15: u16 = 22338;
+    assert_eq(f64::from(value_15).bits(), 0x40d5d08000000000 as u64);
+    // random:754:7
+    let value_16: u16 = 55437;
+    assert_eq(f64::from(value_16).bits(), 0x40eb11a000000000 as u64);
+}
+
+#[test]
+fn generated_f64_from_u32_vectors_match_reference() {
+    // curated:0
+    let value_0: u32 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: u32 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: u32 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: u32 = 4294967295;
+    assert_eq(f64::from(value_3).bits(), 0x41efffffffe00000 as u64);
+    // curated:4
+    let value_4: u32 = 4294967294;
+    assert_eq(f64::from(value_4).bits(), 0x41efffffffc00000 as u64);
+    // curated:5
+    let value_5: u32 = 1431655765;
+    assert_eq(f64::from(value_5).bits(), 0x41d5555555400000 as u64);
+    // curated:6
+    let value_6: u32 = 2047;
+    assert_eq(f64::from(value_6).bits(), 0x409ffc0000000000 as u64);
+    // curated:7
+    let value_7: u32 = 2049;
+    assert_eq(f64::from(value_7).bits(), 0x40a0020000000000 as u64);
+    // curated:8
+    let value_8: u32 = 2051;
+    assert_eq(f64::from(value_8).bits(), 0x40a0060000000000 as u64);
+    // curated:9
+    let value_9: u32 = 16777215;
+    assert_eq(f64::from(value_9).bits(), 0x416fffffe0000000 as u64);
+    // curated:10
+    let value_10: u32 = 16777217;
+    assert_eq(f64::from(value_10).bits(), 0x4170000010000000 as u64);
+    // curated:11
+    let value_11: u32 = 16777219;
+    assert_eq(f64::from(value_11).bits(), 0x4170000030000000 as u64);
+    // random:754:0
+    let value_12: u32 = 2274326990;
+    assert_eq(f64::from(value_12).bits(), 0x41e0f1ef39c00000 as u64);
+    // random:754:1
+    let value_13: u32 = 1752474785;
+    assert_eq(f64::from(value_13).bits(), 0x41da1d2928400000 as u64);
+    // random:754:2
+    let value_14: u32 = 661763695;
+    assert_eq(f64::from(value_14).bits(), 0x41c3b8db37800000 as u64);
+    // random:754:3
+    let value_15: u32 = 1485571883;
+    assert_eq(f64::from(value_15).bits(), 0x41d62301cac00000 as u64);
+    // random:754:4
+    let value_16: u32 = 684698143;
+    assert_eq(f64::from(value_16).bits(), 0x41c467d50f800000 as u64);
+    // random:754:5
+    let value_17: u32 = 3208271865;
+    assert_eq(f64::from(value_17).bits(), 0x41e7e74aff200000 as u64);
+    // random:754:6
+    let value_18: u32 = 523936428;
+    assert_eq(f64::from(value_18).bits(), 0x41bf3aa2ac000000 as u64);
+    // random:754:7
+    let value_19: u32 = 2223978783;
+    assert_eq(f64::from(value_19).bits(), 0x41e091e723e00000 as u64);
+}
+
+#[test]
+fn generated_f64_from_u64_vectors_match_reference() {
+    // curated:0
+    let value_0: u64 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: u64 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: u64 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: u64 = 18446744073709551615;
+    assert_eq(f64::from(value_3).bits(), 0x43f0000000000000 as u64);
+    // curated:4
+    let value_4: u64 = 18446744073709551614;
+    assert_eq(f64::from(value_4).bits(), 0x43f0000000000000 as u64);
+    // curated:5
+    let value_5: u64 = 6148914691236517205;
+    assert_eq(f64::from(value_5).bits(), 0x43d5555555555555 as u64);
+    // curated:6
+    let value_6: u64 = 2047;
+    assert_eq(f64::from(value_6).bits(), 0x409ffc0000000000 as u64);
+    // curated:7
+    let value_7: u64 = 2049;
+    assert_eq(f64::from(value_7).bits(), 0x40a0020000000000 as u64);
+    // curated:8
+    let value_8: u64 = 2051;
+    assert_eq(f64::from(value_8).bits(), 0x40a0060000000000 as u64);
+    // curated:9
+    let value_9: u64 = 16777215;
+    assert_eq(f64::from(value_9).bits(), 0x416fffffe0000000 as u64);
+    // curated:10
+    let value_10: u64 = 16777217;
+    assert_eq(f64::from(value_10).bits(), 0x4170000010000000 as u64);
+    // curated:11
+    let value_11: u64 = 16777219;
+    assert_eq(f64::from(value_11).bits(), 0x4170000030000000 as u64);
+    // curated:12
+    let value_12: u64 = 9007199254740991;
+    assert_eq(f64::from(value_12).bits(), 0x433fffffffffffff as u64);
+    // curated:13
+    let value_13: u64 = 9007199254740993;
+    assert_eq(f64::from(value_13).bits(), 0x4340000000000000 as u64);
+    // curated:14
+    let value_14: u64 = 9007199254740995;
+    assert_eq(f64::from(value_14).bits(), 0x4340000000000002 as u64);
+    // random:754:0
+    let value_15: u64 = 703950959095137627;
+    assert_eq(f64::from(value_15).bits(), 0x43a389df55d0528b as u64);
+    // random:754:1
+    let value_16: u64 = 3507661697101013482;
+    assert_eq(f64::from(value_16).bits(), 0x43c856dbdd53f991 as u64);
+    // random:754:2
+    let value_17: u64 = 8572683827709205489;
+    assert_eq(f64::from(value_17).bits(), 0x43ddbe12a15c95f7 as u64);
+    // random:754:3
+    let value_18: u64 = 8259788192951006634;
+    assert_eq(f64::from(value_18).bits(), 0x43dca82a665a33dd as u64);
+    // random:754:4
+    let value_19: u64 = 16514043721071221645;
+    assert_eq(f64::from(value_19).bits(), 0x43eca5b5689cf70b as u64);
+    // random:754:5
+    let value_20: u64 = 4704775524866866374;
+    assert_eq(f64::from(value_20).bits(), 0x43d052ae1a6ce90f as u64);
+    // random:754:6
+    let value_21: u64 = 1159444532472013083;
+    assert_eq(f64::from(value_21).bits(), 0x43b0172ca8c6c361 as u64);
+    // random:754:7
+    let value_22: u64 = 500632913702092788;
+    assert_eq(f64::from(value_22).bits(), 0x439bca6bee205400 as u64);
+}
+
+#[test]
+fn generated_f64_from_u128_vectors_match_reference() {
+    // curated:0
+    let value_0: u128 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: u128 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: u128 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: u128 = 340282366920938463463374607431768211455;
+    assert_eq(f64::from(value_3).bits(), 0x47f0000000000000 as u64);
+    // curated:4
+    let value_4: u128 = 340282366920938463463374607431768211454;
+    assert_eq(f64::from(value_4).bits(), 0x47f0000000000000 as u64);
+    // curated:5
+    let value_5: u128 = 113427455640312821154458202477256070485;
+    assert_eq(f64::from(value_5).bits(), 0x47d5555555555555 as u64);
+    // curated:6
+    let value_6: u128 = 2047;
+    assert_eq(f64::from(value_6).bits(), 0x409ffc0000000000 as u64);
+    // curated:7
+    let value_7: u128 = 2049;
+    assert_eq(f64::from(value_7).bits(), 0x40a0020000000000 as u64);
+    // curated:8
+    let value_8: u128 = 2051;
+    assert_eq(f64::from(value_8).bits(), 0x40a0060000000000 as u64);
+    // curated:9
+    let value_9: u128 = 16777215;
+    assert_eq(f64::from(value_9).bits(), 0x416fffffe0000000 as u64);
+    // curated:10
+    let value_10: u128 = 16777217;
+    assert_eq(f64::from(value_10).bits(), 0x4170000010000000 as u64);
+    // curated:11
+    let value_11: u128 = 16777219;
+    assert_eq(f64::from(value_11).bits(), 0x4170000030000000 as u64);
+    // curated:12
+    let value_12: u128 = 9007199254740991;
+    assert_eq(f64::from(value_12).bits(), 0x433fffffffffffff as u64);
+    // curated:13
+    let value_13: u128 = 9007199254740993;
+    assert_eq(f64::from(value_13).bits(), 0x4340000000000000 as u64);
+    // curated:14
+    let value_14: u128 = 9007199254740995;
+    assert_eq(f64::from(value_14).bits(), 0x4340000000000002 as u64);
+    // curated:15
+    let value_15: u128 = 10384593717069655257060992658440191;
+    assert_eq(f64::from(value_15).bits(), 0x4700000000000000 as u64);
+    // curated:16
+    let value_16: u128 = 10384593717069655257060992658440193;
+    assert_eq(f64::from(value_16).bits(), 0x4700000000000000 as u64);
+    // curated:17
+    let value_17: u128 = 10384593717069655257060992658440195;
+    assert_eq(f64::from(value_17).bits(), 0x4700000000000000 as u64);
+    // random:754:0
+    let value_18: u128 = 167845782017684667208253673202023114585;
+    assert_eq(f64::from(value_18).bits(), 0x47df917afe28f597 as u64);
+    // random:754:1
+    let value_19: u128 = 32999519560579135940851201736971748346;
+    assert_eq(f64::from(value_19).bits(), 0x47b8d379edf56b78 as u64);
+    // random:754:2
+    let value_20: u128 = 40093049538929192771413283459658738035;
+    assert_eq(f64::from(value_20).bits(), 0x47be29a3f5a33a55 as u64);
+    // random:754:3
+    let value_21: u128 = 163308814236062381187279567257617304869;
+    assert_eq(f64::from(value_21).bits(), 0x47deb7088c1d85ac as u64);
+    // random:754:4
+    let value_22: u128 = 202812950977708874675066211201683911644;
+    assert_eq(f64::from(value_22).bits(), 0x47e3128b5032988d as u64);
+    // random:754:5
+    let value_23: u128 = 313604376582507842444506234633886457925;
+    assert_eq(f64::from(value_23).bits(), 0x47ed7dc030c8c7a7 as u64);
+    // random:754:6
+    let value_24: u128 = 49992226122225146353703495613638997602;
+    assert_eq(f64::from(value_24).bits(), 0x47c2ce138605b7d5 as u64);
+    // random:754:7
+    let value_25: u128 = 339040564965855143953641343168153800087;
+    assert_eq(f64::from(value_25).bits(), 0x47efe21acdf8a194 as u64);
+}
+
+#[test]
+fn generated_f64_from_i8_vectors_match_reference() {
+    // curated:0
+    let value_0: i8 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: i8 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: i8 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: i8 = 127;
+    assert_eq(f64::from(value_3).bits(), 0x405fc00000000000 as u64);
+    // curated:4
+    let value_4: i8 = 126;
+    assert_eq(f64::from(value_4).bits(), 0x405f800000000000 as u64);
+    // curated:5
+    let value_5: i8 = 42;
+    assert_eq(f64::from(value_5).bits(), 0x4045000000000000 as u64);
+    // curated:6
+    let value_6: i8 = -1;
+    assert_eq(f64::from(value_6).bits(), 0xbff0000000000000 as u64);
+    // curated:7
+    let value_7: i8 = -2;
+    assert_eq(f64::from(value_7).bits(), 0xc000000000000000 as u64);
+    // curated:8
+    let value_8: i8 = -127 - 1;
+    assert_eq(f64::from(value_8).bits(), 0xc060000000000000 as u64);
+    // curated:9
+    let value_9: i8 = -127;
+    assert_eq(f64::from(value_9).bits(), 0xc05fc00000000000 as u64);
+    // curated:10
+    let value_10: i8 = -42;
+    assert_eq(f64::from(value_10).bits(), 0xc045000000000000 as u64);
+    // random:754:0
+    let value_11: i8 = 10;
+    assert_eq(f64::from(value_11).bits(), 0x4024000000000000 as u64);
+    // random:754:1
+    let value_12: i8 = -20;
+    assert_eq(f64::from(value_12).bits(), 0xc034000000000000 as u64);
+    // random:754:2
+    let value_13: i8 = 58;
+    assert_eq(f64::from(value_13).bits(), 0x404d000000000000 as u64);
+    // random:754:3
+    let value_14: i8 = 54;
+    assert_eq(f64::from(value_14).bits(), 0x404b000000000000 as u64);
+    // random:754:4
+    let value_15: i8 = 76;
+    assert_eq(f64::from(value_15).bits(), 0x4053000000000000 as u64);
+    // random:754:5
+    let value_16: i8 = -78;
+    assert_eq(f64::from(value_16).bits(), 0xc053800000000000 as u64);
+    // random:754:6
+    let value_17: i8 = 21;
+    assert_eq(f64::from(value_17).bits(), 0x4035000000000000 as u64);
+    // random:754:7
+    let value_18: i8 = 99;
+    assert_eq(f64::from(value_18).bits(), 0x4058c00000000000 as u64);
+}
+
+#[test]
+fn generated_f64_from_i16_vectors_match_reference() {
+    // curated:0
+    let value_0: i16 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: i16 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: i16 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: i16 = 32767;
+    assert_eq(f64::from(value_3).bits(), 0x40dfffc000000000 as u64);
+    // curated:4
+    let value_4: i16 = 32766;
+    assert_eq(f64::from(value_4).bits(), 0x40dfff8000000000 as u64);
+    // curated:5
+    let value_5: i16 = 10922;
+    assert_eq(f64::from(value_5).bits(), 0x40c5550000000000 as u64);
+    // curated:6
+    let value_6: i16 = -1;
+    assert_eq(f64::from(value_6).bits(), 0xbff0000000000000 as u64);
+    // curated:7
+    let value_7: i16 = -2;
+    assert_eq(f64::from(value_7).bits(), 0xc000000000000000 as u64);
+    // curated:8
+    let value_8: i16 = -32767 - 1;
+    assert_eq(f64::from(value_8).bits(), 0xc0e0000000000000 as u64);
+    // curated:9
+    let value_9: i16 = -32767;
+    assert_eq(f64::from(value_9).bits(), 0xc0dfffc000000000 as u64);
+    // curated:10
+    let value_10: i16 = -10922;
+    assert_eq(f64::from(value_10).bits(), 0xc0c5550000000000 as u64);
+    // curated:11
+    let value_11: i16 = 2047;
+    assert_eq(f64::from(value_11).bits(), 0x409ffc0000000000 as u64);
+    // curated:12
+    let value_12: i16 = -2047;
+    assert_eq(f64::from(value_12).bits(), 0xc09ffc0000000000 as u64);
+    // curated:13
+    let value_13: i16 = 2049;
+    assert_eq(f64::from(value_13).bits(), 0x40a0020000000000 as u64);
+    // curated:14
+    let value_14: i16 = -2049;
+    assert_eq(f64::from(value_14).bits(), 0xc0a0020000000000 as u64);
+    // curated:15
+    let value_15: i16 = 2051;
+    assert_eq(f64::from(value_15).bits(), 0x40a0060000000000 as u64);
+    // curated:16
+    let value_16: i16 = -2051;
+    assert_eq(f64::from(value_16).bits(), 0xc0a0060000000000 as u64);
+    // random:754:0
+    let value_17: i16 = 22297;
+    assert_eq(f64::from(value_17).bits(), 0x40d5c64000000000 as u64);
+    // random:754:1
+    let value_18: i16 = 32272;
+    assert_eq(f64::from(value_18).bits(), 0x40df840000000000 as u64);
+    // random:754:2
+    let value_19: i16 = -12382;
+    assert_eq(f64::from(value_19).bits(), 0xc0c82f0000000000 as u64);
+    // random:754:3
+    let value_20: i16 = -25266;
+    assert_eq(f64::from(value_20).bits(), 0xc0d8ac8000000000 as u64);
+    // random:754:4
+    let value_21: i16 = 19342;
+    assert_eq(f64::from(value_21).bits(), 0x40d2e38000000000 as u64);
+    // random:754:5
+    let value_22: i16 = -1606;
+    assert_eq(f64::from(value_22).bits(), 0xc099180000000000 as u64);
+    // random:754:6
+    let value_23: i16 = -10785;
+    assert_eq(f64::from(value_23).bits(), 0xc0c5108000000000 as u64);
+    // random:754:7
+    let value_24: i16 = 29845;
+    assert_eq(f64::from(value_24).bits(), 0x40dd254000000000 as u64);
+}
+
+#[test]
+fn generated_f64_from_i32_vectors_match_reference() {
+    // curated:0
+    let value_0: i32 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: i32 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: i32 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: i32 = 2147483647;
+    assert_eq(f64::from(value_3).bits(), 0x41dfffffffc00000 as u64);
+    // curated:4
+    let value_4: i32 = 2147483646;
+    assert_eq(f64::from(value_4).bits(), 0x41dfffffff800000 as u64);
+    // curated:5
+    let value_5: i32 = 715827882;
+    assert_eq(f64::from(value_5).bits(), 0x41c5555555000000 as u64);
+    // curated:6
+    let value_6: i32 = -1;
+    assert_eq(f64::from(value_6).bits(), 0xbff0000000000000 as u64);
+    // curated:7
+    let value_7: i32 = -2;
+    assert_eq(f64::from(value_7).bits(), 0xc000000000000000 as u64);
+    // curated:8
+    let value_8: i32 = -2147483647 - 1;
+    assert_eq(f64::from(value_8).bits(), 0xc1e0000000000000 as u64);
+    // curated:9
+    let value_9: i32 = -2147483647;
+    assert_eq(f64::from(value_9).bits(), 0xc1dfffffffc00000 as u64);
+    // curated:10
+    let value_10: i32 = -715827882;
+    assert_eq(f64::from(value_10).bits(), 0xc1c5555555000000 as u64);
+    // curated:11
+    let value_11: i32 = 2047;
+    assert_eq(f64::from(value_11).bits(), 0x409ffc0000000000 as u64);
+    // curated:12
+    let value_12: i32 = -2047;
+    assert_eq(f64::from(value_12).bits(), 0xc09ffc0000000000 as u64);
+    // curated:13
+    let value_13: i32 = 2049;
+    assert_eq(f64::from(value_13).bits(), 0x40a0020000000000 as u64);
+    // curated:14
+    let value_14: i32 = -2049;
+    assert_eq(f64::from(value_14).bits(), 0xc0a0020000000000 as u64);
+    // curated:15
+    let value_15: i32 = 2051;
+    assert_eq(f64::from(value_15).bits(), 0x40a0060000000000 as u64);
+    // curated:16
+    let value_16: i32 = -2051;
+    assert_eq(f64::from(value_16).bits(), 0xc0a0060000000000 as u64);
+    // curated:17
+    let value_17: i32 = 16777215;
+    assert_eq(f64::from(value_17).bits(), 0x416fffffe0000000 as u64);
+    // curated:18
+    let value_18: i32 = -16777215;
+    assert_eq(f64::from(value_18).bits(), 0xc16fffffe0000000 as u64);
+    // curated:19
+    let value_19: i32 = 16777217;
+    assert_eq(f64::from(value_19).bits(), 0x4170000010000000 as u64);
+    // curated:20
+    let value_20: i32 = -16777217;
+    assert_eq(f64::from(value_20).bits(), 0xc170000010000000 as u64);
+    // curated:21
+    let value_21: i32 = 16777219;
+    assert_eq(f64::from(value_21).bits(), 0x4170000030000000 as u64);
+    // curated:22
+    let value_22: i32 = -16777219;
+    assert_eq(f64::from(value_22).bits(), 0xc170000030000000 as u64);
+    // random:754:0
+    let value_23: i32 = -183704047;
+    assert_eq(f64::from(value_23).bits(), 0xc1a5e633de000000 as u64);
+    // random:754:1
+    let value_24: i32 = 1674466546;
+    assert_eq(f64::from(value_24).bits(), 0x41d8f3953c800000 as u64);
+    // random:754:2
+    let value_25: i32 = -155785694;
+    assert_eq(f64::from(value_25).bits(), 0xc1a29233bc000000 as u64);
+    // random:754:3
+    let value_26: i32 = -1279282755;
+    assert_eq(f64::from(value_26).bits(), 0xc1d3101390c00000 as u64);
+    // random:754:4
+    let value_27: i32 = -266336043;
+    assert_eq(f64::from(value_27).bits(), 0xc1afbfee56000000 as u64);
+    // random:754:5
+    let value_28: i32 = -1653162898;
+    assert_eq(f64::from(value_28).bits(), 0xc1d8a250e4800000 as u64);
+    // random:754:6
+    let value_29: i32 = 1950188394;
+    assert_eq(f64::from(value_29).bits(), 0x41dd0f60da800000 as u64);
+    // random:754:7
+    let value_30: i32 = -1850707479;
+    assert_eq(f64::from(value_30).bits(), 0xc1db93e385c00000 as u64);
+}
+
+#[test]
+fn generated_f64_from_i64_vectors_match_reference() {
+    // curated:0
+    let value_0: i64 = 0;
+    assert_eq(f64::from(value_0).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    let value_1: i64 = 1;
+    assert_eq(f64::from(value_1).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    let value_2: i64 = 2;
+    assert_eq(f64::from(value_2).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    let value_3: i64 = 9223372036854775807;
+    assert_eq(f64::from(value_3).bits(), 0x43e0000000000000 as u64);
+    // curated:4
+    let value_4: i64 = 9223372036854775806;
+    assert_eq(f64::from(value_4).bits(), 0x43e0000000000000 as u64);
+    // curated:5
+    let value_5: i64 = 3074457345618258602;
+    assert_eq(f64::from(value_5).bits(), 0x43c5555555555555 as u64);
+    // curated:6
+    let value_6: i64 = -1;
+    assert_eq(f64::from(value_6).bits(), 0xbff0000000000000 as u64);
+    // curated:7
+    let value_7: i64 = -2;
+    assert_eq(f64::from(value_7).bits(), 0xc000000000000000 as u64);
+    // curated:8
+    let value_8: i64 = -9223372036854775807 - 1;
+    assert_eq(f64::from(value_8).bits(), 0xc3e0000000000000 as u64);
+    // curated:9
+    let value_9: i64 = -9223372036854775807;
+    assert_eq(f64::from(value_9).bits(), 0xc3e0000000000000 as u64);
+    // curated:10
+    let value_10: i64 = -3074457345618258602;
+    assert_eq(f64::from(value_10).bits(), 0xc3c5555555555555 as u64);
+    // curated:11
+    let value_11: i64 = 2047;
+    assert_eq(f64::from(value_11).bits(), 0x409ffc0000000000 as u64);
+    // curated:12
+    let value_12: i64 = -2047;
+    assert_eq(f64::from(value_12).bits(), 0xc09ffc0000000000 as u64);
+    // curated:13
+    let value_13: i64 = 2049;
+    assert_eq(f64::from(value_13).bits(), 0x40a0020000000000 as u64);
+    // curated:14
+    let value_14: i64 = -2049;
+    assert_eq(f64::from(value_14).bits(), 0xc0a0020000000000 as u64);
+    // curated:15
+    let value_15: i64 = 2051;
+    assert_eq(f64::from(value_15).bits(), 0x40a0060000000000 as u64);
+    // curated:16
+    let value_16: i64 = -2051;
+    assert_eq(f64::from(value_16).bits(), 0xc0a0060000000000 as u64);
+    // curated:17
+    let value_17: i64 = 16777215;
+    assert_eq(f64::from(value_17).bits(), 0x416fffffe0000000 as u64);
+    // curated:18
+    let value_18: i64 = -16777215;
+    assert_eq(f64::from(value_18).bits(), 0xc16fffffe0000000 as u64);
+    // curated:19
+    let value_19: i64 = 16777217;
+    assert_eq(f64::from(value_19).bits(), 0x4170000010000000 as u64);
+    // curated:20
+    let value_20: i64 = -16777217;
+    assert_eq(f64::from(value_20).bits(), 0xc170000010000000 as u64);
+    // curated:21
+    let value_21: i64 = 16777219;
+    assert_eq(f64::from(value_21).bits(), 0x4170000030000000 as u64);
+    // curated:22
+    let value_22: i64 = -16777219;
+    assert_eq(f64::from(value_22).bits(), 0xc170000030000000 as u64);
+    // curated:23
+    let value_23: i64 = 9007199254740991;
+    assert_eq(f64::from(value_23).bits(), 0x433fffffffffffff as u64);
+    // curated:24
+    let value_24: i64 = -9007199254740991;
+    assert_eq(f64::from(value_24).bits(), 0xc33fffffffffffff as u64);
+    // curated:25
+    let value_25: i64 = 9007199254740993;
+    assert_eq(f64::from(value_25).bits(), 0x4340000000000000 as u64);
+    // curated:26
+    let value_26: i64 = -9007199254740993;
+    assert_eq(f64::from(value_26).bits(), 0xc340000000000000 as u64);
+    // curated:27
+    let value_27: i64 = 9007199254740995;
+    assert_eq(f64::from(value_27).bits(), 0x4340000000000002 as u64);
+    // curated:28
+    let value_28: i64 = -9007199254740995;
+    assert_eq(f64::from(value_28).bits(), 0xc340000000000002 as u64);
+    // random:754:0
+    let value_29: i64 = -2094267187933988645;
+    assert_eq(f64::from(value_29).bits(), 0xc3bd1054e9598fc7 as u64);
+    // random:754:1
+    let value_30: i64 = 5343409100023589588;
+    assert_eq(f64::from(value_30).bits(), 0x43d289e691041fbb as u64);
+    // random:754:2
+    let value_31: i64 = 4720532500127465367;
+    assert_eq(f64::from(value_31).bits(), 0x43d060acd3193230 as u64);
+    // random:754:3
+    let value_32: i64 = 7127225976628161;
+    assert_eq(f64::from(value_32).bits(), 0x4339522c9c9223c1 as u64);
+    // random:754:4
+    let value_33: i64 = 1106614237432521504;
+    assert_eq(f64::from(value_33).bits(), 0x43aeb6f7925b1c46 as u64);
+    // random:754:5
+    let value_34: i64 = -2090746457950104834;
+    assert_eq(f64::from(value_34).bits(), 0xc3bd03d2d38585ad as u64);
+    // random:754:6
+    let value_35: i64 = 4581233111555996965;
+    assert_eq(f64::from(value_35).bits(), 0x43cfc9e79f0bc6bf as u64);
+    // random:754:7
+    let value_36: i64 = -9192087474344731875;
+    assert_eq(f64::from(value_36).bits(), 0xc3dfe436b6cb28a9 as u64);
+}
+
+#[test]
+fn generated_f64_from_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f64::from_field(0 as Field).bits(), 0x0000000000000000 as u64);
+    // curated:1
+    assert_eq(f64::from_field(1 as Field).bits(), 0x3ff0000000000000 as u64);
+    // curated:2
+    assert_eq(f64::from_field(2 as Field).bits(), 0x4000000000000000 as u64);
+    // curated:3
+    assert_eq(f64::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x47f0000000000000 as u64);
+    // curated:4
+    assert_eq(f64::from_field(340282366920938463463374607431768211454 as Field).bits(), 0x47f0000000000000 as u64);
+    // curated:5
+    assert_eq(f64::from_field(113427455640312821154458202477256070485 as Field).bits(), 0x47d5555555555555 as u64);
+    // curated:6
+    assert_eq(f64::from_field(2047 as Field).bits(), 0x409ffc0000000000 as u64);
+    // curated:7
+    assert_eq(f64::from_field(2049 as Field).bits(), 0x40a0020000000000 as u64);
+    // curated:8
+    assert_eq(f64::from_field(2051 as Field).bits(), 0x40a0060000000000 as u64);
+    // curated:9
+    assert_eq(f64::from_field(16777215 as Field).bits(), 0x416fffffe0000000 as u64);
+    // curated:10
+    assert_eq(f64::from_field(16777217 as Field).bits(), 0x4170000010000000 as u64);
+    // curated:11
+    assert_eq(f64::from_field(16777219 as Field).bits(), 0x4170000030000000 as u64);
+    // curated:12
+    assert_eq(f64::from_field(9007199254740991 as Field).bits(), 0x433fffffffffffff as u64);
+    // curated:13
+    assert_eq(f64::from_field(9007199254740993 as Field).bits(), 0x4340000000000000 as u64);
+    // curated:14
+    assert_eq(f64::from_field(9007199254740995 as Field).bits(), 0x4340000000000002 as u64);
+    // curated:15
+    assert_eq(f64::from_field(10384593717069655257060992658440191 as Field).bits(), 0x4700000000000000 as u64);
+    // curated:16
+    assert_eq(f64::from_field(10384593717069655257060992658440193 as Field).bits(), 0x4700000000000000 as u64);
+    // curated:17
+    assert_eq(f64::from_field(10384593717069655257060992658440195 as Field).bits(), 0x4700000000000000 as u64);
+    // random:754:0
+    assert_eq(f64::from_field(217198929264228583027647377312721085411 as Field).bits(), 0x47e46cdfbfe7a2ca as u64);
+    // random:754:1
+    assert_eq(f64::from_field(231425716001206170587717876076422401256 as Field).bits(), 0x47e5c35f17a1dc18 as u64);
+    // random:754:2
+    assert_eq(f64::from_field(338170668797700645544018865535076852212 as Field).bits(), 0x47efcd29a7d05ba2 as u64);
+    // random:754:3
+    assert_eq(f64::from_field(282392368115524635805654103720727786930 as Field).bits(), 0x47ea8e5956473a78 as u64);
+    // random:754:4
+    assert_eq(f64::from_field(194702383869200750029088549836602601815 as Field).bits(), 0x47e24f4a15935387 as u64);
+    // random:754:5
+    assert_eq(f64::from_field(316894496408917622718187615129490281441 as Field).bits(), 0x47edccf51e97e877 as u64);
+    // random:754:6
+    assert_eq(f64::from_field(108236643021703854757753848800638674622 as Field).bits(), 0x47d45b67a0c4cc19 as u64);
+    // random:754:7
+    assert_eq(f64::from_field(246056743658089382456223894894293516518 as Field).bits(), 0x47e72399c31361b6 as u64);
+}
+
+#[test]
+fn generated_f128_from_u8_vectors_match_reference() {
+    // curated:0
+    let value_0: u8 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: u8 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: u8 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: u8 = 255;
+    assert_eq(f128::from(value_3).bits(), 0x4006fe00000000000000000000000000 as u128);
+    // curated:4
+    let value_4: u8 = 254;
+    assert_eq(f128::from(value_4).bits(), 0x4006fc00000000000000000000000000 as u128);
+    // curated:5
+    let value_5: u8 = 85;
+    assert_eq(f128::from(value_5).bits(), 0x40055400000000000000000000000000 as u128);
+    // random:754:0
+    let value_6: u8 = 212;
+    assert_eq(f128::from(value_6).bits(), 0x4006a800000000000000000000000000 as u128);
+    // random:754:1
+    let value_7: u8 = 73;
+    assert_eq(f128::from(value_7).bits(), 0x40052400000000000000000000000000 as u128);
+    // random:754:2
+    let value_8: u8 = 179;
+    assert_eq(f128::from(value_8).bits(), 0x40066600000000000000000000000000 as u128);
+    // random:754:3
+    let value_9: u8 = 28;
+    assert_eq(f128::from(value_9).bits(), 0x4003c000000000000000000000000000 as u128);
+    // random:754:4
+    let value_10: u8 = 218;
+    assert_eq(f128::from(value_10).bits(), 0x4006b400000000000000000000000000 as u128);
+    // random:754:5
+    let value_11: u8 = 24;
+    assert_eq(f128::from(value_11).bits(), 0x40038000000000000000000000000000 as u128);
+    // random:754:6
+    let value_12: u8 = 178;
+    assert_eq(f128::from(value_12).bits(), 0x40066400000000000000000000000000 as u128);
+    // random:754:7
+    let value_13: u8 = 143;
+    assert_eq(f128::from(value_13).bits(), 0x40061e00000000000000000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_u16_vectors_match_reference() {
+    // curated:0
+    let value_0: u16 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: u16 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: u16 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: u16 = 65535;
+    assert_eq(f128::from(value_3).bits(), 0x400efffe000000000000000000000000 as u128);
+    // curated:4
+    let value_4: u16 = 65534;
+    assert_eq(f128::from(value_4).bits(), 0x400efffc000000000000000000000000 as u128);
+    // curated:5
+    let value_5: u16 = 21845;
+    assert_eq(f128::from(value_5).bits(), 0x400d5554000000000000000000000000 as u128);
+    // curated:6
+    let value_6: u16 = 2047;
+    assert_eq(f128::from(value_6).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:7
+    let value_7: u16 = 2049;
+    assert_eq(f128::from(value_7).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:8
+    let value_8: u16 = 2051;
+    assert_eq(f128::from(value_8).bits(), 0x400a0060000000000000000000000000 as u128);
+    // random:754:0
+    let value_9: u16 = 55964;
+    assert_eq(f128::from(value_9).bits(), 0x400eb538000000000000000000000000 as u128);
+    // random:754:1
+    let value_10: u16 = 8936;
+    assert_eq(f128::from(value_10).bits(), 0x400c1740000000000000000000000000 as u128);
+    // random:754:2
+    let value_11: u16 = 12610;
+    assert_eq(f128::from(value_11).bits(), 0x400c8a10000000000000000000000000 as u128);
+    // random:754:3
+    let value_12: u16 = 1601;
+    assert_eq(f128::from(value_12).bits(), 0x40099040000000000000000000000000 as u128);
+    // random:754:4
+    let value_13: u16 = 57713;
+    assert_eq(f128::from(value_13).bits(), 0x400ec2e2000000000000000000000000 as u128);
+    // random:754:5
+    let value_14: u16 = 21395;
+    assert_eq(f128::from(value_14).bits(), 0x400d4e4c000000000000000000000000 as u128);
+    // random:754:6
+    let value_15: u16 = 2113;
+    assert_eq(f128::from(value_15).bits(), 0x400a0820000000000000000000000000 as u128);
+    // random:754:7
+    let value_16: u16 = 61285;
+    assert_eq(f128::from(value_16).bits(), 0x400edeca000000000000000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_u32_vectors_match_reference() {
+    // curated:0
+    let value_0: u32 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: u32 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: u32 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: u32 = 4294967295;
+    assert_eq(f128::from(value_3).bits(), 0x401efffffffe00000000000000000000 as u128);
+    // curated:4
+    let value_4: u32 = 4294967294;
+    assert_eq(f128::from(value_4).bits(), 0x401efffffffc00000000000000000000 as u128);
+    // curated:5
+    let value_5: u32 = 1431655765;
+    assert_eq(f128::from(value_5).bits(), 0x401d5555555400000000000000000000 as u128);
+    // curated:6
+    let value_6: u32 = 2047;
+    assert_eq(f128::from(value_6).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:7
+    let value_7: u32 = 2049;
+    assert_eq(f128::from(value_7).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:8
+    let value_8: u32 = 2051;
+    assert_eq(f128::from(value_8).bits(), 0x400a0060000000000000000000000000 as u128);
+    // curated:9
+    let value_9: u32 = 16777215;
+    assert_eq(f128::from(value_9).bits(), 0x4016fffffe0000000000000000000000 as u128);
+    // curated:10
+    let value_10: u32 = 16777217;
+    assert_eq(f128::from(value_10).bits(), 0x40170000010000000000000000000000 as u128);
+    // curated:11
+    let value_11: u32 = 16777219;
+    assert_eq(f128::from(value_11).bits(), 0x40170000030000000000000000000000 as u128);
+    // random:754:0
+    let value_12: u32 = 3760834932;
+    assert_eq(f128::from(value_12).bits(), 0x401ec05392e800000000000000000000 as u128);
+    // random:754:1
+    let value_13: u32 = 2753013848;
+    assert_eq(f128::from(value_13).bits(), 0x401e482f50b000000000000000000000 as u128);
+    // random:754:2
+    let value_14: u32 = 3614113169;
+    assert_eq(f128::from(value_14).bits(), 0x401eaed5fb2200000000000000000000 as u128);
+    // random:754:3
+    let value_15: u32 = 3304359062;
+    assert_eq(f128::from(value_15).bits(), 0x401e89e9092c00000000000000000000 as u128);
+    // random:754:4
+    let value_16: u32 = 843232862;
+    assert_eq(f128::from(value_16).bits(), 0x401c9215b2f000000000000000000000 as u128);
+    // random:754:5
+    let value_17: u32 = 3863636468;
+    assert_eq(f128::from(value_17).bits(), 0x401ecc94d3e800000000000000000000 as u128);
+    // random:754:6
+    let value_18: u32 = 962813227;
+    assert_eq(f128::from(value_18).bits(), 0x401ccb1ae95800000000000000000000 as u128);
+    // random:754:7
+    let value_19: u32 = 1756899236;
+    assert_eq(f128::from(value_19).bits(), 0x401da2e09e9000000000000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_u64_vectors_match_reference() {
+    // curated:0
+    let value_0: u64 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: u64 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: u64 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: u64 = 18446744073709551615;
+    assert_eq(f128::from(value_3).bits(), 0x403efffffffffffffffe000000000000 as u128);
+    // curated:4
+    let value_4: u64 = 18446744073709551614;
+    assert_eq(f128::from(value_4).bits(), 0x403efffffffffffffffc000000000000 as u128);
+    // curated:5
+    let value_5: u64 = 6148914691236517205;
+    assert_eq(f128::from(value_5).bits(), 0x403d5555555555555554000000000000 as u128);
+    // curated:6
+    let value_6: u64 = 2047;
+    assert_eq(f128::from(value_6).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:7
+    let value_7: u64 = 2049;
+    assert_eq(f128::from(value_7).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:8
+    let value_8: u64 = 2051;
+    assert_eq(f128::from(value_8).bits(), 0x400a0060000000000000000000000000 as u128);
+    // curated:9
+    let value_9: u64 = 16777215;
+    assert_eq(f128::from(value_9).bits(), 0x4016fffffe0000000000000000000000 as u128);
+    // curated:10
+    let value_10: u64 = 16777217;
+    assert_eq(f128::from(value_10).bits(), 0x40170000010000000000000000000000 as u128);
+    // curated:11
+    let value_11: u64 = 16777219;
+    assert_eq(f128::from(value_11).bits(), 0x40170000030000000000000000000000 as u128);
+    // curated:12
+    let value_12: u64 = 9007199254740991;
+    assert_eq(f128::from(value_12).bits(), 0x4033fffffffffffff000000000000000 as u128);
+    // curated:13
+    let value_13: u64 = 9007199254740993;
+    assert_eq(f128::from(value_13).bits(), 0x40340000000000000800000000000000 as u128);
+    // curated:14
+    let value_14: u64 = 9007199254740995;
+    assert_eq(f128::from(value_14).bits(), 0x40340000000000001800000000000000 as u128);
+    // random:754:0
+    let value_15: u64 = 5612830980628602708;
+    assert_eq(f128::from(value_15).bits(), 0x403d37932027c2b37d50000000000000 as u128);
+    // random:754:1
+    let value_16: u64 = 6649936771757533296;
+    assert_eq(f128::from(value_16).bits(), 0x403d7125490b4da9a1c0000000000000 as u128);
+    // random:754:2
+    let value_17: u64 = 12306378628099103517;
+    assert_eq(f128::from(value_17).bits(), 0x403e559214520e9cb63a000000000000 as u128);
+    // random:754:3
+    let value_18: u64 = 17323698846721917745;
+    assert_eq(f128::from(value_18).bits(), 0x403ee0d448a1e5688662000000000000 as u128);
+    // random:754:4
+    let value_19: u64 = 10177004462997487859;
+    assert_eq(f128::from(value_19).bits(), 0x403e1a77f7472d0f81e6000000000000 as u128);
+    // random:754:5
+    let value_20: u64 = 13426209651520299746;
+    assert_eq(f128::from(value_20).bits(), 0x403e74a6f515fd93c5c4000000000000 as u128);
+    // random:754:6
+    let value_21: u64 = 17463214489980279801;
+    assert_eq(f128::from(value_21).bits(), 0x403ee4b39a1bef7537f2000000000000 as u128);
+    // random:754:7
+    let value_22: u64 = 17528583506103066977;
+    assert_eq(f128::from(value_22).bits(), 0x403ee68413a82216c2c2000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_u128_vectors_match_reference() {
+    // curated:0
+    let value_0: u128 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: u128 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: u128 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: u128 = 340282366920938463463374607431768211455;
+    assert_eq(f128::from(value_3).bits(), 0x407f0000000000000000000000000000 as u128);
+    // curated:4
+    let value_4: u128 = 340282366920938463463374607431768211454;
+    assert_eq(f128::from(value_4).bits(), 0x407f0000000000000000000000000000 as u128);
+    // curated:5
+    let value_5: u128 = 113427455640312821154458202477256070485;
+    assert_eq(f128::from(value_5).bits(), 0x407d5555555555555555555555555555 as u128);
+    // curated:6
+    let value_6: u128 = 2047;
+    assert_eq(f128::from(value_6).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:7
+    let value_7: u128 = 2049;
+    assert_eq(f128::from(value_7).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:8
+    let value_8: u128 = 2051;
+    assert_eq(f128::from(value_8).bits(), 0x400a0060000000000000000000000000 as u128);
+    // curated:9
+    let value_9: u128 = 16777215;
+    assert_eq(f128::from(value_9).bits(), 0x4016fffffe0000000000000000000000 as u128);
+    // curated:10
+    let value_10: u128 = 16777217;
+    assert_eq(f128::from(value_10).bits(), 0x40170000010000000000000000000000 as u128);
+    // curated:11
+    let value_11: u128 = 16777219;
+    assert_eq(f128::from(value_11).bits(), 0x40170000030000000000000000000000 as u128);
+    // curated:12
+    let value_12: u128 = 9007199254740991;
+    assert_eq(f128::from(value_12).bits(), 0x4033fffffffffffff000000000000000 as u128);
+    // curated:13
+    let value_13: u128 = 9007199254740993;
+    assert_eq(f128::from(value_13).bits(), 0x40340000000000000800000000000000 as u128);
+    // curated:14
+    let value_14: u128 = 9007199254740995;
+    assert_eq(f128::from(value_14).bits(), 0x40340000000000001800000000000000 as u128);
+    // curated:15
+    let value_15: u128 = 10384593717069655257060992658440191;
+    assert_eq(f128::from(value_15).bits(), 0x406fffffffffffffffffffffffffffff as u128);
+    // curated:16
+    let value_16: u128 = 10384593717069655257060992658440193;
+    assert_eq(f128::from(value_16).bits(), 0x40700000000000000000000000000000 as u128);
+    // curated:17
+    let value_17: u128 = 10384593717069655257060992658440195;
+    assert_eq(f128::from(value_17).bits(), 0x40700000000000000000000000000002 as u128);
+    // random:754:0
+    let value_18: u128 = 116338012865866952416419717694604249796;
+    assert_eq(f128::from(value_18).bits(), 0x407d5e178b8905d75c889458d779b154 as u128);
+    // random:754:1
+    let value_19: u128 = 219936390931747966076048560960980165111;
+    assert_eq(f128::from(value_19).bits(), 0x407e4aec6a8e2072e32d51c669db2339 as u128);
+    // random:754:2
+    let value_20: u128 = 144142737008712042079231342487223706152;
+    assert_eq(f128::from(value_20).bits(), 0x407db1c3867fdac1989282f69da2aa23 as u128);
+    // random:754:3
+    let value_21: u128 = 324220672605054412071725545183268124112;
+    assert_eq(f128::from(value_21).bits(), 0x407ee7d542a90af7185d4c4cb72bf2da as u128);
+    // random:754:4
+    let value_22: u128 = 146141177747997681133355306177310404052;
+    assert_eq(f128::from(value_22).bits(), 0x407db7c711712ca67a40b1bc863982ab as u128);
+    // random:754:5
+    let value_23: u128 = 196953839403963013948812176878338112577;
+    assert_eq(f128::from(value_23).bits(), 0x407e2857dc013f3187a9a36fffba3f22 as u128);
+    // random:754:6
+    let value_24: u128 = 57903315743698922284889543576894815545;
+    assert_eq(f128::from(value_24).bits(), 0x407c5c7e2f0953e1f74d0de87ef111de as u128);
+    // random:754:7
+    let value_25: u128 = 134566032490370587588122015652685320970;
+    assert_eq(f128::from(value_25).bits(), 0x407d94f1e68cf35d779dc3ca06ee9fa2 as u128);
+}
+
+#[test]
+fn generated_f128_from_i8_vectors_match_reference() {
+    // curated:0
+    let value_0: i8 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: i8 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: i8 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: i8 = 127;
+    assert_eq(f128::from(value_3).bits(), 0x4005fc00000000000000000000000000 as u128);
+    // curated:4
+    let value_4: i8 = 126;
+    assert_eq(f128::from(value_4).bits(), 0x4005f800000000000000000000000000 as u128);
+    // curated:5
+    let value_5: i8 = 42;
+    assert_eq(f128::from(value_5).bits(), 0x40045000000000000000000000000000 as u128);
+    // curated:6
+    let value_6: i8 = -1;
+    assert_eq(f128::from(value_6).bits(), 0xbfff0000000000000000000000000000 as u128);
+    // curated:7
+    let value_7: i8 = -2;
+    assert_eq(f128::from(value_7).bits(), 0xc0000000000000000000000000000000 as u128);
+    // curated:8
+    let value_8: i8 = -127 - 1;
+    assert_eq(f128::from(value_8).bits(), 0xc0060000000000000000000000000000 as u128);
+    // curated:9
+    let value_9: i8 = -127;
+    assert_eq(f128::from(value_9).bits(), 0xc005fc00000000000000000000000000 as u128);
+    // curated:10
+    let value_10: i8 = -42;
+    assert_eq(f128::from(value_10).bits(), 0xc0045000000000000000000000000000 as u128);
+    // random:754:0
+    let value_11: i8 = 34;
+    assert_eq(f128::from(value_11).bits(), 0x40041000000000000000000000000000 as u128);
+    // random:754:1
+    let value_12: i8 = 14;
+    assert_eq(f128::from(value_12).bits(), 0x4002c000000000000000000000000000 as u128);
+    // random:754:2
+    let value_13: i8 = -66;
+    assert_eq(f128::from(value_13).bits(), 0xc0050800000000000000000000000000 as u128);
+    // random:754:3
+    let value_14: i8 = 23;
+    assert_eq(f128::from(value_14).bits(), 0x40037000000000000000000000000000 as u128);
+    // random:754:4
+    let value_15: i8 = 107;
+    assert_eq(f128::from(value_15).bits(), 0x4005ac00000000000000000000000000 as u128);
+    // random:754:5
+    let value_16: i8 = -115;
+    assert_eq(f128::from(value_16).bits(), 0xc005cc00000000000000000000000000 as u128);
+    // random:754:6
+    let value_17: i8 = 122;
+    assert_eq(f128::from(value_17).bits(), 0x4005e800000000000000000000000000 as u128);
+    // random:754:7
+    let value_18: i8 = -98;
+    assert_eq(f128::from(value_18).bits(), 0xc0058800000000000000000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_i16_vectors_match_reference() {
+    // curated:0
+    let value_0: i16 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: i16 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: i16 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: i16 = 32767;
+    assert_eq(f128::from(value_3).bits(), 0x400dfffc000000000000000000000000 as u128);
+    // curated:4
+    let value_4: i16 = 32766;
+    assert_eq(f128::from(value_4).bits(), 0x400dfff8000000000000000000000000 as u128);
+    // curated:5
+    let value_5: i16 = 10922;
+    assert_eq(f128::from(value_5).bits(), 0x400c5550000000000000000000000000 as u128);
+    // curated:6
+    let value_6: i16 = -1;
+    assert_eq(f128::from(value_6).bits(), 0xbfff0000000000000000000000000000 as u128);
+    // curated:7
+    let value_7: i16 = -2;
+    assert_eq(f128::from(value_7).bits(), 0xc0000000000000000000000000000000 as u128);
+    // curated:8
+    let value_8: i16 = -32767 - 1;
+    assert_eq(f128::from(value_8).bits(), 0xc00e0000000000000000000000000000 as u128);
+    // curated:9
+    let value_9: i16 = -32767;
+    assert_eq(f128::from(value_9).bits(), 0xc00dfffc000000000000000000000000 as u128);
+    // curated:10
+    let value_10: i16 = -10922;
+    assert_eq(f128::from(value_10).bits(), 0xc00c5550000000000000000000000000 as u128);
+    // curated:11
+    let value_11: i16 = 2047;
+    assert_eq(f128::from(value_11).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:12
+    let value_12: i16 = -2047;
+    assert_eq(f128::from(value_12).bits(), 0xc009ffc0000000000000000000000000 as u128);
+    // curated:13
+    let value_13: i16 = 2049;
+    assert_eq(f128::from(value_13).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:14
+    let value_14: i16 = -2049;
+    assert_eq(f128::from(value_14).bits(), 0xc00a0020000000000000000000000000 as u128);
+    // curated:15
+    let value_15: i16 = 2051;
+    assert_eq(f128::from(value_15).bits(), 0x400a0060000000000000000000000000 as u128);
+    // curated:16
+    let value_16: i16 = -2051;
+    assert_eq(f128::from(value_16).bits(), 0xc00a0060000000000000000000000000 as u128);
+    // random:754:0
+    let value_17: i16 = -7097;
+    assert_eq(f128::from(value_17).bits(), 0xc00bbb90000000000000000000000000 as u128);
+    // random:754:1
+    let value_18: i16 = -10500;
+    assert_eq(f128::from(value_18).bits(), 0xc00c4820000000000000000000000000 as u128);
+    // random:754:2
+    let value_19: i16 = -27750;
+    assert_eq(f128::from(value_19).bits(), 0xc00db198000000000000000000000000 as u128);
+    // random:754:3
+    let value_20: i16 = 23427;
+    assert_eq(f128::from(value_20).bits(), 0x400d6e0c000000000000000000000000 as u128);
+    // random:754:4
+    let value_21: i16 = 2774;
+    assert_eq(f128::from(value_21).bits(), 0x400a5ac0000000000000000000000000 as u128);
+    // random:754:5
+    let value_22: i16 = -14524;
+    assert_eq(f128::from(value_22).bits(), 0xc00cc5e0000000000000000000000000 as u128);
+    // random:754:6
+    let value_23: i16 = 5068;
+    assert_eq(f128::from(value_23).bits(), 0x400b3cc0000000000000000000000000 as u128);
+    // random:754:7
+    let value_24: i16 = 13727;
+    assert_eq(f128::from(value_24).bits(), 0x400cacf8000000000000000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_i32_vectors_match_reference() {
+    // curated:0
+    let value_0: i32 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: i32 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: i32 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: i32 = 2147483647;
+    assert_eq(f128::from(value_3).bits(), 0x401dfffffffc00000000000000000000 as u128);
+    // curated:4
+    let value_4: i32 = 2147483646;
+    assert_eq(f128::from(value_4).bits(), 0x401dfffffff800000000000000000000 as u128);
+    // curated:5
+    let value_5: i32 = 715827882;
+    assert_eq(f128::from(value_5).bits(), 0x401c5555555000000000000000000000 as u128);
+    // curated:6
+    let value_6: i32 = -1;
+    assert_eq(f128::from(value_6).bits(), 0xbfff0000000000000000000000000000 as u128);
+    // curated:7
+    let value_7: i32 = -2;
+    assert_eq(f128::from(value_7).bits(), 0xc0000000000000000000000000000000 as u128);
+    // curated:8
+    let value_8: i32 = -2147483647 - 1;
+    assert_eq(f128::from(value_8).bits(), 0xc01e0000000000000000000000000000 as u128);
+    // curated:9
+    let value_9: i32 = -2147483647;
+    assert_eq(f128::from(value_9).bits(), 0xc01dfffffffc00000000000000000000 as u128);
+    // curated:10
+    let value_10: i32 = -715827882;
+    assert_eq(f128::from(value_10).bits(), 0xc01c5555555000000000000000000000 as u128);
+    // curated:11
+    let value_11: i32 = 2047;
+    assert_eq(f128::from(value_11).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:12
+    let value_12: i32 = -2047;
+    assert_eq(f128::from(value_12).bits(), 0xc009ffc0000000000000000000000000 as u128);
+    // curated:13
+    let value_13: i32 = 2049;
+    assert_eq(f128::from(value_13).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:14
+    let value_14: i32 = -2049;
+    assert_eq(f128::from(value_14).bits(), 0xc00a0020000000000000000000000000 as u128);
+    // curated:15
+    let value_15: i32 = 2051;
+    assert_eq(f128::from(value_15).bits(), 0x400a0060000000000000000000000000 as u128);
+    // curated:16
+    let value_16: i32 = -2051;
+    assert_eq(f128::from(value_16).bits(), 0xc00a0060000000000000000000000000 as u128);
+    // curated:17
+    let value_17: i32 = 16777215;
+    assert_eq(f128::from(value_17).bits(), 0x4016fffffe0000000000000000000000 as u128);
+    // curated:18
+    let value_18: i32 = -16777215;
+    assert_eq(f128::from(value_18).bits(), 0xc016fffffe0000000000000000000000 as u128);
+    // curated:19
+    let value_19: i32 = 16777217;
+    assert_eq(f128::from(value_19).bits(), 0x40170000010000000000000000000000 as u128);
+    // curated:20
+    let value_20: i32 = -16777217;
+    assert_eq(f128::from(value_20).bits(), 0xc0170000010000000000000000000000 as u128);
+    // curated:21
+    let value_21: i32 = 16777219;
+    assert_eq(f128::from(value_21).bits(), 0x40170000030000000000000000000000 as u128);
+    // curated:22
+    let value_22: i32 = -16777219;
+    assert_eq(f128::from(value_22).bits(), 0xc0170000030000000000000000000000 as u128);
+    // random:754:0
+    let value_23: i32 = 932639105;
+    assert_eq(f128::from(value_23).bits(), 0x401cbcb78c0800000000000000000000 as u128);
+    // random:754:1
+    let value_24: i32 = -153272639;
+    assert_eq(f128::from(value_24).bits(), 0xc01a245827e000000000000000000000 as u128);
+    // random:754:2
+    let value_25: i32 = 254531663;
+    assert_eq(f128::from(value_25).bits(), 0x401ae57b09e000000000000000000000 as u128);
+    // random:754:3
+    let value_26: i32 = 215373531;
+    assert_eq(f128::from(value_26).bits(), 0x401a9acadb6000000000000000000000 as u128);
+    // random:754:4
+    let value_27: i32 = 627348903;
+    assert_eq(f128::from(value_27).bits(), 0x401c2b24ad3800000000000000000000 as u128);
+    // random:754:5
+    let value_28: i32 = -963728406;
+    assert_eq(f128::from(value_28).bits(), 0xc01ccb8aa0b000000000000000000000 as u128);
+    // random:754:6
+    let value_29: i32 = -595346458;
+    assert_eq(f128::from(value_29).bits(), 0xc01c1be220d000000000000000000000 as u128);
+    // random:754:7
+    let value_30: i32 = 1578719304;
+    assert_eq(f128::from(value_30).bits(), 0x401d7865612000000000000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_i64_vectors_match_reference() {
+    // curated:0
+    let value_0: i64 = 0;
+    assert_eq(f128::from(value_0).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    let value_1: i64 = 1;
+    assert_eq(f128::from(value_1).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    let value_2: i64 = 2;
+    assert_eq(f128::from(value_2).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    let value_3: i64 = 9223372036854775807;
+    assert_eq(f128::from(value_3).bits(), 0x403dfffffffffffffffc000000000000 as u128);
+    // curated:4
+    let value_4: i64 = 9223372036854775806;
+    assert_eq(f128::from(value_4).bits(), 0x403dfffffffffffffff8000000000000 as u128);
+    // curated:5
+    let value_5: i64 = 3074457345618258602;
+    assert_eq(f128::from(value_5).bits(), 0x403c5555555555555550000000000000 as u128);
+    // curated:6
+    let value_6: i64 = -1;
+    assert_eq(f128::from(value_6).bits(), 0xbfff0000000000000000000000000000 as u128);
+    // curated:7
+    let value_7: i64 = -2;
+    assert_eq(f128::from(value_7).bits(), 0xc0000000000000000000000000000000 as u128);
+    // curated:8
+    let value_8: i64 = -9223372036854775807 - 1;
+    assert_eq(f128::from(value_8).bits(), 0xc03e0000000000000000000000000000 as u128);
+    // curated:9
+    let value_9: i64 = -9223372036854775807;
+    assert_eq(f128::from(value_9).bits(), 0xc03dfffffffffffffffc000000000000 as u128);
+    // curated:10
+    let value_10: i64 = -3074457345618258602;
+    assert_eq(f128::from(value_10).bits(), 0xc03c5555555555555550000000000000 as u128);
+    // curated:11
+    let value_11: i64 = 2047;
+    assert_eq(f128::from(value_11).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:12
+    let value_12: i64 = -2047;
+    assert_eq(f128::from(value_12).bits(), 0xc009ffc0000000000000000000000000 as u128);
+    // curated:13
+    let value_13: i64 = 2049;
+    assert_eq(f128::from(value_13).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:14
+    let value_14: i64 = -2049;
+    assert_eq(f128::from(value_14).bits(), 0xc00a0020000000000000000000000000 as u128);
+    // curated:15
+    let value_15: i64 = 2051;
+    assert_eq(f128::from(value_15).bits(), 0x400a0060000000000000000000000000 as u128);
+    // curated:16
+    let value_16: i64 = -2051;
+    assert_eq(f128::from(value_16).bits(), 0xc00a0060000000000000000000000000 as u128);
+    // curated:17
+    let value_17: i64 = 16777215;
+    assert_eq(f128::from(value_17).bits(), 0x4016fffffe0000000000000000000000 as u128);
+    // curated:18
+    let value_18: i64 = -16777215;
+    assert_eq(f128::from(value_18).bits(), 0xc016fffffe0000000000000000000000 as u128);
+    // curated:19
+    let value_19: i64 = 16777217;
+    assert_eq(f128::from(value_19).bits(), 0x40170000010000000000000000000000 as u128);
+    // curated:20
+    let value_20: i64 = -16777217;
+    assert_eq(f128::from(value_20).bits(), 0xc0170000010000000000000000000000 as u128);
+    // curated:21
+    let value_21: i64 = 16777219;
+    assert_eq(f128::from(value_21).bits(), 0x40170000030000000000000000000000 as u128);
+    // curated:22
+    let value_22: i64 = -16777219;
+    assert_eq(f128::from(value_22).bits(), 0xc0170000030000000000000000000000 as u128);
+    // curated:23
+    let value_23: i64 = 9007199254740991;
+    assert_eq(f128::from(value_23).bits(), 0x4033fffffffffffff000000000000000 as u128);
+    // curated:24
+    let value_24: i64 = -9007199254740991;
+    assert_eq(f128::from(value_24).bits(), 0xc033fffffffffffff000000000000000 as u128);
+    // curated:25
+    let value_25: i64 = 9007199254740993;
+    assert_eq(f128::from(value_25).bits(), 0x40340000000000000800000000000000 as u128);
+    // curated:26
+    let value_26: i64 = -9007199254740993;
+    assert_eq(f128::from(value_26).bits(), 0xc0340000000000000800000000000000 as u128);
+    // curated:27
+    let value_27: i64 = 9007199254740995;
+    assert_eq(f128::from(value_27).bits(), 0x40340000000000001800000000000000 as u128);
+    // curated:28
+    let value_28: i64 = -9007199254740995;
+    assert_eq(f128::from(value_28).bits(), 0xc0340000000000001800000000000000 as u128);
+    // random:754:0
+    let value_29: i64 = -1948823375804996527;
+    assert_eq(f128::from(value_29).bits(), 0xc03bb0b9c88f4d59baf0000000000000 as u128);
+    // random:754:1
+    let value_30: i64 = -7035904235904345062;
+    assert_eq(f128::from(value_30).bits(), 0xc03d8692367fbafa8f98000000000000 as u128);
+    // random:754:2
+    let value_31: i64 = 7163471312275171555;
+    assert_eq(f128::from(value_31).bits(), 0x403d8da70cd1bb73a38c000000000000 as u128);
+    // random:754:3
+    let value_32: i64 = -2431708923489219600;
+    assert_eq(f128::from(value_32).bits(), 0xc03c0df9530eadc7a080000000000000 as u128);
+    // random:754:4
+    let value_33: i64 = 5702270921726634495;
+    assert_eq(f128::from(value_33).bits(), 0x403d3c8a24c3fa38a7fc000000000000 as u128);
+    // random:754:5
+    let value_34: i64 = 6123874065899466945;
+    assert_eq(f128::from(value_34).bits(), 0x403d53f17c11aca8c304000000000000 as u128);
+    // random:754:6
+    let value_35: i64 = -8441647111490988690;
+    assert_eq(f128::from(value_35).bits(), 0xc03dd49b0549de7daa48000000000000 as u128);
+    // random:754:7
+    let value_36: i64 = 6869087505706414088;
+    assert_eq(f128::from(value_36).bits(), 0x403d7d4f9ac512d1c020000000000000 as u128);
+}
+
+#[test]
+fn generated_f128_from_field_vectors_match_reference() {
+    // curated:0
+    assert_eq(f128::from_field(0 as Field).bits(), 0x00000000000000000000000000000000 as u128);
+    // curated:1
+    assert_eq(f128::from_field(1 as Field).bits(), 0x3fff0000000000000000000000000000 as u128);
+    // curated:2
+    assert_eq(f128::from_field(2 as Field).bits(), 0x40000000000000000000000000000000 as u128);
+    // curated:3
+    assert_eq(f128::from_field(340282366920938463463374607431768211455 as Field).bits(), 0x407f0000000000000000000000000000 as u128);
+    // curated:4
+    assert_eq(f128::from_field(340282366920938463463374607431768211454 as Field).bits(), 0x407f0000000000000000000000000000 as u128);
+    // curated:5
+    assert_eq(f128::from_field(113427455640312821154458202477256070485 as Field).bits(), 0x407d5555555555555555555555555555 as u128);
+    // curated:6
+    assert_eq(f128::from_field(2047 as Field).bits(), 0x4009ffc0000000000000000000000000 as u128);
+    // curated:7
+    assert_eq(f128::from_field(2049 as Field).bits(), 0x400a0020000000000000000000000000 as u128);
+    // curated:8
+    assert_eq(f128::from_field(2051 as Field).bits(), 0x400a0060000000000000000000000000 as u128);
+    // curated:9
+    assert_eq(f128::from_field(16777215 as Field).bits(), 0x4016fffffe0000000000000000000000 as u128);
+    // curated:10
+    assert_eq(f128::from_field(16777217 as Field).bits(), 0x40170000010000000000000000000000 as u128);
+    // curated:11
+    assert_eq(f128::from_field(16777219 as Field).bits(), 0x40170000030000000000000000000000 as u128);
+    // curated:12
+    assert_eq(f128::from_field(9007199254740991 as Field).bits(), 0x4033fffffffffffff000000000000000 as u128);
+    // curated:13
+    assert_eq(f128::from_field(9007199254740993 as Field).bits(), 0x40340000000000000800000000000000 as u128);
+    // curated:14
+    assert_eq(f128::from_field(9007199254740995 as Field).bits(), 0x40340000000000001800000000000000 as u128);
+    // curated:15
+    assert_eq(f128::from_field(10384593717069655257060992658440191 as Field).bits(), 0x406fffffffffffffffffffffffffffff as u128);
+    // curated:16
+    assert_eq(f128::from_field(10384593717069655257060992658440193 as Field).bits(), 0x40700000000000000000000000000000 as u128);
+    // curated:17
+    assert_eq(f128::from_field(10384593717069655257060992658440195 as Field).bits(), 0x40700000000000000000000000000002 as u128);
+    // random:754:0
+    assert_eq(f128::from_field(120149567256216466463052993950655473270 as Field).bits(), 0x407d698fdc18cf495559ace6a980e4b2 as u128);
+    // random:754:1
+    assert_eq(f128::from_field(145681112051964049176551510177661837072 as Field).bits(), 0x407db664a57b529789e71973444b4baf as u128);
+    // random:754:2
+    assert_eq(f128::from_field(286151087428649983073962025960376532714 as Field).bits(), 0x407eae8d63bb7c7356f9ebf2ae55dbad as u128);
+    // random:754:3
+    assert_eq(f128::from_field(318928340882352635709687795567359103169 as Field).bits(), 0x407edfdeba760d028b458a0183384ab6 as u128);
+    // random:754:4
+    assert_eq(f128::from_field(318005563868497763637665267256267989834 as Field).bits(), 0x407ede7b499f50dde3f5078e93ccec83 as u128);
+    // random:754:5
+    assert_eq(f128::from_field(320328134907163170865065660488648421071 as Field).bits(), 0x407ee1f9e8cf0f583cac81f5a9a27f9e as u128);
+    // random:754:6
+    assert_eq(f128::from_field(55048266430515117854847905239339199022 as Field).bits(), 0x407c4b4f48a4c3be1fa5667b0106ddcb as u128);
+    // random:754:7
+    assert_eq(f128::from_field(6705480275916317767449923166563756010 as Field).bits(), 0x407942db6cf62bad1abf6b2435bcff1a as u128);
 }

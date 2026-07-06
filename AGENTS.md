@@ -29,6 +29,13 @@ When the agent runtime supports skills, load the relevant skill before editing. 
 ## Public API Invariants
 
 - The public API is intentionally the generated `f16`, `f32`, `f64`, and `f128` types.
+- Per-type surface: `new`/`bits`, `Add`/`Sub`/`Mul`/`Div` (round-to-nearest-even),
+  comparison predicates (`eq`/`ne`/`lt`/`le`/`gt`/`ge`), round-to-integral
+  (`floor`/`ceil`/`trunc`/`round_ties_even`), `sqrt`, `to_u64`/`to_i64`,
+  `From<u8..u128, i8..i64>`, and — since sq-dtmg9 — `abs`, the named constant
+  constructors (`zero`/`neg_zero`/`one`/`neg_one`/`infinity`/`neg_infinity`/
+  `nan`/`signaling_nan`), `from_field` (< 2^128, loud range assert), and
+  `to_field` (truncating via the `to_u64` kernel).
 - Raw bits are constructed with `new(bits)` and recovered with `bits()`.
   `new()` enforces TWO in-circuit invariants: (1) `decoded.bits() == bits` and
   (2) `exponent < 2^EXP_SIZE` and `mantissa < 2^MANT_SIZE` for each width.
