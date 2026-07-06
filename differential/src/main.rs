@@ -1,4 +1,5 @@
 //! [SONNET-4.6] IEEE 754 differential harness -- PROOF M1 (sq-3x7dl.14.1).
+//! [FABLE-5] sq-dtmg9: extended with abs, from_field, and to_field coverage.
 //!
 //! Generates a Noir test file asserting bit-equality between sparq_ieee754 circuit
 //! primitives and a TRUSTED INDEPENDENT oracle:
@@ -227,6 +228,61 @@ fn oracle_f16_le(a: u16, b: u16) -> bool {
 }
 
 // ---------------------------------------------------------------------------
+// Oracle: abs (sq-dtmg9).
+//
+// IEEE 754-2019 5.5.1 DEFINES abs(x) as the bit-level copy with the sign bit
+// set to 0 (quiet, payload-preserving, no exceptions), so the oracle IS the
+// spec formula.  The unit tests cross-check it against hardware f32::abs /
+// f64::abs on non-NaN values.  What the differential rows then verify is the
+// circuit's decode -> sign-clear -> re-encode path, including NaN payloads.
+// ---------------------------------------------------------------------------
+
+fn oracle_f16_abs(a: u16) -> u16 {
+    a & 0x7FFF
+}
+fn oracle_f32_abs(a: u32) -> u32 {
+    a & 0x7FFF_FFFF
+}
+fn oracle_f64_abs(a: u64) -> u64 {
+    a & 0x7FFF_FFFF_FFFF_FFFF
+}
+
+// ---------------------------------------------------------------------------
+// Oracle: from_field / to_field (sq-dtmg9).
+//
+// from_field interprets the field element as an unsigned integer < 2^128 and
+// rounds to nearest-even -- Rust guarantees correctly-rounded (RNE) integer ->
+// float casts, so `v as f32` / `v as f64` is a conformant hardware oracle.
+// to_field truncates toward zero via the to_u64 kernel; the oracle mirrors its
+// domain (None = the circuit must reject: NaN, inf, >= 2^64, <= -1).
+// ---------------------------------------------------------------------------
+
+fn oracle_f32_from_field(v: u128) -> u32 {
+    (v as f32).to_bits()
+}
+fn oracle_f64_from_field(v: u128) -> u64 {
+    (v as f64).to_bits()
+}
+
+fn oracle_f64_to_field(a: u64) -> Option<u64> {
+    let x = f64::from_bits(a);
+    if x.is_nan() || x.is_infinite() {
+        return None;
+    }
+    let t = x.trunc();
+    if t <= -1.0 || t >= 18446744073709551616.0 {
+        return None;
+    }
+    // (-1, 0) truncates to -0.0; the saturating float->int cast maps it to 0,
+    // matching the circuit's truncate-toward-zero window.
+    Some(t as u64)
+}
+
+fn oracle_f32_to_field(a: u32) -> Option<u64> {
+    oracle_f64_to_field((f64::from(f32::from_bits(a))).to_bits())
+}
+
+// ---------------------------------------------------------------------------
 // Corner-case input sets (per type)
 // ---------------------------------------------------------------------------
 
@@ -452,6 +508,58 @@ fn f16_cmp_line(a: u16, b: u16, expected: bool, method: &str) -> String {
     format!(
         "    assert_eq(f16::new(0x{:04x} as u16).{}(f16::new(0x{:04x} as u16)), {});",
         a, method, b, expected
+    )
+}
+
+/// Format an abs assert_eq line for each width (sq-dtmg9).
+fn f16_abs_line(a: u16, expected: u16) -> String {
+    format!(
+        "    assert_eq(f16::new(0x{:04x} as u16).abs().bits(), 0x{:04x} as u16);",
+        a, expected
+    )
+}
+
+fn f32_abs_line(a: u32, expected: u32) -> String {
+    format!(
+        "    assert_eq(f32::new(0x{:08x} as u32).abs().bits(), 0x{:08x} as u32);",
+        a, expected
+    )
+}
+
+fn f64_abs_line(a: u64, expected: u64) -> String {
+    format!(
+        "    assert_eq(f64::new(0x{:016x} as u64).abs().bits(), 0x{:016x} as u64);",
+        a, expected
+    )
+}
+
+/// Format a from_field assert_eq line (sq-dtmg9).
+fn f32_from_field_line(v: u128, expected: u32) -> String {
+    format!(
+        "    assert_eq(f32::from_field({} as Field).bits(), 0x{:08x} as u32);",
+        v, expected
+    )
+}
+
+fn f64_from_field_line(v: u128, expected: u64) -> String {
+    format!(
+        "    assert_eq(f64::from_field({} as Field).bits(), 0x{:016x} as u64);",
+        v, expected
+    )
+}
+
+/// Format a to_field assert_eq line (sq-dtmg9).
+fn f32_to_field_line(a: u32, expected: u64) -> String {
+    format!(
+        "    assert_eq(f32::new(0x{:08x} as u32).to_field(), {} as Field);",
+        a, expected
+    )
+}
+
+fn f64_to_field_line(a: u64, expected: u64) -> String {
+    format!(
+        "    assert_eq(f64::new(0x{:016x} as u64).to_field(), {} as Field);",
+        a, expected
     )
 }
 
@@ -824,6 +932,215 @@ fn gen_f16_cmps(out: &mut String, rng: &mut Xorshift64) {
 }
 
 // ---------------------------------------------------------------------------
+// abs tests (sq-dtmg9): all three oracle-covered widths, with NaN-payload and
+// negative-sNaN probes (abs must preserve payloads and only clear the sign).
+// ---------------------------------------------------------------------------
+
+fn gen_abs(out: &mut String, rng: &mut Xorshift64) {
+    // f16 -----------------------------------------------------------------
+    writeln!(out, "#[test]").unwrap();
+    writeln!(out, "fn differential_oracle_f16_abs() {{").unwrap();
+    let mut f16_inputs = f16_corners();
+    f16_inputs.extend_from_slice(&[
+        0x7E01, // qNaN with payload
+        0xFE01, // negative qNaN with payload
+        0xFD00, // negative sNaN pattern
+        0x8001, // -min_subnormal
+    ]);
+    for (i, &a) in f16_inputs.iter().enumerate() {
+        writeln!(out, "    // corner:{}", i).unwrap();
+        writeln!(out, "{}", f16_abs_line(a, oracle_f16_abs(a))).unwrap();
+    }
+    for i in 0..RANDOM_ARITH_PER_OP {
+        let a = rng.next_u16();
+        writeln!(out, "    // random:{}", i).unwrap();
+        writeln!(out, "{}", f16_abs_line(a, oracle_f16_abs(a))).unwrap();
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+
+    // f32 -----------------------------------------------------------------
+    writeln!(out, "#[test]").unwrap();
+    writeln!(out, "fn differential_oracle_f32_abs() {{").unwrap();
+    let mut f32_inputs = f32_corners();
+    f32_inputs.extend_from_slice(&[
+        0x7FC00001, // qNaN with payload
+        0xFFC00001, // negative qNaN with payload
+        0xFFA00000, // negative sNaN pattern
+        0x80000001, // -min_subnormal
+    ]);
+    for (i, &a) in f32_inputs.iter().enumerate() {
+        writeln!(out, "    // corner:{}", i).unwrap();
+        writeln!(out, "{}", f32_abs_line(a, oracle_f32_abs(a))).unwrap();
+    }
+    for i in 0..RANDOM_ARITH_PER_OP {
+        let a = rng.next_u32();
+        writeln!(out, "    // random:{}", i).unwrap();
+        writeln!(out, "{}", f32_abs_line(a, oracle_f32_abs(a))).unwrap();
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+
+    // f64 -----------------------------------------------------------------
+    writeln!(out, "#[test]").unwrap();
+    writeln!(out, "fn differential_oracle_f64_abs() {{").unwrap();
+    let mut f64_inputs = f64_corners();
+    f64_inputs.extend_from_slice(&[
+        0x7FF8000000000001, // qNaN with payload
+        0xFFF8000000000001, // negative qNaN with payload
+        0xFFF4000000000000, // negative sNaN pattern
+        0x8000000000000001, // -min_subnormal
+    ]);
+    for (i, &a) in f64_inputs.iter().enumerate() {
+        writeln!(out, "    // corner:{}", i).unwrap();
+        writeln!(out, "{}", f64_abs_line(a, oracle_f64_abs(a))).unwrap();
+    }
+    for i in 0..RANDOM_ARITH_PER_OP {
+        let a = rng.next_u64();
+        writeln!(out, "    // random:{}", i).unwrap();
+        writeln!(out, "{}", f64_abs_line(a, oracle_f64_abs(a))).unwrap();
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+}
+
+// ---------------------------------------------------------------------------
+// from_field / to_field tests (sq-dtmg9).
+//
+// from_field corpus: rounding boundaries at 2^24 / 2^53 (first inexact
+// integers for f32/f64), the u64/u128 extremes, and random 64/128-bit values.
+// Rust int->float casts are correctly rounded (RNE), so the hardware cast is
+// the oracle.  f16/f128 from_field is covered by the exact-rational generated
+// vectors instead (no conformant hardware oracle for those widths here).
+// ---------------------------------------------------------------------------
+
+fn from_field_corners() -> Vec<u128> {
+    vec![
+        0,
+        1,
+        2,
+        3,
+        (1 << 24) - 1,
+        (1 << 24) + 1,
+        (1 << 24) + 3,
+        (1 << 53) - 1,
+        (1 << 53) + 1,
+        (1 << 53) + 3,
+        1 << 63,
+        u64::MAX as u128,
+        (u64::MAX as u128) + 1,
+        1 << 127,
+        u128::MAX,
+    ]
+}
+
+fn gen_from_field(out: &mut String, rng: &mut Xorshift64) {
+    writeln!(out, "#[test]").unwrap();
+    writeln!(out, "fn differential_oracle_f32_from_field() {{").unwrap();
+    for (i, &v) in from_field_corners().iter().enumerate() {
+        writeln!(out, "    // corner:{}", i).unwrap();
+        writeln!(out, "{}", f32_from_field_line(v, oracle_f32_from_field(v))).unwrap();
+    }
+    for i in 0..RANDOM_ARITH_PER_OP {
+        // Alternate 64-bit and 128-bit magnitudes.
+        let v = if i % 2 == 0 {
+            rng.next_u64() as u128
+        } else {
+            ((rng.next_u64() as u128) << 64) | rng.next_u64() as u128
+        };
+        writeln!(out, "    // random:{}", i).unwrap();
+        writeln!(out, "{}", f32_from_field_line(v, oracle_f32_from_field(v))).unwrap();
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+
+    writeln!(out, "#[test]").unwrap();
+    writeln!(out, "fn differential_oracle_f64_from_field() {{").unwrap();
+    for (i, &v) in from_field_corners().iter().enumerate() {
+        writeln!(out, "    // corner:{}", i).unwrap();
+        writeln!(out, "{}", f64_from_field_line(v, oracle_f64_from_field(v))).unwrap();
+    }
+    for i in 0..RANDOM_ARITH_PER_OP {
+        let v = if i % 2 == 0 {
+            rng.next_u64() as u128
+        } else {
+            ((rng.next_u64() as u128) << 64) | rng.next_u64() as u128
+        };
+        writeln!(out, "    // random:{}", i).unwrap();
+        writeln!(out, "{}", f64_from_field_line(v, oracle_f64_from_field(v))).unwrap();
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+}
+
+fn gen_to_field(out: &mut String, rng: &mut Xorshift64) {
+    // Curated in-range f64 inputs (bit patterns).
+    let f64_inputs: &[u64] = &[
+        0x0000000000000000, // +0
+        0x8000000000000000, // -0
+        0x3FF0000000000000, // 1.0
+        0x400E000000000000, // 3.75 -> 3
+        0x3FE0000000000000, // 0.5 -> 0
+        0xBFE0000000000000, // -0.5 -> 0 (negative truncation window)
+        0x43E0000000000000, // 2^63
+        0x43EFFFFFFFFFFFFF, // largest f64 below 2^64
+        0x4340000000000000, // 2^53
+    ];
+
+    writeln!(out, "#[test]").unwrap();
+    writeln!(out, "fn differential_oracle_f64_to_field() {{").unwrap();
+    for (i, &a) in f64_inputs.iter().enumerate() {
+        let expected = oracle_f64_to_field(a)
+            .expect("curated f64 to_field corner must be in the valid domain");
+        writeln!(out, "    // corner:{}", i).unwrap();
+        writeln!(out, "{}", f64_to_field_line(a, expected)).unwrap();
+    }
+    for i in 0..RANDOM_ARITH_PER_OP {
+        // Compose an in-range value: a variable-magnitude integer part plus a
+        // fractional part, so truncation is exercised across magnitudes.
+        let int_part = rng.next_u64() >> (i % 33);
+        let frac = (rng.next_u64() % 1000) as f64 / 1000.0;
+        let bits = (int_part as f64 + frac).to_bits();
+        if let Some(expected) = oracle_f64_to_field(bits) {
+            writeln!(out, "    // random:{}", i).unwrap();
+            writeln!(out, "{}", f64_to_field_line(bits, expected)).unwrap();
+        }
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+
+    let f32_inputs: &[u32] = &[
+        0x00000000, // +0
+        0x80000000, // -0
+        0x3F800000, // 1.0
+        0x40700000, // 3.75 -> 3
+        0xBF000000, // -0.5 -> 0
+        0x5F000000, // 2^63
+        0x5F7FFFFF, // largest f32 below 2^64
+    ];
+
+    writeln!(out, "#[test]").unwrap();
+    writeln!(out, "fn differential_oracle_f32_to_field() {{").unwrap();
+    for (i, &a) in f32_inputs.iter().enumerate() {
+        let expected = oracle_f32_to_field(a)
+            .expect("curated f32 to_field corner must be in the valid domain");
+        writeln!(out, "    // corner:{}", i).unwrap();
+        writeln!(out, "{}", f32_to_field_line(a, expected)).unwrap();
+    }
+    for i in 0..RANDOM_ARITH_PER_OP {
+        let int_part = (rng.next_u32() >> (i % 17)) as f32;
+        let frac = (rng.next_u32() % 1000) as f32 / 1000.0;
+        let bits = (int_part + frac).to_bits();
+        if let Some(expected) = oracle_f32_to_field(bits) {
+            writeln!(out, "    // random:{}", i).unwrap();
+            writeln!(out, "{}", f32_to_field_line(bits, expected)).unwrap();
+        }
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+}
+
+// ---------------------------------------------------------------------------
 // f128 deferral note
 // ---------------------------------------------------------------------------
 
@@ -865,6 +1182,11 @@ pub fn generate_noir_file(inject_fault: bool) -> String {
     gen_f16_arith(&mut out, &mut rng);
     gen_f16_sqrt(&mut out, &mut rng);
     gen_f16_cmps(&mut out, &mut rng);
+
+    // sq-dtmg9 additions: abs, from_field, to_field.
+    gen_abs(&mut out, &mut rng);
+    gen_from_field(&mut out, &mut rng);
+    gen_to_field(&mut out, &mut rng);
 
     gen_f128_deferral(&mut out);
 
@@ -1057,6 +1379,14 @@ mod tests {
         assert!(content.contains("fn differential_oracle_f32_add()"));
         assert!(content.contains("fn differential_oracle_f64_sqrt()"));
         assert!(content.contains("fn differential_oracle_f16_eq()"));
+        // sq-dtmg9 additions.
+        assert!(content.contains("fn differential_oracle_f16_abs()"));
+        assert!(content.contains("fn differential_oracle_f32_abs()"));
+        assert!(content.contains("fn differential_oracle_f64_abs()"));
+        assert!(content.contains("fn differential_oracle_f32_from_field()"));
+        assert!(content.contains("fn differential_oracle_f64_from_field()"));
+        assert!(content.contains("fn differential_oracle_f32_to_field()"));
+        assert!(content.contains("fn differential_oracle_f64_to_field()"));
         // Must NOT import f128 (we do not test it -- see deferral comment).
         assert!(!content.contains("use sparq_ieee754::{f16, f32, f64, f128}"));
         // f128 deferral comment must be present.
@@ -1168,5 +1498,69 @@ mod tests {
         assert_eq!(oracle_f16_sqrt(0xBC00), CANONICAL_NAN_F16, "sqrt(-1.0_f16) must be canonical NaN");
         assert_eq!(oracle_f16_sqrt(0x8400), CANONICAL_NAN_F16, "sqrt(-min_normal_f16) must be canonical NaN");
         assert_eq!(oracle_f16_sqrt(0xFBFF), CANONICAL_NAN_F16, "sqrt(-max_normal_f16) must be canonical NaN");
+    }
+
+    // ---- sq-dtmg9: abs / from_field / to_field oracles ----
+
+    /// The bit-level abs oracle must agree with hardware f32::abs / f64::abs on
+    /// non-NaN values, and must preserve NaN payloads while clearing the sign.
+    #[test]
+    fn test_oracle_abs_matches_hardware_and_preserves_payloads() {
+        for bits in [0x3F800000_u32, 0xBF800000, 0x80000000, 0x7F800000, 0xFF800000, 0x80000001] {
+            assert_eq!(
+                oracle_f32_abs(bits),
+                f32::from_bits(bits).abs().to_bits(),
+                "f32 abs oracle diverges from hardware for 0x{bits:08x}"
+            );
+        }
+        for bits in [0x3FF0000000000000_u64, 0xBFF0000000000000, 0x8000000000000000] {
+            assert_eq!(oracle_f64_abs(bits), f64::from_bits(bits).abs().to_bits());
+        }
+        // NaN payload preserved, sign cleared (IEEE 754-2019 5.5.1).
+        assert_eq!(oracle_f32_abs(0xFFC00001), 0x7FC00001);
+        assert_eq!(oracle_f64_abs(0xFFF8000000000001), 0x7FF8000000000001);
+        assert_eq!(oracle_f16_abs(0xFE01), 0x7E01);
+        assert_eq!(oracle_f16_abs(0x8001), 0x0001);
+    }
+
+    /// from_field oracle: RNE at the first inexact integers and the extremes.
+    #[test]
+    fn test_oracle_from_field_rne() {
+        // 2^53 + 1 is the first u64 not representable in f64: ties to 2^53.
+        assert_eq!(oracle_f64_from_field((1 << 53) + 1), 0x4340000000000000);
+        assert_eq!(oracle_f64_from_field((1 << 53) + 3), 0x4340000000000002);
+        // 2^24 + 1 is the first integer not representable in f32.
+        assert_eq!(oracle_f32_from_field((1 << 24) + 1), 0x4B800000);
+        // u128::MAX rounds above f32's max finite -> +inf.
+        assert_eq!(oracle_f32_from_field(u128::MAX), 0x7F800000);
+        // u128::MAX in f64: rounds to 2^128.
+        assert_eq!(oracle_f64_from_field(u128::MAX), (340282366920938463463374607431768211455_u128 as f64).to_bits());
+        assert_eq!(oracle_f64_from_field(0), 0);
+        assert_eq!(oracle_f64_from_field(1), 0x3FF0000000000000);
+    }
+
+    /// to_field oracle: truncation toward zero, and the rejection domain.
+    #[test]
+    fn test_oracle_to_field_domain() {
+        assert_eq!(oracle_f64_to_field(0x400E000000000000), Some(3)); // 3.75
+        assert_eq!(oracle_f64_to_field(0xBFE0000000000000), Some(0)); // -0.5
+        assert_eq!(oracle_f64_to_field(0x8000000000000000), Some(0)); // -0
+        assert_eq!(oracle_f64_to_field(0x43E0000000000000), Some(1 << 63)); // 2^63
+        assert_eq!(oracle_f64_to_field(0x7FF8000000000000), None); // NaN
+        assert_eq!(oracle_f64_to_field(0x7FF0000000000000), None); // +inf
+        assert_eq!(oracle_f64_to_field(0xBFF0000000000000), None); // -1.0
+        assert_eq!(oracle_f64_to_field(0x43F0000000000000), None); // 2^64
+        assert_eq!(oracle_f32_to_field(0x40700000), Some(3)); // 3.75
+        assert_eq!(oracle_f32_to_field(0xFF800000), None); // -inf
+    }
+
+    /// The curated to_field corners must all be in the valid domain (the
+    /// generator .expect()s on them).
+    #[test]
+    fn test_to_field_curated_corners_valid() {
+        let content = generate_noir_file(false);
+        assert!(content.contains("fn differential_oracle_f64_to_field()"));
+        // Sanity: the -0.5 truncation row must appear with expected 0.
+        assert!(content.contains("assert_eq(f64::new(0xbfe0000000000000 as u64).to_field(), 0 as Field);"));
     }
 }

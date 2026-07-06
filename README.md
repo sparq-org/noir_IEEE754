@@ -1,12 +1,11 @@
 # sparq_ieee754 — IEEE 754 binary floating point for Noir
 
-> **This repository is the published, standalone face of the library.**
-> Active development happens in
-> [**sparq-org/sparq**](https://github.com/sparq-org/sparq) under
-> [`zk/ieee754`](https://github.com/sparq-org/sparq/tree/main/zk/ieee754).
-> Please file issues and pull requests **there**, not here — this repo is
-> periodically synced from that source of truth. (It supersedes the earlier
-> `jeswr/noir_IEEE754` contents, which are deprecated.)
+> **This repository is the source of truth for the library.** The former
+> in-tree copy at `zk/ieee754` in
+> [sparq-org/sparq](https://github.com/sparq-org/sparq) was removed when sparq
+> switched to depending on this repo's tagged releases (sparq PR #1602);
+> develop, file issues, and open pull requests **here**. (This repo supersedes
+> the earlier `jeswr/noir_IEEE754` contents, which are deprecated.)
 
 A Noir library providing IEEE 754 `f16`, `f32`, `f64`, and `f128` types,
 generated at compile time from a single width parameter, with
@@ -56,6 +55,16 @@ The public API is intentionally only the generated `f16`, `f32`, `f64`, and
 - `sqrt` (round-to-nearest-even).
 - Round-to-integral methods and float-to-integer casts (truncating toward
   zero, with out-of-range/NaN/infinity rejection).
+- `abs` — IEEE 754-2019 5.5.1 quiet bit-level sign clear (NaN payloads pass
+  through unchanged).
+- Named constant constructors `zero`/`neg_zero`/`one`/`neg_one`/`infinity`/
+  `neg_infinity`/`nan`/`signaling_nan` (comptime-constant bit patterns; the
+  library implements no signaling semantics — `signaling_nan()` exists for
+  bit-level interoperability only).
+- `from_field` (Field → float, round-to-nearest-even; the field element is
+  interpreted as an unsigned integer and must be < 2^128 — larger values fail
+  an in-circuit range assert) and `to_field` (float → Field, truncating toward
+  zero via the `to_u64` kernel with its NaN/infinity/range rejections).
 
 Everything else (`FloatParts`, the `ops` kernels, `codegen`, `sizing`,
 generated struct fields, `to_parts`) is private by design and enforced by
@@ -114,10 +123,14 @@ against.
 
 ## Known gaps
 
-Not currently exposed in the public API (tracked in the sparq repo):
+Remaining known gaps, tracked as beads in the sparq repo:
 
 - Directed rounding for arithmetic — `Add`/`Sub`/`Mul`/`Div` are
   round-to-nearest-even only (directed rounding exists only for
-  round-to-integral).
-- `abs` and named constant constructors (use `new(bits)`).
-- Field↔float conversion (integer↔float conversion is provided).
+  round-to-integral). Re-adding the deprecated library's rounding-mode
+  arithmetic is a kernel-level feature (mode-threaded round-pack in both the
+  u64 and wide kernels, with a directed-rounding host oracle) tracked as
+  sparq bead sq-xs0pa.
+- f128 rows in the Rust differential oracle harness — deferred until a stable
+  conformant host reference is adopted (tracked as sq-3x7dl.14.2); f128 is
+  covered by the exact-rational generated vectors.

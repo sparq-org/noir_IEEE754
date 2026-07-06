@@ -72,8 +72,8 @@ jobs:
   #   1. Builds the standalone Rust binary (differential/).
   #   2. Drift-guards the committed oracle (tests/differential_oracle/src/lib.nr)
   #      against the generator — any stale file fails loudly.
-  #   3. Generates a fresh oracle Noir file and runs `nargo test` (24 test
-  #      functions, ~4500 assertions). Any divergence between the Noir circuit
+  #   3. Generates a fresh oracle Noir file and runs `nargo test` (31 test
+  #      functions, ~5300 assertions). Any divergence between the Noir circuit
   #      and the oracle fails the gate.
   #   4. SELF-TEST (inject-fault): re-generates with one expected bit flipped and
   #      asserts `nargo test` FAILS — proving the harness is non-vacuous.

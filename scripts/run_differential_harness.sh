@@ -5,7 +5,7 @@
 #   1. Build the Rust harness (zk/ieee754/differential/).
 #   2. Generate the oracle Noir test file using native Rust f32/f64 + half::f16.
 #   3. Create a temporary Nargo package depending on sparq_ieee754.
-#   4. Run `nargo test` and assert all 24 test functions pass (oracle mode).
+#   4. Run `nargo test` and assert all 31 test functions pass (oracle mode).
 #   5. SELF-TEST: re-run with --inject-fault, assert `nargo test` FAILS.
 #      This proves the harness is non-vacuous (wired to the real Noir circuit).
 #

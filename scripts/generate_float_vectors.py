@@ -288,7 +288,39 @@ def bits_for_fraction(fmt: FloatFormat, value: Fraction) -> int:
 
 COMPARE_OPS = ["eq", "ne", "lt", "le", "gt", "ge"]
 ROUND_OPS = ["floor", "ceil", "trunc", "round_ties_even"]
-CAST_OPS = ["to_u64", "to_i64"]
+CAST_OPS = ["to_u64", "to_i64", "to_field"]
+
+# Integer -> float conversion sources (sq-dtmg9): the public From impls plus
+# from_field (a Field element interpreted as an unsigned integer < 2^128).
+CONVERT_SOURCES = [
+    ("u8", 8, False),
+    ("u16", 16, False),
+    ("u32", 32, False),
+    ("u64", 64, False),
+    ("u128", 128, False),
+    ("i8", 8, True),
+    ("i16", 16, True),
+    ("i32", 32, True),
+    ("i64", 64, True),
+    ("Field", 128, False),
+]
+
+
+def reference_abs(fmt: FloatFormat, bits: int) -> int:
+    """IEEE 754-2019 5.5.1 abs: clear the sign bit, change nothing else.
+
+    A quiet bit-level operation: NaN payloads pass through unchanged.
+    """
+    return bits & ~fmt.sign_mask
+
+
+def reference_convert(fmt: FloatFormat, value: int) -> int:
+    """Integer -> float with round-to-nearest-even (may overflow to infinity)."""
+    if value == 0:
+        return zero(fmt, False)
+    if value < 0:
+        return pack_finite(fmt, True, Fraction(-value, 1))
+    return pack_finite(fmt, False, Fraction(value, 1))
 
 
 def signed_extended_value(fmt: FloatFormat, bits: int):
@@ -415,6 +447,9 @@ def reference_to_int(fmt: FloatFormat, op: str, bits: int) -> tuple[bool, int]:
         return (0 <= truncated <= (1 << 64) - 1, truncated)
     if op == "to_i64":
         return (-(1 << 63) <= truncated <= (1 << 63) - 1, truncated)
+    if op == "to_field":
+        # to_field truncates via the to_u64 kernel, so it shares its range.
+        return (0 <= truncated <= (1 << 64) - 1, truncated)
     raise ValueError(f"unsupported cast: {op}")
 
 
@@ -454,6 +489,18 @@ class CastVector:
 
     def key(self):
         return ("cast", self.fmt.name, self.op, self.input)
+
+
+@dataclass(frozen=True)
+class ConvVector:
+    fmt: FloatFormat
+    src: str
+    value: int
+    expected: int
+    source: str
+
+    def key(self):
+        return ("conv", self.fmt.name, self.src, self.value)
 
 
 def compare_pairs(fmt: FloatFormat) -> list[tuple[int, int]]:
@@ -608,6 +655,22 @@ def new_op_vectors(fmt: FloatFormat, per_op: int, seed: int):
         bits = random_finite_bits(fmt, rng)
         unaries.append(UnaryVector(fmt, "sqrt", bits, reference_sqrt(fmt, bits), f"random:{seed}:{index}"))
 
+    # abs (sq-dtmg9): quiet bit-level sign clear. Beyond the shared curated
+    # inputs, probe NaN payload preservation (positive and negative NaNs with
+    # payload bits) and a negative signaling-NaN pattern.
+    abs_extra = [
+        canonical_nan(fmt) | 1,
+        fmt.sign_mask | canonical_nan(fmt) | 1,
+        fmt.sign_mask | fmt.exponent_mask | (1 << (fmt.mantissa_bits - 2)),
+    ]
+    for index, bits in enumerate(round_inputs(fmt) + abs_extra):
+        unaries.append(UnaryVector(fmt, "abs", bits, reference_abs(fmt, bits), f"curated:{index}"))
+    for index in range(per_op):
+        bits = random_finite_bits(fmt, rng)
+        if index % 2:
+            bits |= fmt.sign_mask
+        unaries.append(UnaryVector(fmt, "abs", bits, reference_abs(fmt, bits), f"random:{seed}:{index}"))
+
     for op in CAST_OPS:
         for index, bits in enumerate(cast_inputs(fmt)):
             valid, expected = reference_to_int(fmt, op, bits)
@@ -624,6 +687,53 @@ def new_op_vectors(fmt: FloatFormat, per_op: int, seed: int):
             emitted += 1
 
     return compares, unaries, casts
+
+
+def convert_inputs(width: int, signed: bool) -> list[int]:
+    """Curated integer values for a conversion source of the given width."""
+    if signed:
+        max_value = (1 << (width - 1)) - 1
+        min_value = -(1 << (width - 1))
+    else:
+        max_value = (1 << width) - 1
+        min_value = 0
+
+    candidates = [0, 1, 2, max_value, max_value - 1, max_value // 3]
+    if signed:
+        candidates.extend([-1, -2, min_value, min_value + 1, -(max_value // 3)])
+
+    # Rounding-boundary probes: around 2^(mantissa_bits + 1) the integers stop
+    # being exactly representable, so +/-1 and +3 exercise RNE ties and the
+    # first inexact conversions for every float width that fits the source.
+    for fmt in FORMATS:
+        base = 1 << (fmt.mantissa_bits + 1)
+        for probe in (base - 1, base + 1, base + 3):
+            if probe <= max_value:
+                candidates.append(probe)
+                if signed and -probe >= min_value:
+                    candidates.append(-probe)
+
+    return candidates
+
+
+def conv_vectors(fmt: FloatFormat, per_op: int, seed: int) -> list[ConvVector]:
+    rng = random.Random(seed + fmt.total_bits + 88)
+    vectors: list[ConvVector] = []
+
+    for src, width, signed in CONVERT_SOURCES:
+        for index, value in enumerate(convert_inputs(width, signed)):
+            vectors.append(
+                ConvVector(fmt, src, value, reference_convert(fmt, value), f"curated:{index}")
+            )
+        for index in range(per_op):
+            raw = rng.getrandbits(width)
+            if signed and raw >= (1 << (width - 1)):
+                raw -= 1 << width
+            vectors.append(
+                ConvVector(fmt, src, raw, reference_convert(fmt, raw), f"random:{seed}:{index}")
+            )
+
+    return vectors
 
 
 def dedupe_keyed(vectors):
@@ -693,6 +803,8 @@ def render_new_op_tests(lines: list[str], compares, unaries, casts) -> None:
             for vector in valid_vectors:
                 if op == "to_u64":
                     expected_literal = f"{vector.expected} as u64"
+                elif op == "to_field":
+                    expected_literal = f"{vector.expected} as Field"
                 else:
                     expected_literal = render_i64_literal(vector.expected)
                 lines.append(f"    // {vector.source}")
@@ -710,6 +822,43 @@ def render_new_op_tests(lines: list[str], compares, unaries, casts) -> None:
             lines.append(f"    let _ = {fmt_name}::new({literal(fmt, vector.input)}).{op}();")
             lines.append("}")
             lines.append("")
+
+
+def render_int_literal(value: int, src: str) -> str:
+    """Render an integer literal for a Noir signed/unsigned source type."""
+    if src.startswith("i"):
+        width = int(src[1:])
+        if value == -(1 << (width - 1)):
+            # The positive magnitude does not fit the type; build it as min+1-1.
+            return f"{value + 1} - 1"
+    return str(value)
+
+
+def render_conv_tests(lines: list[str], convs) -> None:
+    groups: dict[tuple[str, str], list[ConvVector]] = {}
+    for vector in convs:
+        groups.setdefault((vector.fmt.name, vector.src), []).append(vector)
+
+    for (fmt_name, src), group in groups.items():
+        fmt = FORMAT_BY_NAME[fmt_name]
+        suffix = "field" if src == "Field" else src
+        lines.append("#[test]")
+        lines.append(f"fn generated_{fmt_name}_from_{suffix}_vectors_match_reference() {{")
+        for index, vector in enumerate(group):
+            lines.append(f"    // {vector.source}")
+            if src == "Field":
+                lines.append(
+                    f"    assert_eq({fmt_name}::from_field({vector.value} as Field).bits(), "
+                    f"{literal(fmt, vector.expected)});"
+                )
+            else:
+                value_literal = render_int_literal(vector.value, src)
+                lines.append(f"    let value_{index}: {src} = {value_literal};")
+                lines.append(
+                    f"    assert_eq({fmt_name}::from(value_{index}).bits(), {literal(fmt, vector.expected)});"
+                )
+        lines.append("}")
+        lines.append("")
 
 
 def interesting_values(fmt: FloatFormat) -> dict[str, int]:
@@ -929,7 +1078,7 @@ def test_name(fmt: FloatFormat, op: str) -> str:
     return f"generated_{fmt.name}_{op}_vectors_match_reference"
 
 
-def render_noir(vectors: list[Vector], compares, unaries, casts) -> str:
+def render_noir(vectors: list[Vector], compares, unaries, casts, convs) -> str:
     lines = [
         "// Generated by scripts/generate_float_vectors.py. Do not edit by hand.",
         "use sparq_ieee754::{f128, f16, f32, f64};",
@@ -962,6 +1111,7 @@ def render_noir(vectors: list[Vector], compares, unaries, casts) -> str:
             lines.append("")
 
     render_new_op_tests(lines, compares, unaries, casts)
+    render_conv_tests(lines, convs)
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -999,19 +1149,22 @@ def main() -> None:
     all_compares: list[CompareVector] = []
     all_unaries: list[UnaryVector] = []
     all_casts: list[CastVector] = []
+    all_convs: list[ConvVector] = []
 
     for fmt in selected_formats:
         compares, unaries, casts = new_op_vectors(fmt, args.random_per_op, args.seed)
         all_compares.extend(compares)
         all_unaries.extend(unaries)
         all_casts.extend(casts)
+        all_convs.extend(conv_vectors(fmt, args.random_per_op, args.seed))
 
     all_compares = dedupe_keyed(all_compares)
     all_unaries = dedupe_keyed(all_unaries)
     all_casts = dedupe_keyed(all_casts)
+    all_convs = dedupe_keyed(all_convs)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render_noir(vectors, all_compares, all_unaries, all_casts))
+    args.output.write_text(render_noir(vectors, all_compares, all_unaries, all_casts, all_convs))
 
     counts: dict[tuple[str, str], int] = {}
     for vector in vectors:
@@ -1020,10 +1173,20 @@ def main() -> None:
     for vector in all_compares + all_unaries + all_casts:
         key = (vector.fmt.name, vector.op)
         counts[key] = counts.get(key, 0) + 1
+    for vector in all_convs:
+        key = (vector.fmt.name, f"from_{vector.src}")
+        counts[key] = counts.get(key, 0) + 1
 
-    total = len(vectors) + len(all_compares) + len(all_unaries) + len(all_casts)
+    total = len(vectors) + len(all_compares) + len(all_unaries) + len(all_casts) + len(all_convs)
     print(f"wrote {total} vectors to {args.output}")
-    ops_order = list(OP_SYMBOLS) + COMPARE_OPS + ROUND_OPS + ["sqrt"] + CAST_OPS
+    ops_order = (
+        list(OP_SYMBOLS)
+        + COMPARE_OPS
+        + ROUND_OPS
+        + ["sqrt", "abs"]
+        + CAST_OPS
+        + [f"from_{src}" for src, _width, _signed in CONVERT_SOURCES]
+    )
     for fmt in FORMATS:
         for op in ops_order:
             count = counts.get((fmt.name, op), 0)
